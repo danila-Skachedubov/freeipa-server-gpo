@@ -1,0 +1,11 @@
+#############################################################################
+# Create Group Policy Master object
+###############################################################################
+dn: cn=grouppolicymaster,cn=etc,$SUFFIX
+default: objectClass: groupPolicyMaster
+default: objectClass: top
+default: cn: grouppolicymaster
+default: pdcEmulator: $HOST
+
+dn: cn=referential integrity postoperation,cn=plugins,cn=config
+add: referint-membership-attr: chainList

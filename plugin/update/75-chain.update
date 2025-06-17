@@ -1,0 +1,17 @@
+###############################################################################
+# Add gpLink to referential integrity plugin
+###############################################################################
+dn: cn=referential integrity postoperation,cn=plugins,cn=config
+add: referint-membership-attr: gpLink
+
+###############################################################################
+# Add userGroup to referential integrity plugin
+###############################################################################
+dn: cn=referential integrity postoperation,cn=plugins,cn=config
+add: referint-membership-attr: userGroup
+
+###############################################################################
+# Add computerGroup to referential integrity plugin
+###############################################################################
+dn: cn=referential integrity postoperation,cn=plugins,cn=config
+add: referint-membership-attr: computerGroup

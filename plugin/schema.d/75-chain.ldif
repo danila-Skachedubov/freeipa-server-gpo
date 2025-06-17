@@ -1,0 +1,33 @@
+dn: cn=schema
+changetype: modify
+add: attributeTypes
+attributeTypes: ( 1.3.6.1.4.1.9999.1.1.11
+  NAME 'userGroup'
+  DESC 'DN of user group for policy chain'
+  EQUALITY distinguishedNameMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.12
+  SINGLE-VALUE )
+-
+add: attributeTypes
+attributeTypes: ( 1.3.6.1.4.1.9999.1.1.12
+  NAME 'computerGroup'
+  DESC 'DN of computer group for policy chain'
+  EQUALITY distinguishedNameMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.12
+  SINGLE-VALUE )
+-
+add: attributeTypes
+attributeTypes: ( 1.3.6.1.4.1.9999.1.1.13
+  NAME 'gpLink'
+  DESC 'Ordered list of group policy container DNs'
+  EQUALITY distinguishedNameMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 )
+-
+add: objectClasses
+objectClasses: ( 1.3.6.1.4.1.9999.2.1.3
+  NAME 'groupPolicyChain'
+  DESC 'Group Policy Chain linking policies to groups'
+  SUP top
+  STRUCTURAL
+  MUST ( cn )
+  MAY ( userGroup $ computerGroup $ gpLink $ displayName ) )

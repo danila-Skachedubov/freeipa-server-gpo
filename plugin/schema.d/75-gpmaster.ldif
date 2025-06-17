@@ -1,0 +1,25 @@
+dn: cn=schema
+changetype: modify
+add: attributeTypes
+attributeTypes: ( 1.3.6.1.4.1.9999.1.1.9
+  NAME 'chainList'
+  DESC 'Ordered list of group policy chains'
+  EQUALITY distinguishedNameMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 )
+-
+add: attributeTypes
+attributeTypes: ( 1.3.6.1.4.1.9999.1.1.10
+  NAME 'pdcEmulator'
+  DESC 'DN of the PDC emulator server'
+  EQUALITY caseIgnoreMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+  SINGLE-VALUE )
+-
+add: objectClasses
+objectClasses: ( 1.3.6.1.4.1.9999.2.1.2
+  NAME 'groupPolicyMaster'
+  DESC 'Group Policy Master configuration object'
+  SUP top
+  STRUCTURAL
+  MUST ( cn $ pdcEmulator )
+  MAY ( chainList ) )
