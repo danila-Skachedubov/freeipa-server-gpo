@@ -46,6 +46,8 @@ class grouppolicy(LDAPObject):
     ]
     uuid_attribute = 'cn'
     allow_rename = True
+    label = _('Group Policy Objects')
+    label_singular = _('Group Policy Object')
 
     managed_permissions = {
         'System: Read Group Policy Objects': {

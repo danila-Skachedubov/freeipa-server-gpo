@@ -18,7 +18,7 @@ from ipaserver.install.installutils import run_script
 
 from ipa_gpo_install.checks import IPAChecker
 from ipa_gpo_install.actions import IPAActions
-from .config import LOG_FILE_PATH, SCHEMA_LDIF_PATH, REQUIRED_SCHEMA_CLASSES, LOCALE_DIR
+from .config import LOG_FILE_PATH, REQUIRED_SCHEMA_CLASSES, LOCALE_DIR
 
 
 try:
@@ -143,9 +143,6 @@ def execute_required_actions(actions: IPAActions, check_results: Dict[str, Any])
     """Execute required actions based on check results"""
     tasks = []
 
-    if not check_results['schema_complete']:
-        tasks.append((_("Extend LDAP schema"), actions.add_ldif_schema, SCHEMA_LDIF_PATH))
-
     if not check_results['adtrust_enabled']:
         tasks.append((_("Install AD Trust"), actions.install_adtrust))
 
@@ -157,6 +154,11 @@ def execute_required_actions(actions: IPAActions, check_results: Dict[str, Any])
 
     for task in tasks:
         if not run_task(*task):
+            return False
+    
+    if not check_results['schema_complete']:
+        logger.warning(_("About to perform irreversible schema update"))
+        if not run_task(_("Run ipa-server-upgrade"), actions.run_ipa_server_upgrade):
             return False
 
     return True

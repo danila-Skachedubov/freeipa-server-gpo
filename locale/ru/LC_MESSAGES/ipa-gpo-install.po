@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ipa_gpo_install 0.0.1\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-04-15 15:38+0400\n"
+"Report-Msgid-Bugs-To: skachedubov@altlinux.org\n"
+"POT-Creation-Date: 2025-06-17 15:55+0400\n"
 "Last-Translator: Skachedubov Danila <skachedubov@altlinux.org>\n"
 "Language-Team: Russian <gnu@d07.ru>\n"
 "Language: ru\n"
@@ -16,130 +16,134 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
 "%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: ipa_gpo_install/cli.py:54
+#: ipa_gpo_install/cli.py:46
 msgid "Debug level: 0=errors, 1=warnings, 2=debug"
 msgstr "Уровень отладки: 0=ошибки, 1=предупреждения, 2=отладка"
 
-#: ipa_gpo_install/cli.py:56
+#: ipa_gpo_install/cli.py:48
 msgid "Only perform checks without making changes"
 msgstr "Только выполнить проверки без внесения изменений"
 
-#: ipa_gpo_install/cli.py:68
+#: ipa_gpo_install/cli.py:60
 msgid "Must be root to setup Group Policy features on server"
 msgstr ""
 "Необходимо быть пользователем root для настройки функций групповой политики "
 "на сервере"
 
-#: ipa_gpo_install/cli.py:74
+#: ipa_gpo_install/cli.py:66
 msgid "The log file for this installation can be found in {}"
 msgstr "Файл журнала для этой установки можно найти в {}"
 
-#: ipa_gpo_install/cli.py:79
+#: ipa_gpo_install/cli.py:71
 msgid "Initializing IPA API"
 msgstr "Инициализация API IPA"
 
-#: ipa_gpo_install/cli.py:85
+#: ipa_gpo_install/cli.py:77
 msgid "Connected to LDAP server"
 msgstr "Подключено к серверу LDAP"
 
-#: ipa_gpo_install/cli.py:88
+#: ipa_gpo_install/cli.py:80
 msgid ""
 "Outdated Kerberos credentials. Use kdestroy and kinit to update your ticket"
 msgstr ""
 "Устаревшие учетные данные Kerberos. Используйте kdestroy и kinit для "
 "обновления билета"
 
-#: ipa_gpo_install/cli.py:91
+#: ipa_gpo_install/cli.py:83
 msgid "Cannot connect to the LDAP database. Please check if IPA is running"
 msgstr "Невозможно подключиться к базе данных LDAP. Проверьте, работает ли IPA"
 
-#: ipa_gpo_install/cli.py:95
+#: ipa_gpo_install/cli.py:87
 msgid "Error setting up environment: {}"
 msgstr "Ошибка настройки окружения: {}"
 
-#: ipa_gpo_install/cli.py:101
+#: ipa_gpo_install/cli.py:93
 msgid "Checking Kerberos ticket"
 msgstr "Проверка билета Kerberos"
 
-#: ipa_gpo_install/cli.py:103
+#: ipa_gpo_install/cli.py:95
 msgid "Missing Kerberos ticket. Run 'kinit' to obtain a valid ticket."
 msgstr ""
 "Отсутствует билет Kerberos. Выполните 'kinit' для получения действительного "
 "билета."
 
-#: ipa_gpo_install/cli.py:106
+#: ipa_gpo_install/cli.py:98
 msgid "Checking admin privileges"
 msgstr "Проверка прав администратора"
 
-#: ipa_gpo_install/cli.py:108
+#: ipa_gpo_install/cli.py:100
 msgid "Administrative privileges required."
 msgstr "Требуются права администратора."
 
-#: ipa_gpo_install/cli.py:111 ipa_gpo_install/checks.py:116
+#: ipa_gpo_install/cli.py:103 ipa_gpo_install/checks.py:116
 msgid "Checking IPA services"
 msgstr "Проверка служб IPA"
 
-#: ipa_gpo_install/cli.py:113
+#: ipa_gpo_install/cli.py:105
 msgid "Essential IPA services are not running."
 msgstr "Основные службы IPA не запущены."
 
-#: ipa_gpo_install/cli.py:122
+#: ipa_gpo_install/cli.py:114
 msgid "Checking LDAP schema for required object classes"
 msgstr "Проверка схемы LDAP на наличие необходимых классов объектов"
 
-#: ipa_gpo_install/cli.py:125
+#: ipa_gpo_install/cli.py:117
 msgid "Checking if AD Trust is enabled"
 msgstr "Проверка, включено ли доверие AD"
 
-#: ipa_gpo_install/cli.py:128
+#: ipa_gpo_install/cli.py:120
 msgid "Checking SYSVOL directory and share"
 msgstr "Проверка каталога SYSVOL и общего ресурса"
 
-#: ipa_gpo_install/cli.py:137
+#: ipa_gpo_install/cli.py:129
 msgid "Running task: {}"
 msgstr "Выполнение задачи: {}"
 
-#: ipa_gpo_install/cli.py:141
+#: ipa_gpo_install/cli.py:133
 msgid "Task succeeded: {}"
 msgstr "Задача успешно выполнена: {}"
 
-#: ipa_gpo_install/cli.py:143
+#: ipa_gpo_install/cli.py:135
 msgid "Task failed: {}"
 msgstr "Задача не выполнена: {}"
 
-#: ipa_gpo_install/cli.py:146
+#: ipa_gpo_install/cli.py:138
 msgid "Task failed with error: {} - {}"
 msgstr "Задача не выполнена с ошибкой: {} - {}"
 
-#: ipa_gpo_install/cli.py:155
-msgid "Extend LDAP schema"
-msgstr "Расширить схему LDAP"
-
-#: ipa_gpo_install/cli.py:158
+#: ipa_gpo_install/cli.py:147
 msgid "Install AD Trust"
 msgstr "Установить доверие AD"
 
-#: ipa_gpo_install/cli.py:161
+#: ipa_gpo_install/cli.py:150
 msgid "Create SYSVOL directory"
 msgstr "Создать каталог SYSVOL"
 
-#: ipa_gpo_install/cli.py:164
+#: ipa_gpo_install/cli.py:153
 msgid "Create SYSVOL share"
 msgstr "Создать общий ресурс SYSVOL"
 
-#: ipa_gpo_install/cli.py:181
+#: ipa_gpo_install/cli.py:160
+msgid "About to perform irreversible schema update"
+msgstr ""
+
+#: ipa_gpo_install/cli.py:161
+msgid "Run ipa-server-upgrade"
+msgstr ""
+
+#: ipa_gpo_install/cli.py:175
 msgid "Checking critical requirements"
 msgstr "Проверка критических требований"
 
-#: ipa_gpo_install/cli.py:185
+#: ipa_gpo_install/cli.py:179
 msgid "Performing configuration environment checks"
 msgstr "Выполнение проверок конфигурации окружения"
 
-#: ipa_gpo_install/cli.py:189
+#: ipa_gpo_install/cli.py:183
 msgid "Check-only mode: all checks completed"
 msgstr "Режим только проверки: все проверки завершены"
 
-#: ipa_gpo_install/cli.py:196
+#: ipa_gpo_install/cli.py:190
 msgid ""
 "\n"
 "=============================================================================\n"
@@ -195,7 +199,8 @@ msgstr "Ошибка проверки прав администратора: {}"
 msgid "Cannot determine domain name for services check"
 msgstr "Невозможно определить имя домена для проверки служб"
 
-#: ipa_gpo_install/checks.py:120 ipa_gpo_install/actions.py:62 ipa_gpo_install/actions.py:91 ipa_gpo_install/actions.py:168
+#: ipa_gpo_install/checks.py:120 ipa_gpo_install/actions.py:58
+#: ipa_gpo_install/actions.py:135 ipa_gpo_install/actions.py:159
 msgid "Running: {}"
 msgstr "Выполнение: {}"
 
@@ -283,96 +288,86 @@ msgstr "Общий ресурс SYSVOL не существует"
 msgid "Error checking SYSVOL share: {}"
 msgstr "Ошибка проверки общего ресурса SYSVOL: {}"
 
-#: ipa_gpo_install/actions.py:57
-msgid "LDIF file not found: {}"
-msgstr "Файл LDIF не найден: {}"
-
-#: ipa_gpo_install/actions.py:60
-msgid "Adding LDIF schema from file: {}"
-msgstr "Добавление схемы LDIF из файла: {}"
-
-#: ipa_gpo_install/actions.py:66
-msgid "Successfully added schema from {}"
-msgstr "Успешно добавлена схема из {}"
-
-#: ipa_gpo_install/actions.py:69
-msgid "Unknown error"
-msgstr "Неизвестная ошибка"
-
-#: ipa_gpo_install/actions.py:70
-msgid "Failed to add schema from {}: {}"
-msgstr "Не удалось добавить схему из {}: {}"
-
-#: ipa_gpo_install/actions.py:74
-msgid "Error adding LDIF schema: {}"
-msgstr "Ошибка добавления схемы LDIF: {}"
-
-#: ipa_gpo_install/actions.py:85
+#: ipa_gpo_install/actions.py:52
 msgid "Installing AD Trust support"
 msgstr "Установка поддержки доверия AD"
 
-#: ipa_gpo_install/actions.py:87
+#: ipa_gpo_install/actions.py:54
 msgid "ipa-adtrust-install not found"
 msgstr "ipa-adtrust-install не найден"
 
-#: ipa_gpo_install/actions.py:95
+#: ipa_gpo_install/actions.py:62
 msgid "Failed to install AD Trust: {}"
 msgstr "Не удалось установить доверие AD: {}"
 
-#: ipa_gpo_install/actions.py:97
+#: ipa_gpo_install/actions.py:64
 msgid "AD Trust installed successfully"
 msgstr "Доверие AD успешно установлено"
 
-#: ipa_gpo_install/actions.py:101
+#: ipa_gpo_install/actions.py:68
 msgid "Error installing AD Trust: {}"
 msgstr "Ошибка установки доверия AD: {}"
 
-#: ipa_gpo_install/actions.py:122
+#: ipa_gpo_install/actions.py:89
 msgid "Using standard permissions for SYSVOL directories"
 msgstr "Использование стандартных разрешений для каталогов SYSVOL"
 
-#: ipa_gpo_install/actions.py:125
+#: ipa_gpo_install/actions.py:92
 msgid "SYSVOL directory structure created successfully"
 msgstr "Структура каталога SYSVOL успешно создана"
 
-#: ipa_gpo_install/actions.py:129
+#: ipa_gpo_install/actions.py:96
 msgid "Error creating SYSVOL directory: {}"
 msgstr "Ошибка создания каталога SYSVOL: {}"
 
-#: ipa_gpo_install/actions.py:141
+#: ipa_gpo_install/actions.py:108
 msgid "Setting default ACLs on {}"
 msgstr "Установка ACL по умолчанию для {}"
 
-#: ipa_gpo_install/actions.py:146
+#: ipa_gpo_install/actions.py:113
 msgid "Failed to set ACLs on {}: {}"
 msgstr "Не удалось установить ACL для {}: {}"
 
-#: ipa_gpo_install/actions.py:149
+#: ipa_gpo_install/actions.py:116
 msgid "Successfully set default ACLs on {}"
 msgstr "Успешно установлены ACL по умолчанию для {}"
 
-#: ipa_gpo_install/actions.py:161
+#: ipa_gpo_install/actions.py:128
 msgid "Creating SYSVOL share for: {}"
 msgstr "Создание общего ресурса SYSVOL для: {}"
 
-#: ipa_gpo_install/actions.py:164
+#: ipa_gpo_install/actions.py:131
 msgid "Cannot create share: directory {} does not exist"
 msgstr "Невозможно создать общий ресурс: каталог {} не существует"
 
-#: ipa_gpo_install/actions.py:172
+#: ipa_gpo_install/actions.py:139
 msgid "Failed to create SYSVOL share: {}"
 msgstr "Не удалось создать общий ресурс SYSVOL: {}"
 
-#: ipa_gpo_install/actions.py:175
+#: ipa_gpo_install/actions.py:142
 msgid "SYSVOL share created successfully"
 msgstr "Общий ресурс SYSVOL успешно создан"
 
-#: ipa_gpo_install/actions.py:179
+#: ipa_gpo_install/actions.py:146
 msgid "Error creating SYSVOL share: {}"
 msgstr "Ошибка создания общего ресурса SYSVOL: {}"
 
-#~ msgid "Retrieving LDAP schema"
-#~ msgstr "Получение схемы LDAP"
+#: ipa_gpo_install/actions.py:157
+msgid "Running ipa-server-upgrade to apply schema changes"
+msgstr "Запуск ipa-server-upgrade для обновления схемы"
 
-#~ msgid "Checking SYSVOL directory: {}"
-#~ msgstr "Проверка каталога SYSVOL: {}"
+#: ipa_gpo_install/actions.py:163
+msgid "ipa-server-upgrade completed successfully"
+msgstr "Обновление схемы прошло успешно"
+
+#: ipa_gpo_install/actions.py:166
+msgid "Unknown error"
+msgstr "Неизвестная ошибка"
+
+#: ipa_gpo_install/actions.py:167
+msgid "ipa-server-upgrade failed: {}"
+msgstr "ipa-server-upgrade закончилось с ошибкой"
+
+#: ipa_gpo_install/actions.py:171
+msgid "Error running ipa-server-upgrade: {}"
+msgstr "Ошибка при обновления сервера"

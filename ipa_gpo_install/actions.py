@@ -41,38 +41,6 @@ class IPAActions:
         self.logger = logger or logging.getLogger('ipa-gpo-install')
         self.api = api_instance or api
 
-    def add_ldif_schema(self, ldif_file):
-        """
-        Add LDIF schema to LDAP using ipa-ldap-updater
-
-        Args:
-            ldif_file: Path to LDIF file
-
-        Returns:
-            True if successfully added, False otherwise
-        """
-        try:
-            if not os.path.exists(ldif_file):
-                self.logger.error(_("LDIF file not found: {}").format(ldif_file))
-                return False
-
-            self.logger.info(_("Adding LDIF schema from file: {}").format(ldif_file))
-            cmd = ['/usr/sbin/ipa-ldap-updater', '-S', ldif_file]
-            self.logger.debug(_("Running: {}").format(' '.join(cmd)))
-            result = ipautil.run(cmd, raiseonerr=False)
-
-            if result.returncode == 0:
-                self.logger.info(_("Successfully added schema from {}").format(ldif_file))
-                return True
-            else:
-                error_msg = result.error_output or _("Unknown error")
-                self.logger.error(_("Failed to add schema from {}: {}").format(ldif_file, error_msg))
-                return False
-
-        except Exception as e:
-            self.logger.error(_("Error adding LDIF schema: {}").format(e))
-            return False
-
     def install_adtrust(self):
         """
         Install and configure AD Trust support
@@ -176,4 +144,29 @@ class IPAActions:
 
         except Exception as e:
             self.logger.error(_("Error creating SYSVOL share: {}").format(e))
+            return False
+    
+    def run_ipa_server_upgrade(self):
+        """
+        Запустить ipa-server-upgrade для применения схем и обновлений
+        
+        Returns:
+            True если обновление прошло успешно, False иначе
+        """
+        try:
+            self.logger.info(_("Running ipa-server-upgrade to apply schema changes"))
+            cmd = ['/usr/sbin/ipa-server-upgrade']
+            self.logger.debug(_("Running: {}").format(' '.join(cmd)))
+            result = ipautil.run(cmd, raiseonerr=False)
+
+            if result.returncode == 0:
+                self.logger.info(_("ipa-server-upgrade completed successfully"))
+                return True
+            else:
+                error_msg = result.error_output or _("Unknown error")
+                self.logger.error(_("ipa-server-upgrade failed: {}").format(error_msg))
+                return False
+
+        except Exception as e:
+            self.logger.error(_("Error running ipa-server-upgrade: {}").format(e))
             return False

@@ -9,9 +9,11 @@ FREEIPA_SYSVOL_PATH = os.path.join(FREEIPA_BASE_PATH, "sysvol")
 LOG_FILE_PATH = "/var/log/freeipa/ipa-gpo-install.log"
 LOCALE_DIR = "/usr/share/locale"
 
-SCHEMA_LDIF_PATH = "/usr/share/ipa-gpo-install/data/74alt-group-policy.ldif"
-
-REQUIRED_SCHEMA_CLASSES = ['altOrganizationalUnit', 'groupPolicyContainer']
+REQUIRED_SCHEMA_CLASSES = [
+    'groupPolicyContainer',
+    'groupPolicyChain',
+    'groupPolicyMaster'
+]
 
 def get_domain_sysvol_path(domain):
     return os.path.join(FREEIPA_SYSVOL_PATH, domain)
