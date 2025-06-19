@@ -111,7 +111,8 @@ class IPAChecker:
                 f'dirsrv@{domain_suffix}',
                 'krb5kdc',
                 'ipa',
-                'sssd'
+                'sssd',
+                'oddjob'
             ]
             self.logger.debug(_("Checking IPA services"))
 
@@ -122,9 +123,13 @@ class IPAChecker:
                 result = ipautil.run(cmd, raiseonerr=False)
 
                 if result.returncode != 0:
-                    self.logger.error(_("Service {} is not active").format(service))
-                    return False
-                self.logger.debug(_("Service {} is active").format(service))
+                    if service == 'oddjob':
+                        self.logger.warning(_("Service {} is not active - will be started during installation").format(service))
+                    else:
+                        self.logger.error(_("Service {} is not active").format(service))
+                        return False
+                else:
+                    self.logger.debug(_("Service {} is active").format(service))
 
             self.logger.info(_("All essential services are running"))
             return True

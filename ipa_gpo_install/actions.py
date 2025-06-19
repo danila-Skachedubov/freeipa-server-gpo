@@ -75,27 +75,31 @@ class IPAActions:
         """
         try:
             freeipa_dir = Path(FREEIPA_BASE_PATH)
-            sysvol_path = get_domain_sysvol_path(self.api.env.domain)
+            sysvol_path_str = get_domain_sysvol_path(self.api.env.domain)
+            sysvol_path = Path(sysvol_path_str)
             policies_path = sysvol_path / "Policies"
             scripts_path = sysvol_path / "scripts"
 
+            # Создаем базовую директорию FreeIPA
             freeipa_dir.mkdir(parents=True, exist_ok=True)
             acl_set = self._set_default_acl(freeipa_dir)
 
+            # Создаем структуру SYSVOL
             for path in [sysvol_path, policies_path, scripts_path]:
                 path.mkdir(parents=True, exist_ok=True)
+                self.logger.debug(_("Created directory: {}").format(path))
 
             if not acl_set:
                 self.logger.warning(_("Using standard permissions for SYSVOL directories"))
                 for path in [sysvol_path, policies_path, scripts_path]:
                     os.chmod(path, 0o755)
+
             self.logger.info(_("SYSVOL directory structure created successfully"))
             return True
 
         except Exception as e:
             self.logger.error(_("Error creating SYSVOL directory: {}").format(e))
             return False
-
 
     def _set_default_acl(self, path: Path) -> bool:
         """
@@ -161,6 +165,11 @@ class IPAActions:
 
             if result.returncode == 0:
                 self.logger.info(_("ipa-server-upgrade completed successfully"))
+
+                if not self.restart_oddjob():
+                    self.logger.warning(_("Failed to restart oddjob service"))
+
+                
                 return True
             else:
                 error_msg = result.error_output or _("Unknown error")
@@ -169,4 +178,39 @@ class IPAActions:
 
         except Exception as e:
             self.logger.error(_("Error running ipa-server-upgrade: {}").format(e))
+            return False
+
+    def restart_oddjob(self):
+        """
+        Перезапустить службу oddjob для подхвата новых D-Bus обработчиков
+        
+        Returns:
+            True если перезапуск прошел успешно, False иначе
+        """
+        try:
+            self.logger.info(_("Restarting oddjob service"))
+
+            status_cmd = ['systemctl', 'is-active', 'oddjob']
+            status_result = ipautil.run(status_cmd, raiseonerr=False)
+            
+            if status_result.returncode != 0:
+                self.logger.info(_("oddjob service is not running, starting it"))
+                start_cmd = ['systemctl', 'start', 'oddjob']
+                result = ipautil.run(start_cmd, raiseonerr=False)
+            else:
+                self.logger.info(_("Restarting oddjob service"))
+                restart_cmd = ['systemctl', 'restart', 'oddjob']
+                result = ipautil.run(restart_cmd, raiseonerr=False)
+
+            if result.returncode == 0:
+                self.logger.info(_("oddjob service restarted successfully"))
+                
+                return True
+            else:
+                error_msg = result.error_output or _("Unknown error")
+                self.logger.error(_("Failed to restart oddjob: {}").format(error_msg))
+                return False
+
+        except Exception as e:
+            self.logger.error(_("Error restarting oddjob service: {}").format(e))
             return False

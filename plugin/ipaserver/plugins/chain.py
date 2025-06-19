@@ -1,5 +1,5 @@
 from ipalib import api, errors
-from ipalib import Str
+from ipalib import Str, Command
 from ipalib.plugable import Registry
 from .baseldap import (
     LDAPObject,
@@ -588,3 +588,135 @@ class chain_find(LDAPSearch):
                 self.obj.convert_dns_to_names(ldap, entry_attrs)
 
         return truncated
+
+
+class ChainResolveBase(Command):
+    """Базовый класс для разрешения политик"""
+    
+    def _get_active_chains(self):
+        """Получить список активных цепочек из GPMaster"""
+        try:
+
+            result = api.Command.gpmaster_show()
+            return result['result'].get('chainlist', [])
+        except Exception as e:
+            logger.warning("Failed to get active chains from GPMaster: %s", e)
+            return []
+    
+    def _get_matching_policies(self, target_groups, chain_group_attr):
+        """
+        Получить применимые политики для групп объекта
+        
+        Args:
+            target_groups: Список групп объекта (пользователя или хоста)
+            chain_group_attr: Атрибут цепочки для проверки ('usergroup' или 'computergroup')
+        """
+        if not target_groups:
+            return []
+
+        active_chains = self._get_active_chains()
+        if not active_chains:
+            return []
+        
+        ordered_policies = []
+        seen_policies = set()
+
+        for chain_name in active_chains:
+            try:
+                chain_info = api.Command.chain_show(chain_name)['result']
+
+                chain_groups = chain_info.get(chain_group_attr, [])
+                if self._groups_match(target_groups, chain_groups):
+                    for policy_name in chain_info.get('gplink', []):
+                        if policy_name not in seen_policies:
+                            ordered_policies.append(policy_name)
+                            seen_policies.add(policy_name)
+            except Exception as e:
+                logger.warning("Failed to process chain '%s': %s", chain_name, e)
+                continue
+        
+        return ordered_policies
+    
+    def _groups_match(self, target_groups, chain_groups):
+        """Проверить есть ли пересечение между группами"""
+        for target_group in target_groups:
+            for chain_group in chain_groups:
+                if target_group in chain_group:
+                    return True
+        return False
+    
+    def _build_policies_list(self, policy_names):
+        """Построить список политик с их атрибутами"""
+        policies_list = []
+        for policy_name in policy_names:
+            try:
+                policy_result = api.Command.gpo_show(policy_name, all=True)['result']
+                
+                policy_dict = {
+                    'name': policy_result.get('displayname', [''])[0] or policy_name,
+                    'flags': policy_result.get('flags', [''])[0] or '',
+                    'file_system_path': policy_result.get('gpcfilesyspath', [''])[0] or '',
+                    'version': policy_result.get('versionnumber', [''])[0] or ''
+                }
+                policies_list.append(policy_dict)
+                
+            except Exception as e:
+                policy_dict = {
+                    'name': policy_name,
+                    'flags': '',
+                    'file_system_path': '',
+                    'version': '',
+                    'error': str(e)
+                }
+                policies_list.append(policy_dict)
+        
+        return policies_list
+
+
+@register()
+class chain_resolve_for_user(ChainResolveBase):
+    __doc__ = _('Get applicable policies for user with essential attributes')
+    
+    takes_args = (
+        Str('username',
+            label=_('Username'),
+            doc=_('Username'),
+        ),
+    )
+    
+    def execute(self, username, **options):
+        """Получить применимые политики для пользователя"""
+        try:
+
+            user_groups = api.Command.user_show(username)['result'].get('memberof_group', [])
+            policy_names = self._get_matching_policies(user_groups, 'usergroup')
+            policies_list = self._build_policies_list(policy_names)
+            
+            return {'result': policies_list}
+            
+        except Exception as e:
+            return {'result': []}
+
+
+@register()
+class chain_resolve_for_host(ChainResolveBase):
+    __doc__ = _('Get applicable policies for host with essential attributes')
+    
+    takes_args = (
+        Str('hostname',
+            label=_('Hostname'),
+            doc=_('Hostname (FQDN)'),
+        ),
+    )
+    
+    def execute(self, hostname, **options):
+        """Получить применимые политики для хоста"""
+        try:
+            host_groups = api.Command.host_show(hostname)['result'].get('memberof_hostgroup', [])
+            policy_names = self._get_matching_policies(host_groups, 'computergroup')
+            policies_list = self._build_policies_list(policy_names)
+            
+            return {'result': policies_list}
+            
+        except Exception as e:
+            return {'result': []}

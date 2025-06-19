@@ -28,7 +28,7 @@ PLUGIN_CONFIG = (
 
 
 @register()
-class grouppolicy(LDAPObject):
+class gpo(LDAPObject):
     """
     Group Policy Object.
     """
@@ -84,9 +84,6 @@ class grouppolicy(LDAPObject):
         },
     }
 
-    label = _('Group Policy Objects')
-    label_singular = _('Group Policy Object')
-
     takes_params = (
         Str('displayname',
             label=_('Policy name'),
@@ -121,7 +118,7 @@ class grouppolicy(LDAPObject):
     def _on_finalize(self):
         self.env._merge(**dict(PLUGIN_CONFIG))
         self.container_dn = self.env.container_grouppolicy
-        super(grouppolicy, self)._on_finalize()
+        super(gpo, self)._on_finalize()
 
     def find_gpo_by_displayname(self, ldap, displayname):
         try:
@@ -178,7 +175,7 @@ class grouppolicy(LDAPObject):
 
 
 @register()
-class grouppolicy_add(LDAPCreate):
+class gpo_add(LDAPCreate):
     __doc__ = _('Create a new Group Policy Object.')
     msg_summary = _('Added Group Policy Object "%(value)s"')
 
@@ -211,8 +208,8 @@ class grouppolicy_add(LDAPCreate):
 
 
 @register()
-class grouppolicy_del(LDAPDelete):
-    """Delete a Group Policy Object."""
+class gpo_del(LDAPDelete):
+    __doc__ = _("Delete a Group Policy Object.")
     msg_summary = _('Deleted Group Policy Object "%(value)s"')
 
     def pre_callback(self, ldap, dn, *keys, **options):
@@ -229,8 +226,8 @@ class grouppolicy_del(LDAPDelete):
 
 
 @register()
-class grouppolicy_show(LDAPRetrieve):
-    """Display information about a Group Policy Object."""
+class gpo_show(LDAPRetrieve):
+    __doc__ = _("Display information about a Group Policy Object.")
     msg_summary = _('Found Group Policy Object "%(value)s"')
 
     def pre_callback(self, ldap, dn, attrs_list, *keys, **options):
@@ -239,8 +236,8 @@ class grouppolicy_show(LDAPRetrieve):
 
 
 @register()
-class grouppolicy_find(LDAPSearch):
-    """Search for Group Policy Objects."""
+class gpo_find(LDAPSearch):
+    __doc__ = _("Search for Group Policy Objects.")
     msg_summary = ngettext(
         '%(count)d Group Policy Object matched',
         '%(count)d Group Policy Objects matched', 0
@@ -248,8 +245,8 @@ class grouppolicy_find(LDAPSearch):
 
 
 @register()
-class grouppolicy_mod(LDAPUpdate):
-    """Modify a Group Policy Object."""
+class gpo_mod(LDAPUpdate):
+    __doc__ = _("Modify a Group Policy Object.")
     msg_summary = _('Modified Group Policy Object "%(value)s"')
 
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
