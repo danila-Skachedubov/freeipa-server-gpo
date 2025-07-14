@@ -31,14 +31,15 @@ and creates the necessary directory structure.
 %install
 make install PREFIX=%{_prefix} DESTDIR=%{buildroot} PYTHON_SITELIB=%{python3_sitelibdir}
 
-
 %files
 %doc README.md
 %{_bindir}/%{name}
 %{python3_sitelibdir}/ipa_gpo_install/
-%{python3_sitelibdir}/ipaserver/plugins/gpc.py*
+%{python3_sitelibdir}/ipaserver/plugins/gpo.py*
 %{python3_sitelibdir}/ipaserver/plugins/chain.py*
 %{python3_sitelibdir}/ipaserver/plugins/gpmaster.py*
+%{_datadir}/ipa/ui/js/plugins/grouppolicy/chain.js
+%{_datadir}/ipa/ui/js/plugins/grouppolicy/gpo.js
 %{_datadir}/ipa/schema.d/75-gpc.ldif
 %{_datadir}/ipa/schema.d/75-chain.ldif
 %{_datadir}/ipa/schema.d/75-gpmaster.ldif

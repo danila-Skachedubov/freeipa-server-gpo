@@ -20,12 +20,10 @@ PLUGIN_CONFIG = (
     ('container_gpmaster', DN(('cn', 'etc'))),
 )
 
-
 @register()
 class gpmaster(LDAPObject):
-    """
-    Group Policy Master object.
-    """
+    """Group Policy Master object."""
+    
     container_dn = None
     object_name = _('Group Policy Master')
     object_name_plural = _('Group Policy Masters')
@@ -89,17 +87,14 @@ class gpmaster(LDAPObject):
             return chain_name
         
         try:
-            # Construct chain DN
             chain_dn = DN(('cn', chain_name), 
                          ('cn', 'System'), 
                          api.env.basedn)
             
             if strict:
-                # Verify chain exists
                 ldap = self.api.Backend.ldap2
                 ldap.get_entry(chain_dn, attrs_list=['cn'])
                 
-            logger.debug("Resolved chain '%s' to DN: %s", chain_name, chain_dn)
             return str(chain_dn)
             
         except errors.NotFound:
@@ -107,7 +102,6 @@ class gpmaster(LDAPObject):
                 raise errors.NotFound(
                     reason=_("Chain '{}' not found").format(chain_name)
                 )
-            logger.warning("Chain '%s' not found", chain_name)
             return chain_name
         except Exception as e:
             if strict:
@@ -115,7 +109,6 @@ class gpmaster(LDAPObject):
                     name='chain',
                     error=_("Failed to resolve chain '{}': {}").format(chain_name, str(e))
                 )
-            logger.warning("Failed to resolve chain '%s': %s", chain_name, e)
             return chain_name
 
     def convert_chain_names_to_dns(self, chain_names, strict=False):
@@ -146,10 +139,8 @@ class gpmaster(LDAPObject):
                 chain_name = entry['cn'][0]
                 chain_names.append(chain_name)
             except errors.NotFound:
-                # Chain was deleted, keep DN as-is
                 chain_names.append(chain_dn)
-            except Exception as e:
-                logger.warning("Error converting chain DN %s: %s", chain_dn, str(e))
+            except Exception:
                 chain_names.append(chain_dn)
                 
         return chain_names
@@ -160,7 +151,6 @@ class gpmaster(LDAPObject):
                  ('cn', 'etc'), 
                  api.env.basedn)
 
-
 def _normalize_to_list(value):
     """Normalize value to list."""
     if isinstance(value, str):
@@ -170,10 +160,9 @@ def _normalize_to_list(value):
     else:
         return list(value)
 
-
 @register()
 class gpmaster_mod(LDAPUpdate):
-    __doc__ = _('Modify Group Policy Master.')
+    """Modify Group Policy Master."""
     msg_summary = _('Modified Group Policy Master "%(value)s"')
 
     takes_options = (
@@ -201,7 +190,6 @@ class gpmaster_mod(LDAPUpdate):
 
     def execute(self, *keys, **options):
         """Handle move operations separately, everything else normally."""
-
         if ('moveup_chain' in options and options['moveup_chain']) or \
            ('movedown_chain' in options and options['movedown_chain']):
 
@@ -233,8 +221,9 @@ class gpmaster_mod(LDAPUpdate):
         return super(gpmaster_mod, self).execute(*keys, **options)
 
     def _do_move_operation(self, ldap, dn, keys, options):
-        """Move chain operation."""
-
+        """Move chain operation with validation."""
+        self._validate_move_operations(ldap, dn, options)
+        
         entry = ldap.get_entry(dn, attrs_list=['chainlist'])
         current_chains = [str(chain_dn) for chain_dn in entry.get('chainlist', [])]
 
@@ -250,7 +239,6 @@ class gpmaster_mod(LDAPUpdate):
             chain_names = list(chain_names)
 
         for chain_name in chain_names:
-            # Find chain DN by name
             chain_dn = None
             for existing_dn in current_chains:
                 try:
@@ -276,7 +264,6 @@ class gpmaster_mod(LDAPUpdate):
             chain_to_move = current_chains.pop(current_index)
             current_chains.insert(new_index, chain_to_move)
 
-        # Update entry
         entry['chainlist'] = []
         ldap.update_entry(entry)
 
@@ -284,9 +271,63 @@ class gpmaster_mod(LDAPUpdate):
         entry['chainlist'] = current_chains
         ldap.update_entry(entry)
 
+    def _validate_move_operations(self, ldap, dn, options):
+        """Validate that only active chains can be moved."""
+        entry = ldap.get_entry(dn, attrs_list=['chainlist'])
+        current_chains = [str(chain_dn) for chain_dn in entry.get('chainlist', [])]
+        
+        if 'moveup_chain' in options and options['moveup_chain']:
+            chain_names = options['moveup_chain']
+            if isinstance(chain_names, str):
+                chain_names = [chain_names]
+            elif isinstance(chain_names, tuple):
+                chain_names = list(chain_names)
+                
+            for chain_name in chain_names:
+                chain_found = False
+                for existing_dn in current_chains:
+                    try:
+                        chain_entry = ldap.get_entry(DN(existing_dn), attrs_list=['cn'])
+                        existing_name = chain_entry.get('cn', [None])[0]
+                        if existing_name == chain_name:
+                            chain_found = True
+                            break
+                    except:
+                        continue
+                        
+                if not chain_found:
+                    raise errors.ValidationError(
+                        name='moveup_chain',
+                        error=_("Cannot move inactive chain '{}'. Only active chains can be moved.").format(chain_name)
+                    )
+        
+        if 'movedown_chain' in options and options['movedown_chain']:
+            chain_names = options['movedown_chain']
+            if isinstance(chain_names, str):
+                chain_names = [chain_names]
+            elif isinstance(chain_names, tuple):
+                chain_names = list(chain_names)
+                
+            for chain_name in chain_names:
+                chain_found = False
+                for existing_dn in current_chains:
+                    try:
+                        chain_entry = ldap.get_entry(DN(existing_dn), attrs_list=['cn'])
+                        existing_name = chain_entry.get('cn', [None])[0]
+                        if existing_name == chain_name:
+                            chain_found = True
+                            break
+                    except:
+                        continue
+                        
+                if not chain_found:
+                    raise errors.ValidationError(
+                        name='movedown_chain',
+                        error=_("Cannot move inactive chain '{}'. Only active chains can be moved.").format(chain_name)
+                    )
+
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
         """Handle add/remove operations."""
-
         current_entry = ldap.get_entry(dn, attrs_list=['chainlist'])
 
         self._handle_add_operations(entry_attrs, options)
@@ -297,7 +338,6 @@ class gpmaster_mod(LDAPUpdate):
 
     def _handle_add_operations(self, entry_attrs, options):
         """Handle add chain operations."""
-
         if 'add_chain' in options and options['add_chain']:
             ldap = self.api.Backend.ldap2
             gpmaster_dn = self.obj.get_gpmaster_dn()
@@ -311,10 +351,6 @@ class gpmaster_mod(LDAPUpdate):
                     chain_dn = self.obj.resolve_chain_name(chain_name, strict=True)
                     if chain_dn not in current_chains:
                         current_chains.append(chain_dn)
-                        logger.debug("Added chain '%s' to GPMaster", chain_name)
-                    else:
-                        logger.warning("Chain '%s' already exists in GPMaster", chain_name)
-
                 except errors.NotFound:
                     raise errors.NotFound(
                         reason=_("Chain '{}' not found").format(chain_name)
@@ -325,7 +361,6 @@ class gpmaster_mod(LDAPUpdate):
 
     def _handle_remove_operations(self, ldap, current_entry, entry_attrs, options):
         """Handle remove chain operations."""
-
         if 'remove_chain' in options and options['remove_chain']:
             chain_names = _normalize_to_list(options['remove_chain'])
             current_chains = [str(dn) for dn in current_entry.get('chainlist', [])]
@@ -339,17 +374,14 @@ class gpmaster_mod(LDAPUpdate):
             for chain_name in chain_names:
                 removed = False
                 
-                # Try to find by resolved DN
                 try:
                     chain_dn = self.obj.resolve_chain_name(chain_name, strict=False)
                     if chain_dn in current_chains:
                         current_chains.remove(chain_dn)
                         removed = True
-                        logger.debug("Removed chain '%s' from GPMaster", chain_name)
                 except:
                     pass
 
-                # If not found by DN, try to find by name lookup
                 if not removed:
                     for existing_dn in current_chains[:]:
                         try:
@@ -358,7 +390,6 @@ class gpmaster_mod(LDAPUpdate):
                             if existing_name == chain_name:
                                 current_chains.remove(existing_dn)
                                 removed = True
-                                logger.debug("Removed chain '%s' from GPMaster by name", chain_name)
                                 break
                         except errors.NotFound:
                             continue
@@ -372,7 +403,6 @@ class gpmaster_mod(LDAPUpdate):
 
     def _handle_standard_modifications(self, entry_attrs, options):
         """Handle standard modification operations."""
-        
         if 'pdcemulator' in options and options['pdcemulator']:
             entry_attrs['pdcemulator'] = options['pdcemulator']
 
@@ -380,17 +410,14 @@ class gpmaster_mod(LDAPUpdate):
             converted_chains = self.obj.convert_chain_names_to_dns(options['chainlist'], strict=True)
             entry_attrs['chainlist'] = converted_chains
 
-
 @register()
 class gpmaster_show(LDAPRetrieve):
-    __doc__ = _('Display information about Group Policy Master.')
+    """Display information about Group Policy Master."""
 
     def get_args(self):
-        # Override to make cn optional with default value
         return ()
 
     def execute(self, *keys, **options):
-        # Use default GPMaster DN
         gpmaster_dn = self.obj.get_gpmaster_dn()
 
         try:

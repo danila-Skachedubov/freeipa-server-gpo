@@ -26,9 +26,13 @@ install: build
 	cp -r ipa_gpo_install $(DESTDIR)$(PYTHON_SITELIB)/
 
 	# IPA plugins
-	install -D -m 644 plugin/ipaserver/plugins/gpc.py $(DESTDIR)$(PYTHON_SITELIB)/ipaserver/plugins/gpc.py
+	install -D -m 644 plugin/ipaserver/plugins/gpo.py $(DESTDIR)$(PYTHON_SITELIB)/ipaserver/plugins/gpo.py
 	install -D -m 644 plugin/ipaserver/plugins/chain.py $(DESTDIR)$(PYTHON_SITELIB)/ipaserver/plugins/chain.py
 	install -D -m 644 plugin/ipaserver/plugins/gpmaster.py $(DESTDIR)$(PYTHON_SITELIB)/ipaserver/plugins/gpmaster.py
+
+	# IPA UI plugins
+	install -D -m 644 plugin/ui/grouppolicy/chain.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/grouppolicy/chain.js
+	install -D -m 644 plugin/ui/grouppolicy/gpo.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/grouppolicy/gpo.js
 
 	# IPA schemas and updates
 	@for schema in plugin/schema.d/*.ldif; do \
