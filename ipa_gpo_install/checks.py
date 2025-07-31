@@ -3,10 +3,10 @@
 import os
 import subprocess
 import logging
-import ldap
 import gettext
 import locale
-from os.path import dirname, join, abspath
+
+import ldap
 
 from ipalib import api
 from ipalib import krb_utils
@@ -238,7 +238,7 @@ class IPAChecker:
         try:
             self.logger.debug(_("Checking if SYSVOL share exists"))
             cmd = ["net", "conf", "list"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
             if result.returncode != 0:
                 self.logger.error(_("Error listing Samba shares: {}").format(result.stderr))
                 return False

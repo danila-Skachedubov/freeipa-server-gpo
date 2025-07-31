@@ -5,16 +5,16 @@ import sys
 import logging
 import gettext
 import locale
-from typing import Dict, Tuple, List, Any, Callable
-from os.path import dirname, join, abspath
+from typing import Dict, Tuple, Any, Callable
 
 from ipapython.config import IPAOptionParser
-from ipapython.admintool import ScriptError, admin_cleanup_global_argv
+from ipapython.admintool import  admin_cleanup_global_argv
 from ipapython import version
-from ipalib import api, errors
 from ipapython.ipa_log_manager import standard_logging_setup
+from ipalib import api, errors
 from ipaplatform.paths import paths
-from ipaserver.install.installutils import run_script
+#from ipaserver.install.installutils import run_script
+from ipaserver.install.installutils import (run_script)
 
 from ipa_gpo_install.checks import IPAChecker
 from ipa_gpo_install.actions import IPAActions
@@ -155,7 +155,7 @@ def execute_required_actions(actions: IPAActions, check_results: Dict[str, Any])
     for task in tasks:
         if not run_task(*task):
             return False
-    
+
     if not check_results['schema_complete']:
         logger.warning(_("About to perform irreversible schema update"))
         if not run_task(_("Run ipa-server-upgrade"), actions.run_ipa_server_upgrade):
@@ -167,7 +167,7 @@ def execute_required_actions(actions: IPAActions, check_results: Dict[str, Any])
 def main():
     """Main entry point for the application"""
 
-    safe_options, options = parse_options()
+    _safe_options, options = parse_options()
     if not setup_environment(options):
         return 1
     try:
@@ -178,7 +178,7 @@ def main():
 
         logger.info(_("Performing configuration environment checks"))
         check_results = perform_configuration_checks(checker)
- 
+
         if options.check_only:
             print(_("Check-only mode: all checks completed"))
             return 0

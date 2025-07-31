@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
+"""Actions module for IPA GPO installation - handles system operations."""
 
 import os
 import logging
 import gettext
 import locale
 from pathlib import Path
-from os.path import dirname, join, abspath
 
 from ipalib import api
 from ipapython import ipautil
-from ipaplatform.paths import paths
 from .config import LOCALE_DIR, FREEIPA_BASE_PATH, get_domain_sysvol_path
 
 
@@ -132,7 +131,9 @@ class IPAActions:
             self.logger.info(_("Creating SYSVOL share for: {}").format(sysvol_path))
 
             if not os.path.exists(sysvol_path):
-                self.logger.error(_("Cannot create share: directory {} does not exist").format(sysvol_path))
+                self.logger.error(
+                    _("Cannot create share: directory {} does not exist").format(sysvol_path)
+                )
                 return False
 
             cmd = ["net", "conf", "addshare", "sysvol", sysvol_path, "writeable=y", "guest_ok=N"]
@@ -140,7 +141,9 @@ class IPAActions:
             result = ipautil.run(cmd, raiseonerr=False)
 
             if result.returncode != 0:
-                self.logger.error(_("Failed to create SYSVOL share: {}").format(result.error_output))
+                self.logger.error(
+                    _("Failed to create SYSVOL share: {}").format(result.error_output)
+                )
                 return False
 
             self.logger.info(_("SYSVOL share created successfully"))
@@ -149,7 +152,7 @@ class IPAActions:
         except Exception as e:
             self.logger.error(_("Error creating SYSVOL share: {}").format(e))
             return False
-    
+
     def run_ipa_server_upgrade(self):
         """
         Запустить ipa-server-upgrade для применения схем и обновлений
@@ -165,16 +168,11 @@ class IPAActions:
 
             if result.returncode == 0:
                 self.logger.info(_("ipa-server-upgrade completed successfully"))
-
-                if not self.restart_oddjob():
-                    self.logger.warning(_("Failed to restart oddjob service"))
-
-                
                 return True
-            else:
-                error_msg = result.error_output or _("Unknown error")
-                self.logger.error(_("ipa-server-upgrade failed: {}").format(error_msg))
-                return False
+
+            error_msg = result.error_output or _("Unknown error")
+            self.logger.error(_("ipa-server-upgrade failed: {}").format(error_msg))
+            return False
 
         except Exception as e:
             self.logger.error(_("Error running ipa-server-upgrade: {}").format(e))
@@ -192,7 +190,7 @@ class IPAActions:
 
             status_cmd = ['systemctl', 'is-active', 'oddjob']
             status_result = ipautil.run(status_cmd, raiseonerr=False)
-            
+
             if status_result.returncode != 0:
                 self.logger.info(_("oddjob service is not running, starting it"))
                 start_cmd = ['systemctl', 'start', 'oddjob']
@@ -204,7 +202,7 @@ class IPAActions:
 
             if result.returncode == 0:
                 self.logger.info(_("oddjob service restarted successfully"))
-                
+
                 return True
             else:
                 error_msg = result.error_output or _("Unknown error")
