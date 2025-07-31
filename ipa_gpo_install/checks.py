@@ -11,8 +11,8 @@ from os.path import dirname, join, abspath
 from ipalib import api
 from ipalib import krb_utils
 from ipapython import ipautil
+from .config import LOCALE_DIR, get_domain_sysvol_path
 
-LOCALE_DIR = '/usr/share/locale'
 
 try:
     locale.setlocale(locale.LC_ALL, '')
@@ -199,7 +199,7 @@ class IPAChecker:
             True if directory exists, False otherwise
         """
         try:
-            sysvol_path = f"/var/lib/freeipa/sysvol/{self.api.env.domain}"
+            sysvol_path = get_domain_sysvol_path(self.api.env.domain)
 
             if os.path.exists(sysvol_path) and os.path.isdir(sysvol_path):
 

@@ -2,7 +2,6 @@
 
 import os
 import logging
-import subprocess
 import gettext
 import locale
 from pathlib import Path
@@ -11,9 +10,8 @@ from os.path import dirname, join, abspath
 from ipalib import api
 from ipapython import ipautil
 from ipaplatform.paths import paths
+from .config import LOCALE_DIR, FREEIPA_BASE_PATH, get_domain_sysvol_path
 
-
-LOCALE_DIR = '/usr/share/locale'
 
 try:
     locale.setlocale(locale.LC_ALL, '')
@@ -108,8 +106,8 @@ class IPAActions:
         Returns True if creation was successful, False otherwise.
         """
         try:
-            freeipa_dir = Path("/var/lib/freeipa")
-            sysvol_path = freeipa_dir / "sysvol" / self.api.env.domain
+            freeipa_dir = Path(FREEIPA_BASE_PATH)
+            sysvol_path = get_domain_sysvol_path(self.api.env.domain)
             policies_path = sysvol_path / "Policies"
             scripts_path = sysvol_path / "scripts"
 

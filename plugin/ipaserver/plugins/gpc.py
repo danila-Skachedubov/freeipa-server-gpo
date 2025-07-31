@@ -53,15 +53,12 @@ class grouppolicy(LDAPObject):
             'ipapermright': {'read', 'search', 'compare'},
             'ipapermdefaultattr': {
                 'cn', 'displayName', 'distinguishedName', 'flags',
-                'objectclass',
+                'objectclass', 'gPCFileSysPath', 'versionNumber',
             },
         },
         'System: Read Group Policy Objects Content': {
             'ipapermbindruletype': 'permission',
             'ipapermright': {'read'},
-            'ipapermdefaultattr': {
-                'gPCFileSysPath', 'versionNumber'
-            },
             'default_privileges': {'Group Policy Administrators'},
         },
         'System: Add Group Policy Objects': {
@@ -138,6 +135,45 @@ class grouppolicy(LDAPObject):
                 reason=_('%(pkey)s: Group Policy Object not found') % {'pkey': displayname}
             )
 
+    def _call_dbus_method(self, method_name, guid, domain, fail_on_error=True):
+        """Universal D-Bus method caller for GPO operations."""
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+        params = [guid, domain]
+
+        try:
+            bus = dbus.SystemBus()
+            obj = bus.get_object('org.freeipa.server', '/',
+                               follow_name_owner_changes=True)
+            server = dbus.Interface(obj, 'org.freeipa.server')
+
+            method = getattr(server, method_name)
+            ret, stdout, stderr = method(*params)
+
+            if ret != 0:
+                error_msg = f"Failed to {method_name.replace('_', ' ')}: {stderr}"
+                logger.error(error_msg)
+
+                if fail_on_error:
+                    raise errors.ExecutionError(
+                        message=_(f'Failed to {method_name.replace("_", " ")}: %(error)s')
+                                % {'error': stderr or _('Unknown error')}
+                    )
+                else:
+                    logger.warning(error_msg)
+            else:
+                logger.info(f"Successfully completed {method_name} for GUID: {guid}")
+
+        except dbus.DBusException as e:
+            error_msg = f'Failed to call D-Bus {method_name}: {str(e)}'
+            logger.error(error_msg)
+
+            if fail_on_error:
+                raise errors.ExecutionError(
+                    message=_('Failed to communicate with D-Bus service')
+                )
+            else:
+                logger.warning(error_msg)
+
 
 @register()
 class grouppolicy_add(LDAPCreate):
@@ -167,31 +203,7 @@ class grouppolicy_add(LDAPCreate):
     def post_callback(self, ldap, dn, entry_attrs, *keys, **options):
         guid = str(dn[0].value)
         domain = api.env.domain.lower()
-
-        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-        params = [guid, domain]
-        while len(params) < 2:
-            params.append('')
-
-        try:
-            bus = dbus.SystemBus()
-            obj = bus.get_object('org.freeipa.server', '/',
-                                follow_name_owner_changes=True)
-            server = dbus.Interface(obj, 'org.freeipa.server')
-            ret, stdout, stderr = server.create_gpo_structure(*params)
-
-            if ret != 0:
-                logger.error("Failed to create GPO structure: %s", stderr)
-                raise errors.ExecutionError(
-                    message=_('Failed to create GPO structure: %(error)s')
-                            % {'error': stderr or _('Unknown error')}
-                )
-
-        except dbus.DBusException as e:
-            logger.error('Failed to call DBus: %s', str(e))
-            raise errors.ExecutionError(
-                message=_('Failed to communicate with DBus service')
-            )
+        self.obj._call_dbus_method('create_gpo_structure', guid, domain, fail_on_error=True)
 
         return dn
 
@@ -204,6 +216,14 @@ class grouppolicy_del(LDAPDelete):
     def pre_callback(self, ldap, dn, *keys, **options):
         entry = self.obj.find_gpo_by_displayname(ldap, keys[0])
         return entry.dn
+
+    def post_callback(self, ldap, dn, entry_attrs, *keys, **options):
+
+        guid = str(dn[0].value)
+        domain = api.env.domain.lower()
+        self.obj._call_dbus_method('delete_gpo_structure', guid, domain, fail_on_error=False)
+
+        return dn
 
 
 @register()

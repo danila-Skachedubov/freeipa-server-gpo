@@ -2,10 +2,22 @@
 
 import os
 import sys
-import subprocess
+from ipa_gpo_install.config import get_policies_path, get_policy_path, get_gpt_ini_path
+
+
+def set_permissions_recursively(path):
+    """Set proper permissions: 755 for directories, 644 for files"""
+    for root, dirs, files in os.walk(path):
+        for directory in dirs:
+            dir_path = os.path.join(root, directory)
+            os.chmod(dir_path, 0o755)
+
+        for file in files:
+            file_path = os.path.join(root, file)
+            os.chmod(file_path, 0o644)
+
 
 def main():
-
     if len(sys.argv) < 3:
         print("Error: Insufficient arguments", file=sys.stderr)
         return 1
@@ -13,8 +25,8 @@ def main():
     guid = sys.argv[1]
     domain = sys.argv[2]
 
-    policies_path = f"/var/lib/freeipa/sysvol/{domain}/Policies"
-    policy_path = os.path.join(policies_path, guid)
+    policies_path = get_policies_path(domain)
+    policy_path = get_policy_path(domain, guid)
 
     if not os.path.exists(policies_path):
         try:
@@ -31,15 +43,15 @@ def main():
 
         os.makedirs(machine_path, mode=0o755, exist_ok=True)
         os.makedirs(user_path, mode=0o755, exist_ok=True)
-        gpt_ini_path = os.path.join(policy_path, "GPT.INI")
+
+        gpt_ini_path = get_gpt_ini_path(domain, guid)
         with open(gpt_ini_path, 'w') as f:
             f.write("[General]\n")
             f.write("Version=0\n")
 
         print(f"Created GPT.INI file: {gpt_ini_path}")
-        subprocess.run(["chmod", "-R", "755", policy_path], check=True)
 
-
+        set_permissions_recursively(policy_path)
         print("GPO structure creation completed successfully")
         return 0
 
