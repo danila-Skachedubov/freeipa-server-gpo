@@ -124,7 +124,9 @@ class IPAChecker:
 
                 if result.returncode != 0:
                     if service == 'oddjob':
-                        self.logger.warning(_("Service {} is not active - will be started during installation").format(service))
+                        self.logger.warning(_(
+                            "Service {} is not active - will be started during installation"
+                        ).format(service))
                     else:
                         self.logger.error(_("Service {} is not active").format(service))
                         return False
@@ -162,7 +164,9 @@ class IPAChecker:
 
             for class_name in object_class_names:
                 if schema.get_obj(ldap.schema.ObjectClass, class_name) is None:
-                    self.logger.debug(_("Object class '{}' does not exist in schema").format(class_name))
+                    self.logger.debug(_(
+                        "Object class '{}' does not exist in schema"
+                    ).format(class_name))
                     return False
 
             self.logger.debug(_("All required object classes exist in schema"))

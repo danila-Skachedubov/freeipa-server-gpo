@@ -1,21 +1,17 @@
-from ipalib import api, errors
-from ipalib import Str, Int, Command
-from ipalib.plugable import Registry
-from .baseldap import (
-    LDAPObject,
-    LDAPCreate,
-    LDAPDelete,
-    LDAPUpdate,
-    LDAPSearch,
-    LDAPRetrieve,
-)
-from ipalib import _, ngettext
-from ipapython.dn import DN
+import logging
 import uuid
+
 import dbus
 import dbus.mainloop.glib
-import logging
-from ipapython.ipautil import run
+from ipalib import api, errors, _, ngettext
+from ipalib import Str, Int
+from ipalib.plugable import Registry
+from ipapython.dn import DN
+
+from ipaserver.plugins.baseldap import (
+    LDAPObject, LDAPCreate, LDAPDelete, LDAPUpdate,
+    LDAPSearch, LDAPRetrieve,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +142,7 @@ class gpo(LDAPObject):
             server = dbus.Interface(obj, 'org.freeipa.server')
 
             method = getattr(server, method_name)
-            ret, stdout, stderr = method(*params)
+            ret, stderr = method(*params)
 
             if ret != 0:
                 error_msg = f"Failed to {method_name.replace('_', ' ')}: {stderr}"
@@ -160,7 +156,7 @@ class gpo(LDAPObject):
                 else:
                     logger.warning(error_msg)
             else:
-                logger.info(f"Successfully completed {method_name} for GUID: {guid}")
+                logger.info("Successfully completed %s for GUID: %s", method_name, guid)
 
         except dbus.DBusException as e:
             error_msg = f'Failed to call D-Bus {method_name}: {str(e)}'
@@ -184,7 +180,8 @@ class gpo_add(LDAPCreate):
         try:
             self.obj.find_gpo_by_displayname(ldap, displayname)
             raise errors.InvocationError(
-                message=_('A Group Policy Object with displayName "%s" already exists.') % displayname
+                message=_('A Group Policy Object with displayName' \
+                ' "%s" already exists.') % displayname
             )
         except errors.NotFound:
             pass
@@ -193,7 +190,10 @@ class gpo_add(LDAPCreate):
         dn = DN(('cn', guid), api.env.container_grouppolicy, api.env.basedn)
         entry_attrs['cn'] = guid
         entry_attrs['distinguishedname'] = str(dn)
-        entry_attrs['gpcfilesyspath'] = f"\\\\{api.env.domain}\\SysVol\\{api.env.domain}\\Policies\\{guid}"
+        entry_attrs['gpcfilesyspath'] = (
+            f"\\\\{api.env.domain}\\SysVol\\{api.env.domain}"
+            f"\\Policies\\{guid}"
+        )
         entry_attrs['flags'] = 0
         entry_attrs['versionnumber'] = 0
 
@@ -265,7 +265,8 @@ class gpo_mod(LDAPUpdate):
             try:
                 self.obj.find_gpo_by_displayname(ldap, new_name)
                 raise errors.DuplicateEntry(
-                    message=_('A Group Policy Object with displayName "%s" already exists.') % new_name
+                    message=_('A Group Policy Object with displayName' \
+                    ' "%s" already exists.') % new_name
                 )
             except errors.NotFound:
                 pass

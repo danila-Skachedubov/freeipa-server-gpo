@@ -1,15 +1,14 @@
-from ipalib import api, errors
-from ipalib import Str, Command, output
-from ipalib.plugable import Registry
-from .baseldap import (
-    LDAPObject, LDAPCreate, LDAPDelete, LDAPUpdate,
-    LDAPSearch, LDAPRetrieve, LDAPQuery, LDAPAddMember, LDAPRemoveMember,
-)
-from ipalib import _, ngettext
-from ipapython.dn import DN
-from ipalib import Int, Str, Flag, Bool
 import logging
-import time
+
+from ipalib import api, errors, _, ngettext
+from ipalib import Str, Command, output, Flag, Bool
+from ipalib.plugable import Registry
+from ipapython.dn import DN
+
+from ipaserver.plugins.baseldap import (
+    LDAPObject, LDAPCreate, LDAPDelete, LDAPUpdate,
+    LDAPSearch, LDAPRetrieve, LDAPAddMember, LDAPRemoveMember,
+)
 
 logger = logging.getLogger(__name__)
 register = Registry()
@@ -113,7 +112,10 @@ class chain(LDAPObject):
             'replaces_global_anonymous_aci': True,
             'ipapermbindruletype': 'all',
             'ipapermright': {'read', 'search', 'compare'},
-            'ipapermdefaultattr': {'cn', 'objectclass', 'displayname', 'usergroup', 'computergroup', 'gplink', 'active'},
+            'ipapermdefaultattr': {
+                'cn', 'objectclass', 'displayname', 'usergroup',
+                'computergroup', 'gplink', 'active'
+            },
         },
         'System: Add Group Policy Chains': {
             'ipapermright': {'add'},
@@ -125,18 +127,29 @@ class chain(LDAPObject):
         },
         'System: Modify Group Policy Chains': {
             'ipapermright': {'write'},
-            'ipapermdefaultattr': {'cn', 'displayname', 'usergroup', 'computergroup', 'gplink', 'active'},
+            'ipapermdefaultattr': {
+                'cn', 'displayname', 'usergroup', 'computergroup', 'gplink', 'active'
+            },
             'default_privileges': {'Group Policy Administrators'},
         },
     }
 
     takes_params = (
-        Str('cn', cli_name='name', label=_('Chain name'), doc=_('Group Policy Chain name'), primary_key=True, autofill=False),
-        Str('displayname?', cli_name='display_name', label=_('Display name'), doc=_('Display name for the chain')),
-        Str('usergroup?', cli_name='user_group', label=_('User group'), doc=_('User group name for this chain')),
-        Str('computergroup?', cli_name='computer_group', label=_('Computer group'), doc=_('Computer group name for this chain')),
-        Str('gplink*', cli_name='gp_link', label=_('Group Policy links'), doc=_('List of Group Policy Container names')),
-        Bool('active?', cli_name='active', label=_('Active'), doc=_('Whether this chain is active'), default=False),
+        Str('cn', cli_name='name', label=_('Chain name'),
+            doc=_('Group Policy Chain name'), primary_key=True,
+            autofill=False),
+        Str('displayname?', cli_name='display_name',
+            label=_('Display name'),
+            doc=_('Display name for the chain')),
+        Str('usergroup?', cli_name='user_group', label=_('User group'),
+            doc=_('User group name for this chain')),
+        Str('computergroup?', cli_name='computer_group',
+            label=_('Computer group'),
+            doc=_('Computer group name for this chain')),
+        Str('gplink*', cli_name='gp_link', label=_('Group Policy links'),
+            doc=_('List of Group Policy Container names')),
+        Bool('active?', cli_name='active', label=_('Active'),
+             doc=_('Whether this chain is active'), default=False),
     )
 
     def _on_finalize(self):
@@ -171,9 +184,15 @@ class chain(LDAPObject):
             active_value = entry_attrs.get('active', [])
             if active_value:
                 if isinstance(active_value, list):
-                    entry_attrs['active'] = [active_value[0].upper() == 'TRUE' if isinstance(active_value[0], str) else bool(active_value[0])]
+                    is_true = (active_value[0].upper() == 'TRUE'
+                            if isinstance(active_value[0], str)
+                            else bool(active_value[0]))
+                    entry_attrs['active'] = [is_true]
                 else:
-                    entry_attrs['active'] = [active_value.upper() == 'TRUE' if isinstance(active_value, str) else bool(active_value)]
+                    is_true = (active_value.upper() == 'TRUE'
+                              if isinstance(active_value, str)
+                              else bool(active_value))
+                    entry_attrs['active'] = [is_true]
             else:
                 entry_attrs['active'] = [False]
 
@@ -240,16 +259,24 @@ class chain(LDAPObject):
         converted = {}
         for attr_name in OBJECT_TYPE_MAPPING:
             if attr_name in options and options[attr_name]:
-                converted[attr_name] = self.resolve_object_name(attr_name, options[attr_name], strict)
+                converted[attr_name] = self.resolve_object_name(
+                    attr_name, options[attr_name], strict
+                )
 
         if 'gplink' in options and options['gplink']:
             gp_names = options['gplink']
             if isinstance(gp_names, str):
-                converted['gplink'] = [self.resolve_object_name('gplink', gp_names, strict)]
+                converted['gplink'] = [
+                    self.resolve_object_name('gplink', gp_names, strict)
+                ]
             elif isinstance(gp_names, tuple):
-                converted['gplink'] = [self.resolve_object_name('gplink', name, strict) for name in gp_names]
+                converted['gplink'] = [
+                    self.resolve_object_name('gplink', name, strict) for name in gp_names
+                ]
             else:
-                converted['gplink'] = [self.resolve_object_name('gplink', name, strict) for name in gp_names]
+                converted['gplink'] = [
+                    self.resolve_object_name('gplink', name, strict) for name in gp_names
+                ]
 
         return converted
 
@@ -307,8 +334,9 @@ class chain_toggle_base(Command):
             updated_chain = api.Command.chain_show(cn)
             return {'result': updated_chain['result']}
 
-        except Exception as e:
-            logger.error("Failed to %s chain '%s': %s", 'enable' if enable else 'disable', cn, str(e))
+        except Exception as exc:
+            logger.error("Failed to %s chain '%s': %s",
+                        'enable' if enable else 'disable', cn, str(exc))
             raise
 
 @register()
@@ -425,7 +453,8 @@ class chain_mod(LDAPUpdate):
             result_dict = {}
             for attr_name in entry_attrs:
                 attr_value = entry_attrs[attr_name]
-                if isinstance(attr_value, list) and len(attr_value) == 1 and attr_name not in ['gplink']:
+                if (isinstance(attr_value, list) and len(attr_value) == 1 and
+                    attr_name not in ['gplink']):
                     result_dict[attr_name] = attr_value[0]
                 else:
                     result_dict[attr_name] = attr_value
@@ -467,7 +496,7 @@ class chain_mod(LDAPUpdate):
                     if display_name == gp_name:
                         gp_dn = existing_dn
                         break
-                except:
+                except Exception:
                     continue
             if not gp_dn:
                 continue
@@ -508,7 +537,9 @@ class chain_mod(LDAPUpdate):
 
         if 'add_computergroup' in options and options['add_computergroup']:
             hostgroup_name = options['add_computergroup']
-            validated = self.obj.convert_names_to_dns({'computergroup': hostgroup_name}, strict=True)
+            validated = self.obj.convert_names_to_dns(
+                {'computergroup': hostgroup_name}, strict=True
+            )
             entry_attrs['computergroup'] = validated['computergroup']
 
     def _handle_remove_operations(self, ldap, current_entry, entry_attrs, options):
@@ -547,7 +578,8 @@ class chain_del(LDAPDelete):
 class chain_find(LDAPSearch):
     """Search for Group Policy Chains."""
 
-    msg_summary = ngettext('%(count)d Group Policy Chain matched', '%(count)d Group Policy Chains matched', 0)
+    msg_summary = ngettext('%(count)d Group Policy Chain matched',
+                          '%(count)d Group Policy Chains matched', 0)
 
     def __init__(self, *args, **kwargs):
         super(chain_find, self).__init__(*args, **kwargs)
@@ -561,7 +593,6 @@ class chain_find(LDAPSearch):
 
     def post_callback(self, ldap, entries, truncated, *args, **options):
         """Sort chains by GPMaster order."""
-        start_time = time.time()
 
         if not options.get('raw', False) and entries:
             for entry_attrs in entries:
@@ -823,7 +854,7 @@ class chain_add_gpo(LDAPAddMember):
         else:
             return self._extract_displayname_from_value(str(value))
 
-    def post_callback(self, ldap, completed, failed, dn, entry_attrs, *keys, **options):
+    def post_callback(self, ldap, completed, dn, entry_attrs, *keys, **options):
         """Post-processing after adding GPOs."""
         if not options.get('raw', False):
             self.obj.convert_attribute_members(entry_attrs, *keys, **options)
@@ -868,7 +899,8 @@ class chain_remove_gpo(LDAPRemoveMember):
                     except errors.NotFound:
                         for existing_dn in current_gplinks:
                             try:
-                                gp_entry = ldap.get_entry(DN(existing_dn), attrs_list=GP_LOOKUP_ATTRIBUTES)
+                                gp_entry = ldap.get_entry(DN(existing_dn),
+                                                        attrs_list=GP_LOOKUP_ATTRIBUTES)
                                 existing_name = (
                                     gp_entry.get('displayName', [None])[0] or
                                     gp_entry.get('cn', [None])[0]
@@ -901,7 +933,7 @@ class chain_remove_gpo(LDAPRemoveMember):
         else:
             return self._extract_displayname_from_value(str(value))
 
-    def post_callback(self, ldap, completed, failed, dn, entry_attrs, *keys, **options):
+    def post_callback(self, ldap, completed, dn, entry_attrs, *keys, **options):
         """Post-processing after removing GPOs."""
         if not options.get('raw', False):
             self.obj.convert_attribute_members(entry_attrs, *keys, **options)

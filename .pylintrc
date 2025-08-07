@@ -13,9 +13,18 @@ disable=
     broad-except,
     broad-exception-caught,
     no-else-return,
-    line-too-long,
     no-name-in-module,
     no-member,
+    protected-access,
+    abstract-method,
+    raise-missing-from,
+    unused-argument,
+    too-few-public-methods,
+    super-with-arguments,
+    arguments-differ,
+    too-many-ancestors,
+    no-else-raise,
+    too-many-nested-blocks,
 
 [REPORTS]
 output-format=colorized

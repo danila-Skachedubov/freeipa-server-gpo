@@ -77,7 +77,9 @@ def setup_environment(options: Any) -> bool:
             logger.info(_("Connected to LDAP server"))
             return True
         except errors.ACIError:
-            logger.error(_("Outdated Kerberos credentials. Use kdestroy and kinit to update your ticket"))
+            logger.error(_(
+                "Outdated Kerberos credentials. Use kdestroy and kinit to update your ticket")
+            )
             return False
         except errors.DatabaseError:
             logger.error(_("Cannot connect to the LDAP database. Please check if IPA is running"))

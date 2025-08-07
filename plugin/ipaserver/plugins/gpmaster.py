@@ -1,15 +1,12 @@
-from ipalib import api, errors
-from ipalib import Str, Command
-from ipalib.plugable import Registry
-from .baseldap import (
-    LDAPObject,
-    LDAPUpdate,
-    LDAPRetrieve,
-)
-from ipalib import _, ngettext
-from ipapython.dn import DN
-from ipalib import Int, Str, Flag
 import logging
+
+from ipalib import api, errors, _, Str
+from ipalib.plugable import Registry
+from ipapython.dn import DN
+
+from ipaserver.plugins.baseldap import (
+    LDAPObject, LDAPUpdate, LDAPRetrieve,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +20,7 @@ PLUGIN_CONFIG = (
 @register()
 class gpmaster(LDAPObject):
     """Group Policy Master object."""
-    
+
     container_dn = None
     object_name = _('Group Policy Master')
     object_name_plural = _('Group Policy Masters')
@@ -85,18 +82,18 @@ class gpmaster(LDAPObject):
         """Convert chain name to DN."""
         if chain_name.startswith(('cn=', 'CN=')):
             return chain_name
-        
+
         try:
-            chain_dn = DN(('cn', chain_name), 
-                         ('cn', 'System'), 
+            chain_dn = DN(('cn', chain_name),
+                         ('cn', 'System'),
                          api.env.basedn)
-            
+
             if strict:
                 ldap = self.api.Backend.ldap2
                 ldap.get_entry(chain_dn, attrs_list=['cn'])
-                
+
             return str(chain_dn)
-            
+
         except errors.NotFound:
             if strict:
                 raise errors.NotFound(
@@ -115,10 +112,10 @@ class gpmaster(LDAPObject):
         """Convert chain names to DNs."""
         if not chain_names:
             return []
-            
+
         def resolve_chain(name):
             return self.resolve_chain_name(str(name), strict)
-        
+
         if isinstance(chain_names, str):
             return [resolve_chain(chain_names)]
         elif isinstance(chain_names, tuple):
@@ -130,7 +127,7 @@ class gpmaster(LDAPObject):
         """Convert chain DNs to readable names."""
         if not chain_dns:
             return []
-            
+
         chain_names = []
         for chain_dn in chain_dns:
             try:
@@ -142,13 +139,13 @@ class gpmaster(LDAPObject):
                 chain_names.append(chain_dn)
             except Exception:
                 chain_names.append(chain_dn)
-                
+
         return chain_names
 
     def get_gpmaster_dn(self):
         """Get GPMaster DN."""
-        return DN(('cn', 'grouppolicymaster'), 
-                 ('cn', 'etc'), 
+        return DN(('cn', 'grouppolicymaster'),
+                 ('cn', 'etc'),
                  api.env.basedn)
 
 def _normalize_to_list(value):
@@ -201,13 +198,16 @@ class gpmaster_mod(LDAPUpdate):
             entry_attrs = ldap.get_entry(dn, self.obj.default_attributes)
             if not options.get('raw', False):
                 if 'chainlist' in entry_attrs:
-                    chain_names = self.obj.convert_chain_dns_to_names(ldap, entry_attrs['chainlist'])
+                    chain_names = self.obj.convert_chain_dns_to_names(
+                        ldap, entry_attrs['chainlist']
+                    )
                     entry_attrs['chainlist'] = chain_names
 
             result_dict = {}
             for attr_name in entry_attrs:
                 attr_value = entry_attrs[attr_name]
-                if isinstance(attr_value, list) and len(attr_value) == 1 and attr_name not in ['chainlist']:
+                if (isinstance(attr_value, list) and len(attr_value) == 1 and
+                        attr_name not in ['chainlist']):
                     result_dict[attr_name] = attr_value[0]
                 else:
                     result_dict[attr_name] = attr_value
@@ -223,7 +223,7 @@ class gpmaster_mod(LDAPUpdate):
     def _do_move_operation(self, ldap, dn, keys, options):
         """Move chain operation with validation."""
         self._validate_move_operations(ldap, dn, options)
-        
+
         entry = ldap.get_entry(dn, attrs_list=['chainlist'])
         current_chains = [str(chain_dn) for chain_dn in entry.get('chainlist', [])]
 
@@ -247,9 +247,9 @@ class gpmaster_mod(LDAPUpdate):
                     if existing_name == chain_name:
                         chain_dn = existing_dn
                         break
-                except:
+                except Exception:
                     continue
-                    
+
             if not chain_dn:
                 continue
 
@@ -260,7 +260,7 @@ class gpmaster_mod(LDAPUpdate):
                 new_index = current_index + 1
             else:
                 continue
-                
+
             chain_to_move = current_chains.pop(current_index)
             current_chains.insert(new_index, chain_to_move)
 
@@ -275,14 +275,14 @@ class gpmaster_mod(LDAPUpdate):
         """Validate that only active chains can be moved."""
         entry = ldap.get_entry(dn, attrs_list=['chainlist'])
         current_chains = [str(chain_dn) for chain_dn in entry.get('chainlist', [])]
-        
+
         if 'moveup_chain' in options and options['moveup_chain']:
             chain_names = options['moveup_chain']
             if isinstance(chain_names, str):
                 chain_names = [chain_names]
             elif isinstance(chain_names, tuple):
                 chain_names = list(chain_names)
-                
+
             for chain_name in chain_names:
                 chain_found = False
                 for existing_dn in current_chains:
@@ -292,22 +292,23 @@ class gpmaster_mod(LDAPUpdate):
                         if existing_name == chain_name:
                             chain_found = True
                             break
-                    except:
+                    except Exception:
                         continue
-                        
+
                 if not chain_found:
                     raise errors.ValidationError(
                         name='moveup_chain',
-                        error=_("Cannot move inactive chain '{}'. Only active chains can be moved.").format(chain_name)
+                        error=_("Cannot move inactive chain '{}'. " \
+                        "Only active chains can be moved.").format(chain_name)
                     )
-        
+
         if 'movedown_chain' in options and options['movedown_chain']:
             chain_names = options['movedown_chain']
             if isinstance(chain_names, str):
                 chain_names = [chain_names]
             elif isinstance(chain_names, tuple):
                 chain_names = list(chain_names)
-                
+
             for chain_name in chain_names:
                 chain_found = False
                 for existing_dn in current_chains:
@@ -317,13 +318,14 @@ class gpmaster_mod(LDAPUpdate):
                         if existing_name == chain_name:
                             chain_found = True
                             break
-                    except:
+                    except Exception:
                         continue
-                        
+
                 if not chain_found:
                     raise errors.ValidationError(
                         name='movedown_chain',
-                        error=_("Cannot move inactive chain '{}'. Only active chains can be moved.").format(chain_name)
+                        error=_("Cannot move inactive chain '{}'." \
+                        " Only active chains can be moved.").format(chain_name)
                     )
 
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
@@ -373,13 +375,13 @@ class gpmaster_mod(LDAPUpdate):
 
             for chain_name in chain_names:
                 removed = False
-                
+
                 try:
                     chain_dn = self.obj.resolve_chain_name(chain_name, strict=False)
                     if chain_dn in current_chains:
                         current_chains.remove(chain_dn)
                         removed = True
-                except:
+                except Exception:
                     pass
 
                 if not removed:
@@ -407,7 +409,9 @@ class gpmaster_mod(LDAPUpdate):
             entry_attrs['pdcemulator'] = options['pdcemulator']
 
         if 'chainlist' in options and options['chainlist']:
-            converted_chains = self.obj.convert_chain_names_to_dns(options['chainlist'], strict=True)
+            converted_chains = self.obj.convert_chain_names_to_dns(
+                options['chainlist'], strict=True
+            )
             entry_attrs['chainlist'] = converted_chains
 
 @register()
@@ -426,13 +430,16 @@ class gpmaster_show(LDAPRetrieve):
 
             if not options.get('raw', False):
                 if 'chainlist' in entry_attrs:
-                    chain_names = self.obj.convert_chain_dns_to_names(ldap, entry_attrs['chainlist'])
+                    chain_names = self.obj.convert_chain_dns_to_names(
+                        ldap, entry_attrs['chainlist']
+                    )
                     entry_attrs['chainlist'] = chain_names
 
             result_dict = {}
             for attr_name in entry_attrs:
                 attr_value = entry_attrs[attr_name]
-                if isinstance(attr_value, list) and len(attr_value) == 1 and attr_name not in ['chainlist']:
+                if (isinstance(attr_value, list) and len(attr_value) == 1
+                    and attr_name not in ['chainlist']):
                     result_dict[attr_name] = attr_value[0]
                 else:
                     result_dict[attr_name] = attr_value

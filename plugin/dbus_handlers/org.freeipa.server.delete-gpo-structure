@@ -4,10 +4,11 @@ import os
 import sys
 import shutil
 import re
-from ipa_gpo_install.config import get_policies_path, get_policy_path
+from ipa_gpo_install.config import get_policy_path
 
 
-GUID_PATTERN = re.compile(r'^\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}$')
+GUID_PATTERN = re.compile(r'^\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f] \
+                        {4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}$')
 
 
 def is_valid_guid(guid):
@@ -27,7 +28,6 @@ def main():
         print("Error: Invalid GUID format", file=sys.stderr)
         return 1
 
-    policies_path = get_policies_path(domain)
     policy_path = get_policy_path(domain, guid)
 
     if not os.path.exists(policy_path):
@@ -39,8 +39,8 @@ def main():
         print(f"Successfully deleted GPO structure: {policy_path}")
         return 0
 
-    except Exception as e:
-        print(f"Error deleting GPO structure: {e}", file=sys.stderr)
+    except Exception as exc:
+        print(f"Error deleting GPO structure: {exc}", file=sys.stderr)
         return 1
 
 if __name__ == "__main__":
