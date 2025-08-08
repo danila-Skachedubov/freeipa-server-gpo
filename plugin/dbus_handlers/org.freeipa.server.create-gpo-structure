@@ -6,19 +6,8 @@ import sys
 from ipa_gpo_install.config import get_policies_path, get_policy_path, get_gpt_ini_path
 
 
-def set_permissions_recursively(path):
-    """Set proper permissions: 755 for directories, 644 for files"""
-    for root, dirs, files in os.walk(path):
-        for directory in dirs:
-            dir_path = os.path.join(root, directory)
-            os.chmod(dir_path, 0o755)
-
-        for file in files:
-            file_path = os.path.join(root, file)
-            os.chmod(file_path, 0o644)
-
-
 def main():
+    """Main function to create GPO directory structure."""
     if len(sys.argv) < 3:
         print("Error: Insufficient arguments", file=sys.stderr)
         return 1
@@ -31,34 +20,33 @@ def main():
 
     if not os.path.exists(policies_path):
         try:
-            os.makedirs(policies_path, mode=0o755)
+            os.makedirs(policies_path, exist_ok=True)
             print(f"Created policies directory: {policies_path}")
-        except Exception as e:
-            print(f"Error creating policies directory: {e}", file=sys.stderr)
+        except Exception as exc:
+            print(f"Error creating policies directory: {exc}", file=sys.stderr)
             return 1
 
     try:
-        os.makedirs(policy_path, mode=0o755, exist_ok=True)
+        os.makedirs(policy_path, exist_ok=True)
         machine_path = os.path.join(policy_path, "Machine")
         user_path = os.path.join(policy_path, "User")
 
-        os.makedirs(machine_path, mode=0o755, exist_ok=True)
-        os.makedirs(user_path, mode=0o755, exist_ok=True)
+        os.makedirs(machine_path, exist_ok=True)
+        os.makedirs(user_path, exist_ok=True)
 
         gpt_ini_path = get_gpt_ini_path(domain, guid)
-        with open(gpt_ini_path, 'w', encoding='utf-8') as f:
-            f.write("[General]\n")
-            f.write("Version=0\n")
+        with open(gpt_ini_path, 'w', encoding='utf-8') as gpt_file:
+            gpt_file.write("[General]\n")
+            gpt_file.write("Version=0\n")
 
         print(f"Created GPT.INI file: {gpt_ini_path}")
-
-        set_permissions_recursively(policy_path)
         print("GPO structure creation completed successfully")
         return 0
 
-    except Exception as e:
-        print(f"Error creating GPO structure: {e}", file=sys.stderr)
+    except Exception as exc:
+        print(f"Error creating GPO structure: {exc}", file=sys.stderr)
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
