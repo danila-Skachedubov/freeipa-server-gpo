@@ -1,4 +1,4 @@
-PACKAGE_NAME = ipa-gpo-install
+PACKAGE_NAME = freeipa-server-gpo
 VERSION = 0.0.1
 
 PREFIX ?= /usr
@@ -19,20 +19,20 @@ install: build
 	@echo "Installing $(PACKAGE_NAME)..."
 
 	# Main executable
-	install -D -m 755 bin/$(PACKAGE_NAME) $(DESTDIR)$(PREFIX)/bin/$(PACKAGE_NAME)
+	install -D -m 755 bin/ipa-gpo-install $(DESTDIR)$(PREFIX)/bin/ipa-gpo-install
 
 	# Python modules
-	@mkdir -p $(DESTDIR)$(PYTHON_SITELIB)
-	cp -r ipa_gpo_install $(DESTDIR)$(PYTHON_SITELIB)/
+	@mkdir -p $(DESTDIR)$(PYTHON_SITELIBDIR)
+	cp -r ipa_gpo_install $(DESTDIR)$(PYTHON_SITELIBDIR)/
 
 	# IPA plugins
-	install -D -m 644 plugin/ipaserver/plugins/gpo.py $(DESTDIR)$(PYTHON_SITELIB)/ipaserver/plugins/gpo.py
-	install -D -m 644 plugin/ipaserver/plugins/chain.py $(DESTDIR)$(PYTHON_SITELIB)/ipaserver/plugins/chain.py
-	install -D -m 644 plugin/ipaserver/plugins/gpmaster.py $(DESTDIR)$(PYTHON_SITELIB)/ipaserver/plugins/gpmaster.py
+	install -D -m 644 plugin/ipaserver/plugins/gpo.py $(DESTDIR)$(PYTHON_SITELIBDIR)/ipaserver/plugins/gpo.py
+	install -D -m 644 plugin/ipaserver/plugins/chain.py $(DESTDIR)$(PYTHON_SITELIBDIR)/ipaserver/plugins/chain.py
+	install -D -m 644 plugin/ipaserver/plugins/gpmaster.py $(DESTDIR)$(PYTHON_SITELIBDIR)/ipaserver/plugins/gpmaster.py
 
 	# IPA UI plugins
-	install -D -m 644 plugin/ui/grouppolicy/chain.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/grouppolicy/chain.js
-	install -D -m 644 plugin/ui/grouppolicy/gpo.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/grouppolicy/gpo.js
+	install -D -m 644 plugin/ui/grouppolicy/chain.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/chain.js
+	install -D -m 644 plugin/ui/grouppolicy/gpo.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/gpo.js
 
 	# IPA schemas and updates
 	@for schema in plugin/schema.d/*.ldif; do \
@@ -48,17 +48,17 @@ install: build
 	install -D -m 755 plugin/dbus_handlers/org.freeipa.server.delete-gpo-structure $(DESTDIR)$(PREFIX)/libexec/ipa/oddjob/org.freeipa.server.delete-gpo-structure
 
 	# Documentation
-	install -D -m 644 doc/$(PACKAGE_NAME).8 $(DESTDIR)$(PREFIX)/share/man/man8/$(PACKAGE_NAME).8
-	install -D -m 644 doc/ru/$(PACKAGE_NAME).8 $(DESTDIR)$(PREFIX)/share/man/ru/man8/$(PACKAGE_NAME).8
+	install -D -m 644 doc/ipa-gpo-install.8 $(DESTDIR)$(PREFIX)/share/man/man8/ipa-gpo-install.8
+	install -D -m 644 doc/ru/ipa-gpo-install.8 $(DESTDIR)$(PREFIX)/share/man/ru/man8/ipa-gpo-install.8
 
 	# Bash completion
-	install -D -m 644 completions/$(PACKAGE_NAME) $(DESTDIR)$(PREFIX)/share/bash-completion/completions/$(PACKAGE_NAME)
+	install -D -m 644 completions/ipa-gpo-install $(DESTDIR)$(PREFIX)/share/bash-completion/completions/ipa-gpo-install
 
 	# Translations
-	@for mo_file in locale/*/LC_MESSAGES/*.mo; do \
+	@for mo_file in locale/*/LC_MESSAGES/ipa-gpo-install.mo; do \
 		if [ -f "$$mo_file" ]; then \
 			locale_dir=$$(echo $$mo_file | sed 's|locale/||' | sed 's|/LC_MESSAGES/.*||'); \
-			install -D -m 644 "$$mo_file" "$(DESTDIR)$(PREFIX)/share/locale/$$locale_dir/LC_MESSAGES/$(PACKAGE_NAME).mo"; \
+			install -D -m 644 "$$mo_file" "$(DESTDIR)$(PREFIX)/share/locale/$$locale_dir/LC_MESSAGES/ipa-gpo-install.mo"; \
 		fi; \
 	done
 

@@ -25,6 +25,8 @@ disable=
     too-many-ancestors,
     no-else-raise,
     too-many-nested-blocks,
+    no-self-use,
+    unused-variable,
 
 [REPORTS]
 output-format=colorized

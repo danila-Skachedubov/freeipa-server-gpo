@@ -1,6 +1,6 @@
 import logging
 
-from ipalib import api, errors, _, Str
+from ipalib import api, errors, _, Str, output
 from ipalib.plugable import Registry
 from ipapython.dn import DN
 
@@ -448,6 +448,39 @@ class gpmaster_show(LDAPRetrieve):
                 'result': result_dict,
                 'value': 'grouppolicymaster',
                 'summary': None
+            }
+
+        except errors.NotFound:
+            raise errors.NotFound(
+                reason=_("Group Policy Master not found")
+            )
+
+@register()
+class gpmaster_show_pdc(LDAPRetrieve):
+    """Show PDC Emulator server name."""
+    NO_CLI = True
+    has_output = (
+        output.Output('result', type=dict, doc=_('PDC Emulator info')),
+    )
+
+    def get_args(self):
+        return ()
+
+    def execute(self, *keys, **options):
+        """Show PDC Emulator server name."""
+        gpmaster_dn = self.obj.get_gpmaster_dn()
+
+        try:
+            ldap = self.api.Backend.ldap2
+            entry_attrs = ldap.get_entry(gpmaster_dn, ['pdcemulator'])
+
+            pdc_emulator = entry_attrs.get('pdcemulator', [None])
+            pdc_value = pdc_emulator[0] if pdc_emulator and pdc_emulator[0] else "Not configured"
+
+            return {
+                'result': {
+                    'pdc_emulator': pdc_value
+                }
             }
 
         except errors.NotFound:

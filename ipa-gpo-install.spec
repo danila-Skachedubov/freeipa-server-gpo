@@ -1,4 +1,4 @@
-Name:           ipa-gpo-install
+Name:           freeipa-server-gpo
 Version:        0.0.1
 Release:        alt1
 
@@ -29,17 +29,20 @@ and creates the necessary directory structure.
 %make_build compile-po
 
 %install
-make install PREFIX=%{_prefix} DESTDIR=%{buildroot} PYTHON_SITELIB=%{python3_sitelibdir}
+make install PREFIX=%{_prefix} DESTDIR=%{buildroot} PYTHON_SITELIBDIR=%{python3_sitelibdir}
 
 %files
 %doc README.md
-%{_bindir}/%{name}
+%{_bindir}/ipa-gpo-install
 %{python3_sitelibdir}/ipa_gpo_install/
 %{python3_sitelibdir}/ipaserver/plugins/gpo.py*
 %{python3_sitelibdir}/ipaserver/plugins/chain.py*
 %{python3_sitelibdir}/ipaserver/plugins/gpmaster.py*
-%{_datadir}/ipa/ui/js/plugins/grouppolicy/chain.js
-%{_datadir}/ipa/ui/js/plugins/grouppolicy/gpo.js
+%{python3_sitelibdir}/ipaserver/plugins/__pycache__/gpo.*
+%{python3_sitelibdir}/ipaserver/plugins/__pycache__/chain.*
+%{python3_sitelibdir}/ipaserver/plugins/__pycache__/gpmaster.*
+%{_datadir}/ipa/ui/js/plugins/chain/chain.js
+%{_datadir}/ipa/ui/js/plugins/chain/gpo.js
 %{_datadir}/ipa/schema.d/75-gpc.ldif
 %{_datadir}/ipa/schema.d/75-chain.ldif
 %{_datadir}/ipa/schema.d/75-gpmaster.ldif
@@ -49,10 +52,10 @@ make install PREFIX=%{_prefix} DESTDIR=%{buildroot} PYTHON_SITELIB=%{python3_sit
 %config(noreplace) %{_sysconfdir}/oddjobd.conf.d/ipa-gpo.conf
 %{_prefix}/libexec/ipa/oddjob/org.freeipa.server.create-gpo-structure
 %{_prefix}/libexec/ipa/oddjob/org.freeipa.server.delete-gpo-structure
-%{_mandir}/man8/%{name}.8*
-%{_mandir}/ru/man8/%{name}.8*
-%{_datadir}/bash-completion/completions/%{name}
-%{_datadir}/locale/*/LC_MESSAGES/%{name}.mo
+%{_mandir}/man8/ipa-gpo-install.8*
+%{_mandir}/ru/man8/ipa-gpo-install.8*
+%{_datadir}/bash-completion/completions/ipa-gpo-install
+%{_datadir}/locale/ru/LC_MESSAGES/ipa-gpo-install.mo
 
 %changelog
 * Wed Apr 16 2025 Danila Skachedubov <skachedubov@altlinux.org> 0.0.1-alt1

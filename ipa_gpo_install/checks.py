@@ -112,7 +112,7 @@ class IPAChecker:
                 'krb5kdc',
                 'ipa',
                 'sssd',
-                'oddjob'
+                'oddjobd'
             ]
             self.logger.debug(_("Checking IPA services"))
 

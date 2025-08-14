@@ -688,21 +688,14 @@ class chain_find(LDAPSearch):
 
 class ChainResolveBase(Command):
     def _get_active_chains_optimized(self):
-        """Get active chains directly from LDAP."""
+        """Get active chains using API instead of direct LDAP."""
         try:
-            ldap = self.api.Backend.ldap2
-            base_dn = DN(('cn', 'System'), self.api.env.basedn)
-            filter_str = '(&(objectClass=groupPolicyChain)(active=TRUE))'
+            gpmaster_result = api.Command.gpmaster_show()
+            active_chains = gpmaster_result['result'].get('chainlist', [])
+            return active_chains
 
-            entries = ldap.find_entries(
-                filter=filter_str,
-                base_dn=base_dn,
-                attrs_list=['cn']
-            )[0]
-
-            return [entry.get('cn', [None])[0] for entry in entries if entry.get('cn')]
-        except Exception:
-            return []
+        except Exception as exc:
+            logger.error("Error getting active chains: %s", str(exc))
 
     def _get_matching_policies(self, target_groups, chain_group_attr):
         if not target_groups:
@@ -766,7 +759,7 @@ class ChainResolveBase(Command):
 @register()
 class chain_resolve_for_user(ChainResolveBase):
     """Get applicable policies for user with essential attributes."""
-
+    NO_CLI = True
     takes_args = (
         Str('username',
             label=_('Username'),
@@ -788,7 +781,7 @@ class chain_resolve_for_user(ChainResolveBase):
 @register()
 class chain_resolve_for_host(ChainResolveBase):
     """Get applicable policies for host with essential attributes."""
-
+    NO_CLI = True
     takes_args = (
         Str('hostname',
             label=_('Hostname'),
@@ -854,7 +847,7 @@ class chain_add_gpo(LDAPAddMember):
         else:
             return self._extract_displayname_from_value(str(value))
 
-    def post_callback(self, ldap, completed, dn, entry_attrs, *keys, **options):
+    def post_callback(self, ldap, completed, failed, dn, entry_attrs, *keys, **options):
         """Post-processing after adding GPOs."""
         if not options.get('raw', False):
             self.obj.convert_attribute_members(entry_attrs, *keys, **options)
@@ -933,7 +926,7 @@ class chain_remove_gpo(LDAPRemoveMember):
         else:
             return self._extract_displayname_from_value(str(value))
 
-    def post_callback(self, ldap, completed, dn, entry_attrs, *keys, **options):
+    def post_callback(self, ldap, completed, failed, dn, entry_attrs, *keys, **options):
         """Post-processing after removing GPOs."""
         if not options.get('raw', False):
             self.obj.convert_attribute_members(entry_attrs, *keys, **options)

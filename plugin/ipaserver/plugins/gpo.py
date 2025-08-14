@@ -142,7 +142,7 @@ class gpo(LDAPObject):
             server = dbus.Interface(obj, 'org.freeipa.server')
 
             method = getattr(server, method_name)
-            ret, stderr = method(*params)
+            ret, stdout, stderr = method(*params)
 
             if ret != 0:
                 error_msg = f"Failed to {method_name.replace('_', ' ')}: {stderr}"
@@ -155,8 +155,7 @@ class gpo(LDAPObject):
                     )
                 else:
                     logger.warning(error_msg)
-            else:
-                logger.info("Successfully completed %s for GUID: %s", method_name, guid)
+
 
         except dbus.DBusException as e:
             error_msg = f'Failed to call D-Bus {method_name}: {str(e)}'
