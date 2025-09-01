@@ -127,7 +127,7 @@ class IPAActions:
             True if creation was successful, False otherwise
         """
         try:
-            sysvol_path = f"/var/lib/freeipa/sysvol/{self.api.env.domain}"
+            sysvol_path = f"/var/lib/freeipa/sysvol"
             self.logger.info(_("Creating SYSVOL share for: {}").format(sysvol_path))
 
             if not os.path.exists(sysvol_path):
