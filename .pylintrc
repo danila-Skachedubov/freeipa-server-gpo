@@ -1,0 +1,34 @@
+[MASTER]
+persistent=no
+extension-pkg-allow-list=
+    _ldap,
+
+[MESSAGES CONTROL]
+disable=
+    missing-docstring,
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    invalid-name,
+    broad-except,
+    broad-exception-caught,
+    no-else-return,
+    no-name-in-module,
+    no-member,
+    protected-access,
+    abstract-method,
+    raise-missing-from,
+    unused-argument,
+    too-few-public-methods,
+    super-with-arguments,
+    arguments-differ,
+    too-many-ancestors,
+    no-else-raise,
+    too-many-nested-blocks,
+    no-self-use,
+    unused-variable,
+
+[REPORTS]
+output-format=colorized
+reports=no
+msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg})'

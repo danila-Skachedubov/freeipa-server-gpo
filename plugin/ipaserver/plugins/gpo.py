@@ -1,21 +1,17 @@
-from ipalib import api, errors
-from ipalib import Str, Int, Command
-from ipalib.plugable import Registry
-from .baseldap import (
-    LDAPObject,
-    LDAPCreate,
-    LDAPDelete,
-    LDAPUpdate,
-    LDAPSearch,
-    LDAPRetrieve,
-)
-from ipalib import _, ngettext
-from ipapython.dn import DN
+import logging
 import uuid
+
 import dbus
 import dbus.mainloop.glib
-import logging
-from ipapython.ipautil import run
+from ipalib import api, errors, _, ngettext
+from ipalib import Str, Int
+from ipalib.plugable import Registry
+from ipapython.dn import DN
+
+from ipaserver.plugins.baseldap import (
+    LDAPObject, LDAPCreate, LDAPDelete, LDAPUpdate,
+    LDAPSearch, LDAPRetrieve,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +24,7 @@ PLUGIN_CONFIG = (
 
 
 @register()
-class grouppolicy(LDAPObject):
+class gpo(LDAPObject):
     """
     Group Policy Object.
     """
@@ -46,6 +42,8 @@ class grouppolicy(LDAPObject):
     ]
     uuid_attribute = 'cn'
     allow_rename = True
+    label = _('Group Policy Objects')
+    label_singular = _('Group Policy Object')
 
     managed_permissions = {
         'System: Read Group Policy Objects': {
@@ -82,9 +80,6 @@ class grouppolicy(LDAPObject):
         },
     }
 
-    label = _('Group Policy Objects')
-    label_singular = _('Group Policy Object')
-
     takes_params = (
         Str('displayname',
             label=_('Policy name'),
@@ -119,7 +114,7 @@ class grouppolicy(LDAPObject):
     def _on_finalize(self):
         self.env._merge(**dict(PLUGIN_CONFIG))
         self.container_dn = self.env.container_grouppolicy
-        super(grouppolicy, self)._on_finalize()
+        super(gpo, self)._on_finalize()
 
     def find_gpo_by_displayname(self, ldap, displayname):
         try:
@@ -160,8 +155,7 @@ class grouppolicy(LDAPObject):
                     )
                 else:
                     logger.warning(error_msg)
-            else:
-                logger.info(f"Successfully completed {method_name} for GUID: {guid}")
+
 
         except dbus.DBusException as e:
             error_msg = f'Failed to call D-Bus {method_name}: {str(e)}'
@@ -176,7 +170,7 @@ class grouppolicy(LDAPObject):
 
 
 @register()
-class grouppolicy_add(LDAPCreate):
+class gpo_add(LDAPCreate):
     __doc__ = _('Create a new Group Policy Object.')
     msg_summary = _('Added Group Policy Object "%(value)s"')
 
@@ -185,7 +179,8 @@ class grouppolicy_add(LDAPCreate):
         try:
             self.obj.find_gpo_by_displayname(ldap, displayname)
             raise errors.InvocationError(
-                message=_('A Group Policy Object with displayName "%s" already exists.') % displayname
+                message=_('A Group Policy Object with displayName' \
+                ' "%s" already exists.') % displayname
             )
         except errors.NotFound:
             pass
@@ -194,7 +189,10 @@ class grouppolicy_add(LDAPCreate):
         dn = DN(('cn', guid), api.env.container_grouppolicy, api.env.basedn)
         entry_attrs['cn'] = guid
         entry_attrs['distinguishedname'] = str(dn)
-        entry_attrs['gpcfilesyspath'] = f"\\\\{api.env.domain}\\SysVol\\{api.env.domain}\\Policies\\{guid}"
+        entry_attrs['gpcfilesyspath'] = (
+            f"\\\\{api.env.domain}\\SysVol\\{api.env.domain}"
+            f"\\Policies\\{guid}"
+        )
         entry_attrs['flags'] = 0
         entry_attrs['versionnumber'] = 0
 
@@ -209,8 +207,8 @@ class grouppolicy_add(LDAPCreate):
 
 
 @register()
-class grouppolicy_del(LDAPDelete):
-    """Delete a Group Policy Object."""
+class gpo_del(LDAPDelete):
+    __doc__ = _("Delete a Group Policy Object.")
     msg_summary = _('Deleted Group Policy Object "%(value)s"')
 
     def pre_callback(self, ldap, dn, *keys, **options):
@@ -227,8 +225,8 @@ class grouppolicy_del(LDAPDelete):
 
 
 @register()
-class grouppolicy_show(LDAPRetrieve):
-    """Display information about a Group Policy Object."""
+class gpo_show(LDAPRetrieve):
+    __doc__ = _("Display information about a Group Policy Object.")
     msg_summary = _('Found Group Policy Object "%(value)s"')
 
     def pre_callback(self, ldap, dn, attrs_list, *keys, **options):
@@ -237,8 +235,8 @@ class grouppolicy_show(LDAPRetrieve):
 
 
 @register()
-class grouppolicy_find(LDAPSearch):
-    """Search for Group Policy Objects."""
+class gpo_find(LDAPSearch):
+    __doc__ = _("Search for Group Policy Objects.")
     msg_summary = ngettext(
         '%(count)d Group Policy Object matched',
         '%(count)d Group Policy Objects matched', 0
@@ -246,8 +244,8 @@ class grouppolicy_find(LDAPSearch):
 
 
 @register()
-class grouppolicy_mod(LDAPUpdate):
-    """Modify a Group Policy Object."""
+class gpo_mod(LDAPUpdate):
+    __doc__ = _("Modify a Group Policy Object.")
     msg_summary = _('Modified Group Policy Object "%(value)s"')
 
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
@@ -266,7 +264,8 @@ class grouppolicy_mod(LDAPUpdate):
             try:
                 self.obj.find_gpo_by_displayname(ldap, new_name)
                 raise errors.DuplicateEntry(
-                    message=_('A Group Policy Object with displayName "%s" already exists.') % new_name
+                    message=_('A Group Policy Object with displayName' \
+                    ' "%s" already exists.') % new_name
                 )
             except errors.NotFound:
                 pass

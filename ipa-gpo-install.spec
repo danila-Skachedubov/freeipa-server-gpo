@@ -1,4 +1,4 @@
-Name:           ipa-gpo-install
+Name:           freeipa-server-gpo
 Version:        0.0.1
 Release:        alt1
 
@@ -26,35 +26,36 @@ and creates the necessary directory structure.
 %setup -q
 
 %build
-cd locale/ru/LC_MESSAGES/
-msgfmt ipa-gpo-install.po -o ipa-gpo-install.mo
+%make_build compile-po
 
 %install
-mkdir -p %buildroot%_bindir
-mkdir -p %buildroot%_datadir/%name/data
-mkdir -p %buildroot%python3_sitelibdir/ipa_gpo_install
-mkdir -p %buildroot%_datadir/locale/ru/LC_MESSAGES
-mkdir -p %buildroot%_mandir/man8
-mkdir -p %buildroot%_mandir/ru/man8
-mkdir -p %buildroot%_datadir/bash-completion/completions
-
-install -m 755 bin/ipa-gpo-install %buildroot%_bindir/
-cp -a ipa_gpo_install/* %buildroot%python3_sitelibdir/ipa_gpo_install/
-install -m 644 data/74alt-group-policy.ldif %buildroot%_datadir/%name/data/
-install -m 644 locale/ru/LC_MESSAGES/ipa-gpo-install.mo %buildroot%_datadir/locale/ru/LC_MESSAGES/
-install -m 644 doc/ipa-gpo-install.8 %buildroot%_mandir/man8/
-install -m 644 doc/ru/ipa-gpo-install.8 %buildroot%_mandir/ru/man8/
-install -m 644 completions/ipa-gpo-install %buildroot%_datadir/bash-completion/completions/
+make install PREFIX=%{_prefix} DESTDIR=%{buildroot} PYTHON_SITELIBDIR=%{python3_sitelibdir}
 
 %files
 %doc README.md
-%_bindir/ipa-gpo-install
-%python3_sitelibdir/ipa_gpo_install
-%_datadir/%name
-%_datadir/locale/ru/LC_MESSAGES/%name.mo
-%_mandir/man8/ipa-gpo-install.8*
-%_mandir/ru/man8/ipa-gpo-install.8*
-%_datadir/bash-completion/completions/ipa-gpo-install
+%{_bindir}/ipa-gpo-install
+%{python3_sitelibdir}/ipa_gpo_install/
+%{python3_sitelibdir}/ipaserver/plugins/gpo.py*
+%{python3_sitelibdir}/ipaserver/plugins/chain.py*
+%{python3_sitelibdir}/ipaserver/plugins/gpmaster.py*
+%{python3_sitelibdir}/ipaserver/plugins/__pycache__/gpo.*
+%{python3_sitelibdir}/ipaserver/plugins/__pycache__/chain.*
+%{python3_sitelibdir}/ipaserver/plugins/__pycache__/gpmaster.*
+%{_datadir}/ipa/ui/js/plugins/chain/chain.js
+%{_datadir}/ipa/ui/js/plugins/chain/gpo.js
+%{_datadir}/ipa/schema.d/75-gpc.ldif
+%{_datadir}/ipa/schema.d/75-chain.ldif
+%{_datadir}/ipa/schema.d/75-gpmaster.ldif
+%{_datadir}/ipa/updates/75-gpc.update
+%{_datadir}/ipa/updates/75-chain.update
+%{_datadir}/ipa/updates/75-gpmaster.update
+%config(noreplace) %{_sysconfdir}/oddjobd.conf.d/ipa-gpo.conf
+%{_prefix}/libexec/ipa/oddjob/org.freeipa.server.create-gpo-structure
+%{_prefix}/libexec/ipa/oddjob/org.freeipa.server.delete-gpo-structure
+%{_mandir}/man8/ipa-gpo-install.8*
+%{_mandir}/ru/man8/ipa-gpo-install.8*
+%{_datadir}/bash-completion/completions/ipa-gpo-install
+%{_datadir}/locale/ru/LC_MESSAGES/ipa-gpo-install.mo
 
 %changelog
 * Wed Apr 16 2025 Danila Skachedubov <skachedubov@altlinux.org> 0.0.1-alt1

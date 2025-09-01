@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
+"""Actions module for IPA GPO installation - handles system operations."""
 
 import os
 import logging
 import gettext
 import locale
 from pathlib import Path
-from os.path import dirname, join, abspath
 
 from ipalib import api
 from ipapython import ipautil
-from ipaplatform.paths import paths
 from .config import LOCALE_DIR, FREEIPA_BASE_PATH, get_domain_sysvol_path
 
 
@@ -40,38 +39,6 @@ class IPAActions:
         """
         self.logger = logger or logging.getLogger('ipa-gpo-install')
         self.api = api_instance or api
-
-    def add_ldif_schema(self, ldif_file):
-        """
-        Add LDIF schema to LDAP using ipa-ldap-updater
-
-        Args:
-            ldif_file: Path to LDIF file
-
-        Returns:
-            True if successfully added, False otherwise
-        """
-        try:
-            if not os.path.exists(ldif_file):
-                self.logger.error(_("LDIF file not found: {}").format(ldif_file))
-                return False
-
-            self.logger.info(_("Adding LDIF schema from file: {}").format(ldif_file))
-            cmd = ['/usr/sbin/ipa-ldap-updater', '-S', ldif_file]
-            self.logger.debug(_("Running: {}").format(' '.join(cmd)))
-            result = ipautil.run(cmd, raiseonerr=False)
-
-            if result.returncode == 0:
-                self.logger.info(_("Successfully added schema from {}").format(ldif_file))
-                return True
-            else:
-                error_msg = result.error_output or _("Unknown error")
-                self.logger.error(_("Failed to add schema from {}: {}").format(ldif_file, error_msg))
-                return False
-
-        except Exception as e:
-            self.logger.error(_("Error adding LDIF schema: {}").format(e))
-            return False
 
     def install_adtrust(self):
         """
@@ -107,27 +74,31 @@ class IPAActions:
         """
         try:
             freeipa_dir = Path(FREEIPA_BASE_PATH)
-            sysvol_path = get_domain_sysvol_path(self.api.env.domain)
+            sysvol_path_str = get_domain_sysvol_path(self.api.env.domain)
+            sysvol_path = Path(sysvol_path_str)
             policies_path = sysvol_path / "Policies"
             scripts_path = sysvol_path / "scripts"
 
+            # Создаем базовую директорию FreeIPA
             freeipa_dir.mkdir(parents=True, exist_ok=True)
             acl_set = self._set_default_acl(freeipa_dir)
 
+            # Создаем структуру SYSVOL
             for path in [sysvol_path, policies_path, scripts_path]:
                 path.mkdir(parents=True, exist_ok=True)
+                self.logger.debug(_("Created directory: {}").format(path))
 
             if not acl_set:
                 self.logger.warning(_("Using standard permissions for SYSVOL directories"))
                 for path in [sysvol_path, policies_path, scripts_path]:
                     os.chmod(path, 0o755)
+
             self.logger.info(_("SYSVOL directory structure created successfully"))
             return True
 
         except Exception as e:
             self.logger.error(_("Error creating SYSVOL directory: {}").format(e))
             return False
-
 
     def _set_default_acl(self, path: Path) -> bool:
         """
@@ -156,11 +127,13 @@ class IPAActions:
             True if creation was successful, False otherwise
         """
         try:
-            sysvol_path = f"/var/lib/freeipa/sysvol/{self.api.env.domain}"
+            sysvol_path = f"/var/lib/freeipa/sysvol"
             self.logger.info(_("Creating SYSVOL share for: {}").format(sysvol_path))
 
             if not os.path.exists(sysvol_path):
-                self.logger.error(_("Cannot create share: directory {} does not exist").format(sysvol_path))
+                self.logger.error(
+                    _("Cannot create share: directory {} does not exist").format(sysvol_path)
+                )
                 return False
 
             cmd = ["net", "conf", "addshare", "sysvol", sysvol_path, "writeable=y", "guest_ok=N"]
@@ -168,7 +141,9 @@ class IPAActions:
             result = ipautil.run(cmd, raiseonerr=False)
 
             if result.returncode != 0:
-                self.logger.error(_("Failed to create SYSVOL share: {}").format(result.error_output))
+                self.logger.error(
+                    _("Failed to create SYSVOL share: {}").format(result.error_output)
+                )
                 return False
 
             self.logger.info(_("SYSVOL share created successfully"))
@@ -176,4 +151,64 @@ class IPAActions:
 
         except Exception as e:
             self.logger.error(_("Error creating SYSVOL share: {}").format(e))
+            return False
+
+    def run_ipa_server_upgrade(self):
+        """
+        Запустить ipa-server-upgrade для применения схем и обновлений
+        
+        Returns:
+            True если обновление прошло успешно, False иначе
+        """
+        try:
+            self.logger.info(_("Running ipa-server-upgrade to apply schema changes"))
+            cmd = ['/usr/sbin/ipa-server-upgrade']
+            self.logger.debug(_("Running: {}").format(' '.join(cmd)))
+            result = ipautil.run(cmd, raiseonerr=False)
+
+            if result.returncode == 0:
+                self.logger.info(_("ipa-server-upgrade completed successfully"))
+                return True
+
+            error_msg = result.error_output or _("Unknown error")
+            self.logger.error(_("ipa-server-upgrade failed: {}").format(error_msg))
+            return False
+
+        except Exception as e:
+            self.logger.error(_("Error running ipa-server-upgrade: {}").format(e))
+            return False
+
+    def restart_oddjob(self):
+        """
+        Перезапустить службу oddjob для подхвата новых D-Bus обработчиков
+        
+        Returns:
+            True если перезапуск прошел успешно, False иначе
+        """
+        try:
+            self.logger.info(_("Restarting oddjob service"))
+
+            status_cmd = ['systemctl', 'is-active', 'oddjob']
+            status_result = ipautil.run(status_cmd, raiseonerr=False)
+
+            if status_result.returncode != 0:
+                self.logger.info(_("oddjob service is not running, starting it"))
+                start_cmd = ['systemctl', 'start', 'oddjob']
+                result = ipautil.run(start_cmd, raiseonerr=False)
+            else:
+                self.logger.info(_("Restarting oddjob service"))
+                restart_cmd = ['systemctl', 'restart', 'oddjob']
+                result = ipautil.run(restart_cmd, raiseonerr=False)
+
+            if result.returncode == 0:
+                self.logger.info(_("oddjob service restarted successfully"))
+
+                return True
+            else:
+                error_msg = result.error_output or _("Unknown error")
+                self.logger.error(_("Failed to restart oddjob: {}").format(error_msg))
+                return False
+
+        except Exception as e:
+            self.logger.error(_("Error restarting oddjob service: {}").format(e))
             return False

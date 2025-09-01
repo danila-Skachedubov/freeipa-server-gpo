@@ -3,10 +3,10 @@
 import os
 import subprocess
 import logging
-import ldap
 import gettext
 import locale
-from os.path import dirname, join, abspath
+
+import ldap
 
 from ipalib import api
 from ipalib import krb_utils
@@ -111,7 +111,8 @@ class IPAChecker:
                 f'dirsrv@{domain_suffix}',
                 'krb5kdc',
                 'ipa',
-                'sssd'
+                'sssd',
+                'oddjobd'
             ]
             self.logger.debug(_("Checking IPA services"))
 
@@ -122,9 +123,15 @@ class IPAChecker:
                 result = ipautil.run(cmd, raiseonerr=False)
 
                 if result.returncode != 0:
-                    self.logger.error(_("Service {} is not active").format(service))
-                    return False
-                self.logger.debug(_("Service {} is active").format(service))
+                    if service == 'oddjob':
+                        self.logger.warning(_(
+                            "Service {} is not active - will be started during installation"
+                        ).format(service))
+                    else:
+                        self.logger.error(_("Service {} is not active").format(service))
+                        return False
+                else:
+                    self.logger.debug(_("Service {} is active").format(service))
 
             self.logger.info(_("All essential services are running"))
             return True
@@ -157,7 +164,9 @@ class IPAChecker:
 
             for class_name in object_class_names:
                 if schema.get_obj(ldap.schema.ObjectClass, class_name) is None:
-                    self.logger.debug(_("Object class '{}' does not exist in schema").format(class_name))
+                    self.logger.debug(_(
+                        "Object class '{}' does not exist in schema"
+                    ).format(class_name))
                     return False
 
             self.logger.debug(_("All required object classes exist in schema"))
@@ -233,7 +242,7 @@ class IPAChecker:
         try:
             self.logger.debug(_("Checking if SYSVOL share exists"))
             cmd = ["net", "conf", "list"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
             if result.returncode != 0:
                 self.logger.error(_("Error listing Samba shares: {}").format(result.stderr))
                 return False
