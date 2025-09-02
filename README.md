@@ -170,7 +170,7 @@ policy-1 → policy-2 → policy-3 → policy-4
 1. **Сначала все политики из dev-chain** - потому что эта цепочка идет первой в `chainList` мастера
 2. **Затем все политики из office-chain** - потому что эта цепочка идет второй в `chainList` мастера
 3. **Внутри каждой цепочки** политики находятся в порядке их следования в `gpLink`
-4. **При конфликте настроек** приоритетнее последняя политика (в данном случае из policy-4)
+4. **При конфликте настроек** приоритетнее последняя политика (в данном случае из policy-1)
 
 Такой подход обеспечивает предсказуемое и контролируемое наследование политик с возможностью гибкого управления приоритетами на двух уровнях: уровне цепочек и уровне политик внутри цепочки.
 
@@ -184,7 +184,7 @@ policy-1 → policy-2 → policy-3 → policy-4
 - Действующий Kerberos-билет
 
 ## Установка RPM пакета
-    # apt-get install ipa-gpo-install
+    # apt-get install freeipa-server-gpo
 
 ## Получение Kerberos-билета
     # kinit admin
@@ -206,7 +206,6 @@ ipa-gpo-install [OPTIONS]
 1. **Расширение схемы LDAP** — добавляет новые классы объектов для групповых политик
 2. **Создание структуры SYSVOL** — создает каталоги для хранения файлов политик
 3. **Настройка Samba** — создает общий ресурс SYSVOL
-4. **Проверка AD Trust** — проверяет и при необходимости устанавливает поддержку доверия с AD
 
 
 ## Техническая реализация
@@ -245,24 +244,23 @@ ipa-gpo-install [OPTIONS]
 
 #### Создание политики
 
-    # ipa grouppolicy-add office-security-policy
+    # ipa gpo-add office-security-policy
 
 #### Просмотр политики
 
-    # ipa grouppolicy-show office-security-policy
+    # ipa gpo-show office-security-policy
 
 #### Изменение политики
 
-    # ipa grouppolicy-mod office-security-policy --rename="new-security-policy" \
-  --flags=FLAGS
+    # ipa gpo-mod office-security-policy --rename="new-security-policy"
 
 #### Удаление политики
 
-    # ipa grouppolicy-del office-security-policy
+    # ipa gpo-del new-security-policy
 
 #### Поиск политик
 
-    # ipa grouppolicy-find [CRITERIA]
+    # ipa gpo-find [CRITERIA]
 
 ### Управление цепочками политик
 
@@ -283,9 +281,9 @@ ipa-gpo-install [OPTIONS]
 **Базовые изменения:**
 
     # ipa chain-mod it-chain \
-  [--display-name="New Display Name"] \
-  [--user-group=new-user-group] \
-  [--computer-group=new-computer-group]
+  --display-name="New Display Name" \
+  --user-group=new-user-group \
+  --computer-group=new-computer-group
 
 **Добавление групп:**
 
@@ -300,22 +298,16 @@ ipa-gpo-install [OPTIONS]
 **Работа с политиками в цепочке:**
 
 ### Добавление политик
-    # ipa chain-mod it-chain --add-gpc="security-policy"
-    # ipa chain-mod it-chain --add-gpc="printer-policy"
+    # ipa chain-add-gpo it-chain --gpos security-policy
+    # ipa chain-add-gpo it-chain --gpos printer-policy
 
 ### Удаление политик
-    # ipa chain-mod it-chain --remove-gpc="old-policy"
-
-### Изменение порядка (приоритета)
-    # ipa chain-mod it-chain --moveup-gpc="security-policy"
-    # ipa chain-mod it-chain --movedown-gpc="security-policy"
+    # ipa chain-remove-gpo it-chain --gpos security-policy
 
 ### Удаление цепочки
-
     # ipa chain-del it-chain
 
 ### Поиск цепочек
-
     # ipa chain-find [CRITERIA]
 
 ## Управление приоритетами
@@ -324,55 +316,49 @@ ipa-gpo-install [OPTIONS]
     # ipa chain-show policy-chain
 
 ### Перемещение политики вверх (повышение приоритета)
-    # ipa chain-mod policy-chain --moveup-gpc="critical-policy"
+    # ipa chain-mod it-chain --moveup-gpc="security-policy"
 
 ### Перемещение политики вниз (понижение приоритета)
-    # ipa chain-mod policy-chain --movedown-gpc="optional-policy"
+    # ipa chain-mod it-chain --movedown-gpc="security-policy"
 
 ## Управление мастером групповых политик
 
-#### Просмотр мастера
+#### Просмотр мастера групповых политик
 
     # ipa gpmaster-show
 
 #### Добавление цепочки в мастер
 
-    # ipa gpmaster-add-chain chain-name
+    # ipa gpmaster-mod master-name --add-chain=chain-name
 
 #### Удаление цепочки из мастера
-
-    # ipa gpmaster-del-chain chain-name
+    # ipa gpmaster-mod master-name --remove-chain=chain-name
 
 ### Перемещение цепочки вверх (повышение приоритета)
-    # ipa gpmaster-moveup-chain chain-name
+    # ipa gpmaster-mod master-name --moveup-chain=chain-name
 
 ### Перемещение цепочки вниз (понижение приоритета)
-    # ipa gpmaster-movedown-chain chain-name
+    # ipa gpmaster-mod master-name --movedown-chain=chain-name
 
-## Примеры использования
+### Настройка PDC Emulator
+    # ipa gpmaster-mod master-name --pdc-emulator=server-name
 
-### Базовый сценарий
+## Веб-интерфейс
 
-1. **Создание групповой политики:**
+Расширение включает полнофункциональный веб-интерфейс, интегрированный в административную панель FreeIPA.
 
-        # ipa grouppolicy-add "workstation-security-policy"
+### Основные возможности
 
-2. **Создание цепочки для отдела IT:**
+- **Управление цепочками политик**: создание, редактирование, включение/отключение
+- **Управление приоритетами**: изменение порядка цепочек и GPO
+- **Управление объектами GPO**: создание, редактирование, удаление с автоматической обработкой файловой структуры
+- **Связывание с группами**: назначение цепочек группам пользователей и компьютеров
 
-        # ipa chain-add it-policy-chain \
-  --display-name="IT Department Policies" \
-  --user-group=it-users \
-  --computer-group=it-workstations \
-  --gp-link="workstation-security-policy"
+### Интеграция
 
-3. **Добавление дополнительной политики:**
-
-        # ipa grouppolicy-add "printer-policy"
-        # ipa chain-mod it-policy-chain --add-gpc="printer-policy"
-
-4. **Изменение приоритета политик:**
-
-        # ipa chain-mod it-policy-chain --moveup-gpc="printer-policy"
+- Новый раздел "Group Policy" в меню FreeIPA
+- Поддержка системы прав доступа с ролью "Group Policy Administrators"
+- Стандартные компоненты интерфейса FreeIPA
 
 ## Структура файлов
 
