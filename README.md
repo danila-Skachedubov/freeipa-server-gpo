@@ -1,69 +1,69 @@
-# ipa-gpo-install - Групповые политики для FreeIPA
+# ipa-gpo-install - Group Policies for FreeIPA
 
-## Описание
+**English** | [Русский](./README.ru.md)
 
-**ipa-gpo-install** — это инструмент для интеграции функций групповых политик в FreeIPA. Пакет расширяет схему LDAP необходимыми объектами и предоставляет CLI и WEB интефрейсы для управления групповыми политиками.
+## Description
 
-## Как это работает
+**ipa-gpo-install** is a tool for integrating group policy functionality into FreeIPA. The package extends the LDAP schema with necessary objects and provides CLI and WEB interfaces for managing group policies.
 
-### Концепция групповых политик
+## How it works
 
-Групповые политики в FreeIPA работают по принципу **многоуровневого наследования настроек**. Система состоит из трех основных компонентов:
+### Group Policy Concept
 
-1. **Политики** — это наборы правил и настроек
+Group Policies in FreeIPA work on the principle of **multi-level inheritance of settings**. The system consists of three main components:
 
-2. **Цепочки** — это связующее звено, которое определяет принадлежность политик к группе пользователей и хостов и последовательность их применения
+1. **Policies** - sets of rules and settings
 
-3. **Мастер групповых политик** — объект, который хранит упорядоченный список всех цепочек в системе и определяет главный сервер для управления политиками
+2. **Chains** - linking element that defines policy assignment to user and computer groups and their application sequence
 
-#### Определение приоритетности политик
+3. **Group Policy Master** - object that stores ordered list of all chains in the system and defines the main server for policy management
 
-Когда пользователь входит в систему, политики применяются в строго определенной последовательности:
+#### Policy Priority Determination
 
-1. **Обработка цепочек** — система просматривает цепочки в том порядке, в котором они указаны в мастере групповых политик
-2. **Фильтрация по принадлежности** — для каждой цепочки проверяется, подходит ли она текущему пользователю и компьютеру
-3. **Приоритетность политик внутри цепочки** — если цепочка подходит, политики из неё вычисляются в порядке их следования в атрибуте `gpLink`
+When a user logs into the system, policies are applied in a strictly defined sequence:
 
-#### Управление приоритетами
+1. **Chain processing** - system processes chains in the order specified in the Group Policy Master
+2. **Membership filtering** - for each chain, system checks if it matches the current user and computer
+3. **Policy priority within chain** - if chain matches, policies from it are processed in the order of their sequence in the `gpLink` attribute
 
-Приоритеты настраиваются на двух уровнях:
+#### Priority Management
 
-**Уровень цепочек в мастере:**
-- Порядок цепочек определяется их позицией в атрибуте `chainList` мастера
-- Цепочки, находящиеся выше в списке, имеют более высокий приоритет
+Priorities are configured at two levels:
 
-**Уровень политик внутри цепочки:**
-- Порядок политик определяется их позицией в атрибуте `gpLink` цепочки
-- Политики, находящиеся выше в списке, имеют более высокий приоритет
-- При конфликте настроек действует политика с более высоким приоритетом
+**Chain level in Master:**
+- Chain order is determined by their position in the `chainList` attribute of the master
+- Chains higher in the list have higher priority
 
-### Устройство реализации
+**Policy level within chain:**
+- Policy order is determined by their position in the `gpLink` attribute of the chain
+- Policies higher in the list have higher priority
+- In case of setting conflicts, the policy with higher priority takes effect
 
-#### Group Policy Container (GPC) — Контейнер политик
-Контейнер с настройками и правилами. Каждый GPC содержит:
-- Уникальный идентификатор (GUID)
-- Название
-- Ссылку на директорию с файлами настроек в Sysvol
-- Версию политики для отслеживания изменений
+### Implementation Structure
 
+#### Group Policy Container (GPC)
+Container with settings and rules. Each GPC contains:
+- Unique identifier (GUID)
+- Name
+- Reference to settings directory in Sysvol
+- Policy version for tracking changes
 
-#### Group Policy Chain — Цепочка политик
-Связующий элемент между группами и политиками. Цепочка определяет:
-- Какая группа пользователей получит настройки
-- Какая группа компьютеров получит настройки
-- Какие именно политики связаны с группами пользователей и машин
-- В каком порядке политики получает участники связанных групп
+#### Group Policy Chain
+Linking element between groups and policies. Chain defines:
+- Which user group will receive settings
+- Which computer group will receive settings
+- Which specific policies are linked to user and computer groups
+- In what order policies are applied to members of linked groups
 
+#### Group Policy Master
+Central management object that:
+- Maintains registry of all active chains in the system
+- Defines the main server for policy management
+- Maintains correct chain processing order
 
-#### Group Policy Master — Мастер групповых политик
-Центральный объект управления, который:
-- Ведет реестр всех активных цепочек в системе
-- Определяет главный сервер для управления политиками
-- Поддерживает правильный порядок обработки цепочек
+Master ensures consistency and coordination of the entire group policy system.
 
-Master обеспечивает согласованность и координацию всей системы групповых политик.
-
-### Схема наследования групповых политик
+### Group Policy Inheritance Scheme
 
 ```mermaid
 graph TD
@@ -92,8 +92,8 @@ graph TD
     end
 
     subgraph UserSide ["👤 User/Computer"]
-        User["Пользователь: john<br/>Группы:<br/>• developers<br/>• office-users"]
-        Computer["Компьютер: ws001<br/>Группы:<br/>• dev-workstations<br/>• office-computers"]
+        User["User: john<br/>Groups:<br/>• developers<br/>• office-users"]
+        Computer["Computer: ws001<br/>Groups:<br/>• dev-workstations<br/>• office-computers"]
     end
 
     Master -.->|"1"| ChainDev
@@ -110,294 +110,278 @@ graph TD
     class User,Computer userClass
 ```
 
-Схема демонстрирует процесс наследования групповых политик на примере пользователя `john` и компьютера `ws001`.
+The diagram demonstrates the group policy inheritance process using the example of user `john` and computer `ws001`.
 
-#### Принадлежность к группам
+#### Group Membership
 
-**Пользователь john** входит в группы:
+**User john** belongs to groups:
 - `developers`
 - `office-users`
 
-**Компьютер ws001** входит в группы:
+**Computer ws001** belongs to groups:
 - `dev-workstations`
 - `office-computers`
 
-#### Определение подходящих цепочек
+#### Determining Suitable Chains
 
-Поскольку пользователь и компьютер входят в группы из **обеих** цепочек, система определяет две подходящие цепочки:
+Since the user and computer belong to groups from **both** chains, the system identifies two suitable chains:
 
-1. **dev-chain** - подходит, так как:
+1. **dev-chain** - matches because:
    - john ∈ developers (userGroup)
    - ws001 ∈ dev-workstations (computerGroup)
 
-2. **office-chain** - подходит, так как:
+2. **office-chain** - matches because:
    - john ∈ office-users (userGroup)
    - ws001 ∈ office-computers (computerGroup)
 
-#### Последовательность политик
+#### Policy Sequence
 
-**Шаг 1: Порядок цепочек**
-Group Policy Master определяет порядок обработки через атрибут `chainList`:
+**Step 1: Chain Order**
+Group Policy Master defines processing order through the `chainList` attribute:
 ```
-1. dev-chain (первая в списке)
-2. office-chain (вторая в списке)
-```
-
-**Шаг 2: Политики из dev-chain**
-Находятся в порядке атрибута `gpLink`:
-```
-1. policy-1 (приоритет 1)
-2. policy-2 (приоритет 2)
+1. dev-chain (first in list)
+2. office-chain (second in list)
 ```
 
-**Шаг 3: Политики из office-chain**
-Находятся в порядке атрибута `gpLink`:
+**Step 2: Policies from dev-chain**
+In order of `gpLink` attribute:
 ```
-3. policy-3 (приоритет 1)
-4. policy-4 (приоритет 2)
+1. policy-1 (priority 1)
+2. policy-2 (priority 2)
 ```
 
-#### Итоговая последовательность
+**Step 3: Policies from office-chain**
+In order of `gpLink` attribute:
+```
+3. policy-3 (priority 1)
+4. policy-4 (priority 2)
+```
 
-Пользователь `john` на компьютере `ws001` получит политики в следующем порядке:
+#### Final Sequence
 
+User `john` on computer `ws001` will receive policies in the following order:
 ```
 policy-1 → policy-2 → policy-3 → policy-4
 ```
 
-#### Объяснение последовательности
+#### Sequence Explanation
 
-1. **Сначала все политики из dev-chain** - потому что эта цепочка идет первой в `chainList` мастера
-2. **Затем все политики из office-chain** - потому что эта цепочка идет второй в `chainList` мастера
-3. **Внутри каждой цепочки** политики находятся в порядке их следования в `gpLink`
-4. **При конфликте настроек** приоритетнее последняя политика (в данном случае из policy-1)
+1. **First all policies from dev-chain** - because this chain is first in master's `chainList`
+2. **Then all policies from office-chain** - because this chain is second in master's `chainList`
+3. **Within each chain** policies are in the order of their sequence in `gpLink`
+4. **In case of setting conflicts** the last policy takes precedence (in this case from policy-1)
 
-Такой подход обеспечивает предсказуемое и контролируемое наследование политик с возможностью гибкого управления приоритетами на двух уровнях: уровне цепочек и уровне политик внутри цепочки.
+This approach provides predictable and controlled policy inheritance with flexible priority management at two levels: chain level and policy level within chain.
 
+## Installation
 
-# Установка
+### Requirements
 
-### Требования
+- FreeIPA server
+- Administrator rights
+- Valid Kerberos ticket
 
-- FreeIPA сервер
-- Права администратора
-- Действующий Kerberos-билет
-
-## Установка RPM пакета
+## Installing RPM package
     # apt-get install freeipa-server-gpo
 
-## Получение Kerberos-билета
+## Getting Kerberos ticket
     # kinit admin
 
-## Настройка групповых политик
+## Configuring group policies
     # ipa-gpo-install
 
-### Параметры установки
+### Installation parameters
 
-ipa-gpo-install [OPTIONS]
+    # ipa-gpo-install [OPTIONS]
 
-Опции:
-  --debuglevel LEVEL    Уровень отладки: 0=ошибки, 1=предупреждения, 2=отладка
-  --check-only          Только проверка без внесения изменений
-  --help               Показать справку
+Options:
+  --debuglevel LEVEL   Debug level: 0=errors, 1=warnings, 2=debug
+  --check-only         Check only without making changes
+  --help               Show help
 
-### Что делает установщик
+### What the installer does
 
-1. **Расширение схемы LDAP** — добавляет новые классы объектов для групповых политик
-2. **Создание структуры SYSVOL** — создает каталоги для хранения файлов политик
-3. **Настройка Samba** — создает общий ресурс SYSVOL
+1. **Extending LDAP schema** - adds new object classes for group policies
+2. **Creating SYSVOL structure** - creates directories for storing policy files
+3. **Configuring Samba** - creates SYSVOL share
 
+## Technical implementation
 
-## Техническая реализация
-
-### Схема LDAP
-- `cn` — GUID политики
-- `displayName` — отображаемое имя политики
-- `distinguishedName` — DN объекта
-- `flags` — флаги политики
-- `gPCFileSysPath` — путь к файлам политики в SYSVOL
-- `versionNumber` — номер версии политики
+### LDAP Schema
+- `cn` - Policy GUID
+- `displayName` - Display name of policy
+- `distinguishedName` - Object DN
+- `flags` - Policy flags
+- `gPCFileSysPath` - Path to policy files in SYSVOL
+- `versionNumber` - Policy version number
 
 **groupPolicyContainer (GPC)**
-- `cn` — GUID политики
-- `displayName` — отображаемое имя политики
-- `distinguishedName` — DN объекта
-- `flags` — флаги политики
-- `gPCFileSysPath` — путь к файлам политики в SYSVOL
-- `versionNumber` — номер версии политики
+- `cn` - Policy GUID
+- `displayName` - Display name of policy
+- `distinguishedName` - Object DN
+- `flags` - Policy flags
+- `gPCFileSysPath` - Path to policy files in SYSVOL
+- `versionNumber` - Policy version number
 
 **groupPolicyChain**
-- `cn` — имя цепочки
-- `displayName` — отображаемое имя цепочки
-- `userGroup` — DN группы пользователей
-- `computerGroup` — DN группы компьютеров
-- `gpLink` — упорядоченный список DN политик
+- `cn` - Chain name
+- `displayName` - Display name of chain
+- `userGroup` - User group DN
+- `computerGroup` - Computer group DN
+- `gpLink` - Ordered list of policy DNs
 
 **groupPolicyMaster**
-- `cn` — имя мастер-объекта
-- `pdcEmulator` — DN PDC эмулятора
-- `chainList` — упорядоченный список цепочек политик
+- `cn` - Master object name
+- `pdcEmulator` - PDC emulator DN
+- `chainList` - Ordered list of policy chains
 
-## Команды управления
+## Management commands
 
-### Управление политиками
+### Policy management
 
-#### Создание политики
-
+#### Creating policy
     # ipa gpo-add office-security-policy
 
-#### Просмотр политики
-
+#### Viewing policy
     # ipa gpo-show office-security-policy
 
-#### Изменение политики
-
+#### Modifying policy
     # ipa gpo-mod office-security-policy --rename="new-security-policy"
 
-#### Удаление политики
-
+#### Deleting policy
     # ipa gpo-del new-security-policy
 
-#### Поиск политик
-
+#### Finding policies
     # ipa gpo-find [CRITERIA]
 
-### Управление цепочками политик
+### Policy chain management
 
-#### Создание цепочки
-
+#### Creating chain
     # ipa chain-add it-chain \
-  --display-name="IT Department Chain" \
-  --user-group=it-users \
-  --computer-group=it-workstations \
-  --gp-link=policy1
+    --display-name="IT Department Chain"
+    --user-group=it-users
+    --computer-group=it-workstations
+    --gp-link=policy1
 
-#### Просмотр цепочки
-
+#### Viewing chain
     # ipa chain-show it-chain --raw
 
-### Изменение цепочки
+### Modifying chain
 
-**Базовые изменения:**
-
+**Basic modifications:**
     # ipa chain-mod it-chain \
-  --display-name="New Display Name" \
-  --user-group=new-user-group \
-  --computer-group=new-computer-group
+    --display-name="New Display Name"
+    --user-group=new-user-group
+    --computer-group=new-computer-group
 
-**Добавление групп:**
-
+**Adding groups:**
     # ipa chain-mod it-chain --add-user-group=developers
     # ipa chain-mod it-chain --add-computer-group=dev-machines
 
-**Удаление групп:**
-
+**Removing groups:**
     # ipa chain-mod it-chain --remove-user-group
     # ipa chain-mod it-chain --remove-computer-group
 
-**Работа с политиками в цепочке:**
+**Working with policies in chain:**
 
-### Добавление политик
+### Adding policies
     # ipa chain-add-gpo it-chain --gpos security-policy
     # ipa chain-add-gpo it-chain --gpos printer-policy
 
-### Удаление политик
+### Removing policies
     # ipa chain-remove-gpo it-chain --gpos security-policy
 
-### Удаление цепочки
+### Deleting chain
     # ipa chain-del it-chain
 
-### Поиск цепочек
+### Finding chains
     # ipa chain-find [CRITERIA]
 
-## Управление приоритетами
+## Priority management
 
-### Просмотр текущего порядка
+### Viewing current order
     # ipa chain-show policy-chain
 
-### Перемещение политики вверх (повышение приоритета)
+### Moving policy up (increasing priority)
     # ipa chain-mod it-chain --moveup-gpc="security-policy"
 
-### Перемещение политики вниз (понижение приоритета)
+### Moving policy down (decreasing priority)
     # ipa chain-mod it-chain --movedown-gpc="security-policy"
 
-## Управление мастером групповых политик
+## Group Policy Master management
 
-#### Просмотр мастера групповых политик
-
+#### Viewing Group Policy Master
     # ipa gpmaster-show
 
-#### Добавление цепочки в мастер
-
+#### Adding chain to master
     # ipa gpmaster-mod master-name --add-chain=chain-name
 
-#### Удаление цепочки из мастера
+#### Removing chain from master
     # ipa gpmaster-mod master-name --remove-chain=chain-name
 
-### Перемещение цепочки вверх (повышение приоритета)
+### Moving chain up (increasing priority)
     # ipa gpmaster-mod master-name --moveup-chain=chain-name
 
-### Перемещение цепочки вниз (понижение приоритета)
+### Moving chain down (decreasing priority)
     # ipa gpmaster-mod master-name --movedown-chain=chain-name
 
-### Настройка PDC Emulator
+### Configuring PDC Emulator
     # ipa gpmaster-mod master-name --pdc-emulator=server-name
 
-## Веб-интерфейс
+## Web interface
 
-Расширение включает полнофункциональный веб-интерфейс, интегрированный в административную панель FreeIPA.
+The extension includes a full-featured web interface integrated into the FreeIPA administrative panel.
 
-### Основные возможности
+### Main features
 
-- **Управление цепочками политик**: создание, редактирование, включение/отключение
-- **Управление приоритетами**: изменение порядка цепочек и GPO
-- **Управление объектами GPO**: создание, редактирование, удаление с автоматической обработкой файловой структуры
-- **Связывание с группами**: назначение цепочек группам пользователей и компьютеров
+- **Policy chain management**: creation, editing, enabling/disabling
+- **Priority management**: changing chain and GPO order
+- **GPO object management**: creation, editing, deletion with automatic file structure processing
+- **Group linking**: assigning chains to user and computer groups
 
-### Интеграция
+### Integration
 
-- Новый раздел "Group Policy" в меню FreeIPA
-- Поддержка системы прав доступа с ролью "Group Policy Administrators"
-- Стандартные компоненты интерфейса FreeIPA
+- New "Group Policy" section in FreeIPA menu
+- Support for access rights system with "Group Policy Administrators" role
+- Standard FreeIPA interface components
 
-## Структура файлов
+## File structure
 
 ### SYSVOL
-После установки создается структура каталогов:
-
+After installation, directory structure is created:
 /var/lib/freeipa/sysvol/
 └── domain.example.com/
-    ├── Policies/
-    │   └── {GUID}/
-    │       ├── GPT.INI
-    │       ├── Machine/
-    │       └── User/
+├── Policies/
+│ └── {GUID}/
+│ ├── GPT.INI
+│ ├── Machine/
+│ └── User/
 
-### Файлы политик
-Каждая политика создает в SYSVOL структуру:
-- `GPT.INI` — метаданные политики
-- `Machine/` — настройки для компьютеров
-- `User/` — настройки для пользователей
 
-## Права доступа
+### Policy files
+Each policy creates structure in SYSVOL:
+- `GPT.INI` - policy metadata
+- `Machine/` - settings for computers
+- `User/` - settings for users
 
-### Роли и привилегии
-Система создает специальную роль **Group Policy Administrators** с правами:
-- Чтение всех объектов групповых политик
-- Создание, изменение и удаление политик
-- Управление цепочками политик
+## Access rights
 
-### Назначение прав
+### Roles and privileges
+System creates special role **Group Policy Administrators** with rights:
+- Read all group policy objects
+- Create, modify and delete policies
+- Manage policy chains
 
+### Assigning rights
     # ipa role-add-member "Group Policy Administrators" --users=username
 
-## Особенности работы системы
+## System features
 
-### Проверка целостности данных
+### Data integrity verification
 
-**При добавлении объектов:**
-- Добавление GPC и групп происходит с проверкой на их существование в базе LDAP
+**When adding objects:**
+- Adding GPC and groups is performed with verification of their existence in LDAP database
 
-**При удалении объектов:**
-- При удалении GPC или групп ссылки в цепочках автоматически удаляются плагином ссылочной целостности
-- При удалении цепочки она автоматически удаляется из объекта gpmaster
+**When deleting objects:**
+- When deleting GPC or groups, references in chains are automatically removed by referential integrity plugin
+- When deleting chain, it is automatically removed from gpmaster object
