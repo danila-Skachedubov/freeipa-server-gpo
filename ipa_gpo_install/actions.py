@@ -11,7 +11,6 @@ from ipalib import api
 from ipapython import ipautil
 from .config import LOCALE_DIR, FREEIPA_BASE_PATH, get_domain_sysvol_path
 
-
 try:
     locale.setlocale(locale.LC_ALL, '')
     current_locale, encoding = locale.getlocale()
@@ -79,11 +78,9 @@ class IPAActions:
             policies_path = sysvol_path / "Policies"
             scripts_path = sysvol_path / "scripts"
 
-            # Создаем базовую директорию FreeIPA
             freeipa_dir.mkdir(parents=True, exist_ok=True)
             acl_set = self._set_default_acl(freeipa_dir)
 
-            # Создаем структуру SYSVOL
             for path in [sysvol_path, policies_path, scripts_path]:
                 path.mkdir(parents=True, exist_ok=True)
                 self.logger.debug(_("Created directory: {}").format(path))
@@ -145,6 +142,13 @@ class IPAActions:
                     _("Failed to create SYSVOL share: {}").format(result.error_output)
                 )
                 return False
+
+            cmd_setparm = ["net", "conf", "setparm", "sysvol", "create mask", "0664"]
+            self.logger.debug(_("Running: {}").format(' '.join(cmd_setparm)))
+            result_setparm = ipautil.run(cmd_setparm, raiseonerr=False)
+
+            if result_setparm.returncode != 0:
+                self.logger.warning(_("Failed to set create mask parameter: {}").format(result_setparm.error_output))
 
             self.logger.info(_("SYSVOL share created successfully"))
             return True

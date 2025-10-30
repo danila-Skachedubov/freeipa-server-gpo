@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Скрипт для обновления файлов локализации
-# Запускать из корня проекта
+# Script for updating localization files
+# Run from project root
 
-set -e  # Остановиться при ошибке
+set -e  # Stop on error
 
 PROJECT_NAME="ipa-gpo-install"
 VERSION="0.0.1"
