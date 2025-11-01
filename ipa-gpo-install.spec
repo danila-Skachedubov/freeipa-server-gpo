@@ -1,5 +1,5 @@
 Name:           freeipa-server-gpo
-Version:        0.0.1
+Version:        0.0.2
 Release:        alt1
 
 Summary:        Prepare FreeIPA for Group Policy Management
@@ -59,5 +59,9 @@ make install PREFIX=%{_prefix} DESTDIR=%{buildroot} PYTHON_SITELIBDIR=%{python3_
 %{_datadir}/locale/ru/LC_MESSAGES/ipa-gpo-install.mo
 
 %changelog
+* Sat Nov 01 2025 Danila Skachedubov <skachedubov@altlinux.org> 0.0.2-alt1
+- feat: add Russian README and improve SYSVOL configuration
+- feat(i18n): add English translation for README
+
 * Wed Apr 16 2025 Danila Skachedubov <skachedubov@altlinux.org> 0.0.1-alt1
 - Initial build
