@@ -1,0 +1,332 @@
+#!/usr/bin/python3
+"""D-Bus handler for parsing ADMX/ADML files and generating policy dictionary."""
+
+import os
+import sys
+import json
+import xml.etree.ElementTree as ET
+from pathlib import Path
+from collections import defaultdict
+
+
+def parse_admx_file(admx_path):
+    """Parse a single ADMX file and extract policy definitions."""
+    try:
+        tree = ET.parse(admx_path)
+        root = tree.getroot()
+
+        # Register namespaces
+        namespaces = {
+            '': 'http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions'
+        }
+
+        # Find all namespaces in the file
+        for elem in root.iter():
+            if '}' in elem.tag:
+                ns = elem.tag.split('}')[0][1:]
+                if ns not in namespaces:
+                    namespaces[ns] = ns
+
+        # Extract policy definitions
+        policies = []
+
+        # Find all policy elements
+        for policy in root.findall('.//policy', namespaces):
+            policy_data = {
+                'name': policy.get('name', ''),
+                'displayName': policy.get('displayName', ''),
+                'explainText': policy.get('explainText', ''),
+                'key': policy.get('key', ''),
+                'valueName': policy.get('valueName', ''),
+                'class': policy.get('class', ''),
+                'elements': []
+            }
+
+            # Parse elements within the policy
+            for element in policy.findall('.//elements/*', namespaces):
+                elem_data = {
+                    'type': element.tag.split('}')[-1] if '}' in element.tag else element.tag,
+                    'id': element.get('id', ''),
+                    'valueName': element.get('valueName', ''),
+                    'key': element.get('key', ''),
+                    'required': element.get('required', 'false').lower() == 'true'
+                }
+
+                # Handle different element types
+                if elem_data['type'] == 'decimal':
+                    elem_data['minValue'] = element.get('minValue')
+                    elem_data['maxValue'] = element.get('maxValue')
+                elif elem_data['type'] == 'enum':
+                    elem_data['items'] = []
+                    for item in element.findall('.//item', namespaces):
+                        item_data = {
+                            'displayName': item.get('displayName', ''),
+                            'value': item.get('value', '')
+                        }
+                        elem_data['items'].append(item_data)
+                elif elem_data['type'] == 'list':
+                    elem_data['keyPrefix'] = element.get('keyPrefix', '')
+                    elem_data['valuePrefix'] = element.get('valuePrefix', '')
+
+                policy_data['elements'].append(elem_data)
+
+            policies.append(policy_data)
+
+        # Extract categories
+        categories = []
+        for category in root.findall('.//category', namespaces):
+            cat_data = {
+                'name': category.get('name', ''),
+                'displayName': category.get('displayName', '')
+            }
+            categories.append(cat_data)
+
+        # Extract products
+        products = []
+        for product in root.findall('.//products/*', namespaces):
+            prod_data = {
+                'name': product.get('name', ''),
+                'displayName': product.get('displayName', '')
+            }
+            products.append(prod_data)
+
+        return {
+            'policies': policies,
+            'categories': categories,
+            'products': products,
+            'filename': os.path.basename(admx_path)
+        }
+
+    except ET.ParseError as e:
+        print(f"Error parsing ADMX file {admx_path}: {e}", file=sys.stderr)
+        return None
+    except Exception as e:
+        print(f"Unexpected error parsing {admx_path}: {e}", file=sys.stderr)
+        return None
+
+
+def parse_adml_file(adml_path, language='en-US'):
+    """Parse a single ADML file for localized strings."""
+    try:
+        tree = ET.parse(adml_path)
+        root = tree.getroot()
+
+        # Register namespaces
+        namespaces = {
+            '': 'http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions'
+        }
+
+        # Find all namespaces in the file
+        for elem in root.iter():
+            if '}' in elem.tag:
+                ns = elem.tag.split('}')[0][1:]
+                if ns not in namespaces:
+                    namespaces[ns] = ns
+
+        # Extract string table
+        string_table = {}
+
+        # Find string table for the specified language
+        for string_table_elem in root.findall('.//stringTable', namespaces):
+            table_lang = string_table_elem.get('lang', 'en-US')
+            if table_lang == language:
+                for string in string_table_elem.findall('.//string', namespaces):
+                    string_id = string.get('id', '')
+                    string_value = string.text or ''
+                    string_table[string_id] = string_value
+
+        # Extract presentation table
+        presentation_table = {}
+
+        for presentation_elem in root.findall('.//presentationTable', namespaces):
+            table_lang = presentation_elem.get('lang', 'en-US')
+            if table_lang == language:
+                for presentation in presentation_elem.findall('.//presentation', namespaces):
+                    presentation_id = presentation.get('refId', '')
+                    # Extract text boxes, combo boxes, etc.
+                    presentation_data = []
+                    for elem in presentation:
+                        elem_type = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
+                        elem_data = {
+                            'type': elem_type,
+                            'refId': elem.get('refId', ''),
+                            'label': elem.get('label', ''),
+                            'defaultValue': elem.get('defaultValue', '')
+                        }
+                        presentation_data.append(elem_data)
+                    presentation_table[presentation_id] = presentation_data
+
+        return {
+            'stringTable': string_table,
+            'presentationTable': presentation_table,
+            'language': language,
+            'filename': os.path.basename(adml_path)
+        }
+
+    except ET.ParseError as e:
+        print(f"Error parsing ADML file {adml_path}: {e}", file=sys.stderr)
+        return None
+    except Exception as e:
+        print(f"Unexpected error parsing {adml_path}: {e}", file=sys.stderr)
+        return None
+
+
+def find_adml_for_admx(admx_path, policy_definitions_path, language='en-US'):
+    """Find corresponding ADML file for an ADMX file."""
+    admx_name = os.path.basename(admx_path)
+    base_name = os.path.splitext(admx_name)[0]
+
+    # Look for ADML file in language-specific directory
+    language_dir = os.path.join(policy_definitions_path, language)
+    if os.path.exists(language_dir):
+        adml_path = os.path.join(language_dir, f"{base_name}.adml")
+        if os.path.exists(adml_path):
+            return adml_path
+
+    # Fallback to en-US if specified language not found
+    if language != 'en-US':
+        en_us_dir = os.path.join(policy_definitions_path, 'en-US')
+        if os.path.exists(en_us_dir):
+            adml_path = os.path.join(en_us_dir, f"{base_name}.adml")
+            if os.path.exists(adml_path):
+                return adml_path
+
+    return None
+
+
+def apply_localization(admx_data, adml_data):
+    """Apply localization from ADML to ADMX data."""
+    if not adml_data:
+        return admx_data
+
+    string_table = adml_data.get('string_table', {})
+    presentation_table = adml_data.get('presentation_table', {})
+
+    # Localize policy display names and explanations
+    for policy in admx_data.get('policies', []):
+        display_name_ref = policy.get('displayName', '')
+        explain_text_ref = policy.get('explainText', '')
+
+        if display_name_ref in string_table:
+            policy['displayName'] = string_table[display_name_ref]
+
+        if explain_text_ref in string_table:
+            policy['explainText'] = string_table[explain_text_ref]
+
+        # Localize element labels
+        for element in policy.get('elements', []):
+            # Check if element has presentation data
+            element_id = element.get('id', '')
+            if element_id in presentation_table:
+                for presentation_elem in presentation_table[element_id]:
+                    if presentation_elem.get('refId') == element_id:
+                        label_ref = presentation_elem.get('label', '')
+                        if label_ref in string_table:
+                            element['displayName'] = string_table[label_ref]
+
+    # Localize categories
+    for category in admx_data.get('categories', []):
+        display_name_ref = category.get('displayName', '')
+        if display_name_ref in string_table:
+            category['displayName'] = string_table[display_name_ref]
+
+    # Localize products
+    for product in admx_data.get('products', []):
+        display_name_ref = product.get('displayName', '')
+        if display_name_ref in string_table:
+            product['displayName'] = string_table[display_name_ref]
+
+    return admx_data
+
+
+def parse_policy_definitions(policy_definitions_path, language='en-US'):
+    """Parse all ADMX/ADML files in the policy definitions directory."""
+    if not os.path.exists(policy_definitions_path):
+        print(f"Error: Policy definitions path does not exist: {policy_definitions_path}", file=sys.stderr)
+        return None
+
+    all_policies = []
+    all_categories = []
+    all_products = []
+
+    # Scan for ADMX files
+    for root_dir, dirs, files in os.walk(policy_definitions_path):
+        for file in files:
+            if file.lower().endswith('.admx'):
+                admx_path = os.path.join(root_dir, file)
+
+                # Parse ADMX file
+                admx_data = parse_admx_file(admx_path)
+                if not admx_data:
+                    continue
+
+                # Find and parse corresponding ADML file
+                adml_path = find_adml_for_admx(admx_path, policy_definitions_path, language)
+                adml_data = None
+                if adml_path:
+                    adml_data = parse_adml_file(adml_path, language)
+
+                # Apply localization
+                if adml_data:
+                    admx_data = apply_localization(admx_data, adml_data)
+
+                # Add to collections
+                all_policies.extend(admx_data.get('policies', []))
+                all_categories.extend(admx_data.get('categories', []))
+                all_products.extend(admx_data.get('products', []))
+
+    # Remove duplicates
+    unique_categories = {}
+    for cat in all_categories:
+        if cat['name'] not in unique_categories:
+            unique_categories[cat['name']] = cat
+
+    unique_products = {}
+    for prod in all_products:
+        if prod['name'] not in unique_products:
+            unique_products[prod['name']] = prod
+
+    return {
+        'policies': all_policies,
+        'categories': list(unique_categories.values()),
+        'products': list(unique_products.values()),
+        'total_policies': len(all_policies),
+        'total_categories': len(unique_categories),
+        'total_products': len(unique_products)
+    }
+
+
+def main():
+    """Main function to parse ADMX/ADML files and output JSON."""
+    if len(sys.argv) < 2:
+        print("Error: Insufficient arguments", file=sys.stderr)
+        print("Usage: org.freeipa.server.parse-admx-structure <policy_definitions_path> [language]", file=sys.stderr)
+        return 1
+
+    policy_definitions_path = sys.argv[1]
+    language = sys.argv[2] if len(sys.argv) > 2 else 'en-US'
+
+    print(f"Parsing ADMX/ADML files from: {policy_definitions_path}", file=sys.stderr)
+    print(f"Language: {language}", file=sys.stderr)
+
+    # Parse policy definitions
+    result = parse_policy_definitions(policy_definitions_path, language)
+
+    if result is None:
+        print("Error: Failed to parse policy definitions", file=sys.stderr)
+        return 1
+
+    # Output as JSON
+    json_output = json.dumps(result, indent=2, ensure_ascii=False)
+    print(json_output)
+
+    print(f"\nParsing completed:", file=sys.stderr)
+    print(f"  - Total policies: {result['total_policies']}", file=sys.stderr)
+    print(f"  - Total categories: {result['total_categories']}", file=sys.stderr)
+    print(f"  - Total products: {result['total_products']}", file=sys.stderr)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
