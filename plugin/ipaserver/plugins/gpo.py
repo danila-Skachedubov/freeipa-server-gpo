@@ -1,9 +1,10 @@
+import json
 import logging
 import uuid
 
 import dbus
 import dbus.mainloop.glib
-from ipalib import api, errors, _, ngettext
+from ipalib import api, errors, _, ngettext, Command, output
 from ipalib import Str, Int
 from ipalib.plugable import Registry
 from ipapython.dn import DN
@@ -14,6 +15,7 @@ from ipaserver.plugins.baseldap import (
 )
 
 logger = logging.getLogger(__name__)
+logger.debug('gpo plugin loaded')
 
 register = Registry()
 
@@ -168,6 +170,80 @@ class gpo(LDAPObject):
             else:
                 logger.warning(error_msg)
 
+    def _call_dbus_method_with_output(self, method_name, *params, fail_on_error=True):
+        """D-Bus method caller that returns stdout."""
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+        try:
+            bus = dbus.SystemBus()
+            obj = bus.get_object('org.freeipa.server', '/',
+                               follow_name_owner_changes=True)
+            server = dbus.Interface(obj, 'org.freeipa.server')
+
+            method = getattr(server, method_name)
+            ret, stdout, stderr = method(*params)
+
+            if ret != 0:
+                error_msg = f"Failed to {method_name.replace('_', ' ')}: {stderr}"
+                logger.error(error_msg)
+
+                if fail_on_error:
+                    raise errors.ExecutionError(
+                        message=_(f'Failed to {method_name.replace("_", " ")}: %(error)s')
+                                % {'error': stderr or _('Unknown error')}
+                    )
+                else:
+                    logger.warning(error_msg)
+                    return None
+
+            return stdout
+
+        except dbus.DBusException as e:
+            error_msg = f'Failed to call D-Bus {method_name}: {str(e)}'
+            logger.error(error_msg)
+
+            if fail_on_error:
+                raise errors.ExecutionError(
+                    message=_('Failed to communicate with D-Bus service')
+                )
+            else:
+                logger.warning(error_msg)
+                return None
+
+    def parse_admx_policies(self, policy_definitions_path=None, language='en-US'):
+        """
+        Parse ADMX/ADML policy definitions.
+
+        If policy_definitions_path is not provided, defaults to
+        /usr/share/PolicyDefinitions/
+        """
+        if policy_definitions_path is None:
+            policy_definitions_path = '/usr/share/PolicyDefinitions/'
+
+        logger.debug(f"parse_admx_policies called with path={policy_definitions_path}, language={language}")
+
+        stdout = self._call_dbus_method_with_output('parse_admx_structure',
+                                                   policy_definitions_path, language,
+                                                   fail_on_error=True)
+
+        if stdout is None:
+            raise errors.ExecutionError(
+                message=_('Failed to parse ADMX policies')
+            )
+
+        # Parse JSON output from stdout
+        try:
+            logger.debug(f"Parsing JSON output, length: {len(stdout)}")
+            result = json.loads(stdout)
+            logger.debug(f"Successfully parsed {len(result.get('policies', []))} policies")
+            return result
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON output from ADMX parser: {e}")
+            logger.error(f"Stdout content (first 500 chars): {stdout[:500]}")
+            raise errors.ExecutionError(
+                message=_('Failed to parse ADMX parser output')
+            )
+
 
 @register()
 class gpo_add(LDAPCreate):
@@ -271,3 +347,100 @@ class gpo_mod(LDAPUpdate):
                 pass
 
         return old_dn
+
+@register()
+class gpo_parse_admx(Command):
+    __doc__ = _("Parse ADMX/ADML policy definitions.")
+    NO_CLI = True
+
+    takes_args = (
+        Str('policy_definitions_path?',
+            cli_name='policy_definitions',
+            label=_('Policy definitions path'),
+            doc=_('Path to ADMX/ADML policy definitions (default: /usr/share/PolicyDefinitions/)'),
+        ),
+    )
+
+    takes_options = (
+        Str('language?',
+            cli_name='language',
+            label=_('Language'),
+            doc=_('Language code for ADML files (default: en-US)'),
+            default='en-US',
+        ),
+    )
+
+    has_output = (
+        output.Output('result', type=dict, doc=_('Parsed ADMX/ADML policy definitions')),
+    )
+
+
+
+    def execute(self, policy_definitions_path=None, language='en-US', **options):
+        """
+        Execute ADMX/ADML parsing.
+        """
+        try:
+            logger.debug('gpo_parse_admx execute called')
+            if policy_definitions_path is None:
+                policy_definitions_path = '/usr/share/PolicyDefinitions/'
+
+            logger.debug(f"parse_admx_policies called with path={policy_definitions_path}, language={language}")
+
+            # Call D-Bus method parse_admx_structure
+            dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+            try:
+                with open('/tmp/gpo_debug.log', 'a') as f:
+                    import time
+                    f.write(f'{time.time()}: before dbus call\n')
+                bus = dbus.SystemBus()
+                obj = bus.get_object('org.freeipa.server', '/',
+                                   follow_name_owner_changes=True)
+                server = dbus.Interface(obj, 'org.freeipa.server')
+                method = getattr(server, 'parse_admx_structure')
+                ret, stdout, stderr = method(policy_definitions_path, language)
+                with open('/tmp/gpo_debug.log', 'a') as f:
+                    f.write(f'{time.time()}: after dbus call ret={ret}\n')
+
+                if ret != 0:
+                    error_msg = f"Failed to parse_admx_structure: {stderr}"
+                    logger.error(error_msg)
+                    raise errors.ExecutionError(
+                        message=_('Failed to parse ADMX policies: %(error)s') %
+                                {'error': stderr or _('Unknown error')}
+                    )
+
+            except dbus.DBusException as e:
+                error_msg = f'Failed to call D-Bus parse_admx_structure: {str(e)}'
+                logger.error(error_msg)
+                raise errors.ExecutionError(
+                    message=_('Failed to communicate with D-Bus service')
+                )
+
+            if stdout is None:
+                raise errors.ExecutionError(
+                    message=_('Failed to parse ADMX policies')
+                )
+
+            # Convert dbus.String to Python str
+            stdout = str(stdout)
+
+            # Parse JSON output from stdout
+            try:
+                logger.debug(f"Parsing JSON output, length: {len(stdout)}")
+                result = json.loads(stdout)
+                logger.debug(f"Successfully parsed {len(result.get('policies', []))} policies")
+                with open('/tmp/gpo_debug.log', 'a') as f:
+                    import time
+                    f.write(f'{time.time()}: returning result\n')
+                return {'result': result}
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse JSON output from ADMX parser: {e}")
+                logger.error(f"Stdout content (first 500 chars): {stdout[:500]}")
+                raise errors.ExecutionError(
+                    message=_('Failed to parse ADMX parser output')
+                )
+        except Exception as e:
+            logger.exception("Unexpected error in gpo_parse_admx")
+            raise
