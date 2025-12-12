@@ -1,6 +1,6 @@
 define([
     'freeipa/ipa',
-    'freeipa/phases', 
+    'freeipa/phases',
     'freeipa/reg',
     'freeipa/navigation',
     'freeipa/rpc'
@@ -58,32 +58,6 @@ define([
                                 {
                                     name: 'displayname',
                                     label: 'Policy Name',
-                                    read_only: false
-                                },
-                                {
-                                    name: 'cn',
-                                    label: 'GUID',
-                                    read_only: true
-                                },
-                                {
-                                    name: 'distinguishedname',
-                                    label: 'Distinguished Name',
-                                    read_only: true
-                                },
-                                {
-                                    name: 'gpcfilesyspath',
-                                    label: 'File System Path',
-                                    read_only: false
-                                },
-                                {
-                                    name: 'versionnumber',
-                                    label: 'Current Version (auto-increments on save)',
-                                    read_only: true,
-                                    doc: 'Version will be automatically incremented when saved'
-                                },
-                                {
-                                    name: 'flags',
-                                    label: 'Flags',
                                     read_only: false
                                 }
                             ]
@@ -153,36 +127,18 @@ define([
                                 width: '100%'
                             },
                             {
-                                $type: 'text',
-                                name: 'gpcfilesyspath',
-                                label: 'File System Path',
-                                value: result.gpcfilesyspath || '',
-                                required: false,
-                                width: '100%',
-                                doc: 'Path to policy files on the file system'
-                            },
-                            {
-                                $type: 'number',
-                                name: 'versionnumber',
-                                label: 'Current Version (read-only)',
-                                value: result.versionnumber || 0,
-                                required: false,
-                                width: '100px',
-                                min: 0,
+                                $type: 'textarea',
+                                name: 'admx_json',
+                                label: 'ADMX Policies JSON',
+                                value: 'Loading ADMX policies...',
+                                rows: 20,
                                 read_only: true,
-                                doc: 'Current version: ' + (result.versionnumber || 0) + '. Version will be automatically incremented to ' + ((result.versionnumber || 0) + 1) + ' when saved.'
-                            },
-                            {
-                                $type: 'number',
-                                name: 'flags',
-                                label: 'Flags',
-                                value: result.flags || 0,
-                                required: false,
-                                width: '100px',
-                                doc: 'Group Policy Object flags'
+                                width: '100%'
                             }
                         ]
                     });
+
+
 
                     // Add Save button
                     dialog.create_button({
@@ -191,12 +147,7 @@ define([
                         click: function() {
                             // Get values from dialog fields
                             var displayname_widget = dialog.get_field('displayname').widget;
-                            var gpcfilesyspath_widget = dialog.get_field('gpcfilesyspath').widget;
-                            var flags_widget = dialog.get_field('flags').widget;
-
                             var displayname_value = displayname_widget.get_value()[0] || '';
-                            var gpcfilesyspath_value = gpcfilesyspath_widget.get_value()[0] || '';
-                            var flags_value = parseInt(flags_widget.get_value()[0] || 0);
 
                             // Prepare modification data
                             var mod_data = {};
@@ -211,7 +162,7 @@ define([
                                 mod_data.rename = new_displayname;
                             }
 
-                            // DO NOT check for changes in other fields (gpcfilesyspath, flags)
+                            // DO NOT check for changes in other fields
                             // Only version will be automatically incremented
                             // Other fields remain unchanged unless explicitly renamed
 
@@ -273,6 +224,37 @@ define([
                     });
 
                     dialog.open();
+
+                    // Load ADMX policies
+                    var parse_command = rpc.command({
+                        entity: 'gpo',
+                        method: 'parse_admx',
+                        args: [],
+                        options: {
+                            version: IPA.api_version
+                        },
+                        on_success: function(parse_data) {
+                            var parse_result = parse_data.result.result || {};
+                            var json_str = JSON.stringify(parse_result, null, 2);
+                            var admx_field = dialog.get_field('admx_json');
+                            if (admx_field && admx_field.widget) {
+                                admx_field.widget.set_value([json_str]);
+                            }
+                        },
+                        on_error: function(xhr, text_status, error_thrown) {
+                            var msg = 'Failed to load ADMX policies';
+                            if (error_thrown && error_thrown.message) {
+                                msg += ': ' + error_thrown.message;
+                            }
+                            IPA.notify(msg, 'error');
+                            // Update field with error
+                            var admx_field = dialog.get_field('admx_json');
+                            if (admx_field && admx_field.widget) {
+                                admx_field.widget.set_value(['Error: ' + msg]);
+                            }
+                        }
+                    });
+                    parse_command.execute();
                 },
                 on_error: function(xhr, text_status, error_thrown) {
                     var msg = 'Failed to load GPO data';
@@ -318,7 +300,7 @@ define([
                 has_changes = true;
             }
 
-            // DO NOT check for changes in other fields (gpcfilesyspath, flags)
+            // DO NOT check for changes in other fields
             // Only version will be automatically incremented
             // Other fields remain unchanged unless explicitly renamed
             // Always set has_changes to true to allow version increment
@@ -393,6 +375,8 @@ define([
 
         return that;
     };
+
+
 
     exp.register = function() {
         var e = reg.entity;
