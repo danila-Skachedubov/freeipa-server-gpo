@@ -587,9 +587,12 @@ class chain_find(LDAPSearch):
 
     def args_options_2_entry(self, *args, **options):
         """Convert search options to LDAP entry attributes for filtering."""
-        converted = self.obj.convert_names_to_dns(options, strict=False)
-        options.update(converted)
-        return super(chain_find, self).args_options_2_entry(*args, **options)
+        options_copy = dict(options)
+        options_copy.pop('active', None)
+
+        converted = self.obj.convert_names_to_dns(options_copy, strict=False)
+        options_copy.update(converted)
+        return super(chain_find, self).args_options_2_entry(*args, **options_copy)
 
     def post_callback(self, ldap, entries, truncated, *args, **options):
         """Sort chains by GPMaster order."""
@@ -612,6 +615,7 @@ class chain_find(LDAPSearch):
                 if chain_name and isinstance(chain_name, list):
                     chain_name = chain_name[0]
                     is_active = chain_name in gpmaster_chains
+
                     entry_attrs['active'] = [is_active]
 
                     try:
@@ -642,9 +646,6 @@ class chain_find(LDAPSearch):
 
     def _order_by_gpmaster(self, entries, gpmaster_chains):
         """Sort chains by GPMaster order."""
-        if not gpmaster_chains:
-            return entries
-
         chain_order = {name: idx for idx, name in enumerate(gpmaster_chains)}
         active_entries = []
         inactive_entries = []
