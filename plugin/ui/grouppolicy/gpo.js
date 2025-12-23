@@ -59,6 +59,28 @@ define([
                                     name: 'displayname',
                                     label: 'Policy Name',
                                     read_only: false
+                                },
+                                {
+                                    name: 'cn',
+                                    label: 'GUID',
+                                    read_only: true
+                                },
+                                {
+                                    name: 'distinguishedname',
+                                    label: 'Distinguished Name',
+                                    read_only: true
+                                },
+                                {
+                                    name: 'gpcfilesyspath',
+                                    label: 'File System Path'
+                                },
+                                {
+                                    name: 'versionnumber',
+                                    label: 'Version Number'
+                                },
+                                {
+                                    name: 'flags',
+                                    label: 'Flags'
                                 }
                             ]
                         }
