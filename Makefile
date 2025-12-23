@@ -1,9 +1,10 @@
 PACKAGE_NAME = freeipa-server-gpo
-VERSION = 0.0.1
+VERSION = 0.0.3
 
 PREFIX ?= /usr
 DESTDIR =
 PYTHON_SITELIBDIR = /usr/lib64/python3/site-packages
+STAGING_DIR = $(PREFIX)/share/freeipa-server-gpo/staging
 
 .PHONY: all build install clean dist rpm compile-po
 
@@ -25,27 +26,27 @@ install: build
 	@mkdir -p $(DESTDIR)$(PYTHON_SITELIBDIR)
 	cp -r ipa_gpo_install $(DESTDIR)$(PYTHON_SITELIBDIR)/
 
-	# IPA plugins
-	install -D -m 644 plugin/ipaserver/plugins/gpo.py $(DESTDIR)$(PYTHON_SITELIBDIR)/ipaserver/plugins/gpo.py
-	install -D -m 644 plugin/ipaserver/plugins/chain.py $(DESTDIR)$(PYTHON_SITELIBDIR)/ipaserver/plugins/chain.py
-	install -D -m 644 plugin/ipaserver/plugins/gpmaster.py $(DESTDIR)$(PYTHON_SITELIBDIR)/ipaserver/plugins/gpmaster.py
+	# IPA plugins (staged)
+	install -D -m 644 plugin/ipaserver/plugins/gpo.py $(DESTDIR)$(STAGING_DIR)/plugin/ipaserver/plugins/gpo.py
+	install -D -m 644 plugin/ipaserver/plugins/chain.py $(DESTDIR)$(STAGING_DIR)/plugin/ipaserver/plugins/chain.py
+	install -D -m 644 plugin/ipaserver/plugins/gpmaster.py $(DESTDIR)$(STAGING_DIR)/plugin/ipaserver/plugins/gpmaster.py
 
-	# IPA UI plugins
-	install -D -m 644 plugin/ui/grouppolicy/chain.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/chain.js
-	install -D -m 644 plugin/ui/grouppolicy/gpo.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/gpo.js
+	# IPA UI plugins (staged)
+	install -D -m 644 plugin/ui/grouppolicy/chain.js $(DESTDIR)$(STAGING_DIR)/plugin/ui/grouppolicy/chain.js
+	install -D -m 644 plugin/ui/grouppolicy/gpo.js $(DESTDIR)$(STAGING_DIR)/plugin/ui/grouppolicy/gpo.js
 
-	# IPA schemas and updates
+	# IPA schemas and updates (staged)
 	@for schema in plugin/schema.d/*.ldif; do \
-		install -D -m 644 "$$schema" "$(DESTDIR)$(PREFIX)/share/ipa/schema.d/$$(basename $$schema)"; \
+		install -D -m 644 "$$schema" "$(DESTDIR)$(STAGING_DIR)/plugin/schema.d/$$(basename $$schema)"; \
 	done
 	@for update in plugin/update/*.update; do \
-		install -D -m 644 "$$update" "$(DESTDIR)$(PREFIX)/share/ipa/updates/$$(basename $$update)"; \
+		install -D -m 644 "$$update" "$(DESTDIR)$(STAGING_DIR)/plugin/update/$$(basename $$update)"; \
 	done
 
-	# DBUS configuration and handlers
-	install -D -m 644 plugin/dbus_handlers/ipa-gpo.conf $(DESTDIR)/etc/oddjobd.conf.d/ipa-gpo.conf	
-	install -D -m 755 plugin/dbus_handlers/org.freeipa.server.create-gpo-structure $(DESTDIR)$(PREFIX)/libexec/ipa/oddjob/org.freeipa.server.create-gpo-structure
-	install -D -m 755 plugin/dbus_handlers/org.freeipa.server.delete-gpo-structure $(DESTDIR)$(PREFIX)/libexec/ipa/oddjob/org.freeipa.server.delete-gpo-structure
+	# DBUS configuration and handlers (staged)
+	install -D -m 644 plugin/dbus_handlers/ipa-gpo.conf $(DESTDIR)$(STAGING_DIR)/plugin/dbus_handlers/ipa-gpo.conf
+	install -D -m 755 plugin/dbus_handlers/org.freeipa.server.create-gpo-structure $(DESTDIR)$(STAGING_DIR)/plugin/dbus_handlers/org.freeipa.server.create-gpo-structure
+	install -D -m 755 plugin/dbus_handlers/org.freeipa.server.delete-gpo-structure $(DESTDIR)$(STAGING_DIR)/plugin/dbus_handlers/org.freeipa.server.delete-gpo-structure
 
 	# Documentation
 	install -D -m 644 doc/ipa-gpo-install.8 $(DESTDIR)$(PREFIX)/share/man/man8/ipa-gpo-install.8
