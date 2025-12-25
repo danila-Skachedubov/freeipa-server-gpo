@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.altlinux.gpuiservice" path="/org/altlinux/gpuiservice/">
+    <key name="monitor-path" type="s">
+      <default>'/usr/share/PolicyDefinitions'</default>
+      <summary>Directory path to monitor for ADMX files</summary>
+      <description>
+        Path to the directory containing ADMX policy definition files.
+        The service will monitor this directory for changes and reload data automatically.
+      </description>
+    </key>
+  </schema>
+</schemalist>
