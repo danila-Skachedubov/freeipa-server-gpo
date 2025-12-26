@@ -206,57 +206,57 @@ class GPUIService(dbus.service.Object):
         Required for clients to discover methods and interfaces
         """
         return """<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
-"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
-<node name="/org/altlinux/gpuiservice">
-  <interface name="org.altlinux.GPUIService">
-    <method name="get">
-      <arg name="path" direction="in" type="s"/>
-      <arg name="value" direction="out" type="v"/>
-    </method>
-    <method name="set">
-      <arg name="path" direction="in" type="s"/>
-      <arg name="value" direction="in" type="v"/>
-      <arg name="success" direction="out" type="b"/>
-    </method>
-    <method name="list_children">
-      <arg name="parent_path" direction="in" type="s"/>
-      <arg name="children" direction="out" type="as"/>
-    </method>
-    <method name="find">
-      <arg name="search_pattern" direction="in" type="s"/>
-      <arg name="search_type" direction="in" type="s"/>
-      <arg name="results" direction="out" type="as"/>
-    </method>
-    <method name="get_set_values">
-      <arg name="paths" direction="in" type="as"/>
-      <arg name="results" direction="out" type="a{sv}"/>
-    </method>
-    <method name="reload">
-      <arg name="success" direction="out" type="b"/>
-    </method>
-  </interface>
-  <interface name="org.freedesktop.DBus.Introspectable">
-    <method name="Introspect">
-      <arg name="data" direction="out" type="s"/>
-    </method>
-  </interface>
-  <interface name="org.freedesktop.DBus.Properties">
-    <method name="Get">
-      <arg name="interface" direction="in" type="s"/>
-      <arg name="property" direction="in" type="s"/>
-      <arg name="value" direction="out" type="v"/>
-    </method>
-    <method name="Set">
-      <arg name="interface" direction="in" type="s"/>
-      <arg name="property" direction="in" type="s"/>
-      <arg name="value" direction="in" type="v"/>
-    </method>
-    <method name="GetAll">
-      <arg name="interface" direction="in" type="s"/>
-      <arg name="properties" direction="out" type="a{sv}"/>
-    </method>
-  </interface>
-</node>"""
+                "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+                <node name="/org/altlinux/gpuiservice">
+                <interface name="org.altlinux.GPUIService">
+                    <method name="get">
+                    <arg name="path" direction="in" type="s"/>
+                    <arg name="value" direction="out" type="v"/>
+                    </method>
+                    <method name="set">
+                    <arg name="path" direction="in" type="s"/>
+                    <arg name="value" direction="in" type="v"/>
+                    <arg name="success" direction="out" type="b"/>
+                    </method>
+                    <method name="list_children">
+                    <arg name="parent_path" direction="in" type="s"/>
+                    <arg name="children" direction="out" type="as"/>
+                    </method>
+                    <method name="find">
+                    <arg name="search_pattern" direction="in" type="s"/>
+                    <arg name="search_type" direction="in" type="s"/>
+                    <arg name="results" direction="out" type="as"/>
+                    </method>
+                    <method name="get_set_values">
+                    <arg name="paths" direction="in" type="as"/>
+                    <arg name="results" direction="out" type="a{sv}"/>
+                    </method>
+                    <method name="reload">
+                    <arg name="success" direction="out" type="b"/>
+                    </method>
+                </interface>
+                <interface name="org.freedesktop.DBus.Introspectable">
+                    <method name="Introspect">
+                    <arg name="data" direction="out" type="s"/>
+                    </method>
+                </interface>
+                <interface name="org.freedesktop.DBus.Properties">
+                    <method name="Get">
+                    <arg name="interface" direction="in" type="s"/>
+                    <arg name="property" direction="in" type="s"/>
+                    <arg name="value" direction="out" type="v"/>
+                    </method>
+                    <method name="Set">
+                    <arg name="interface" direction="in" type="s"/>
+                    <arg name="property" direction="in" type="s"/>
+                    <arg name="value" direction="in" type="v"/>
+                    </method>
+                    <method name="GetAll">
+                    <arg name="interface" direction="in" type="s"/>
+                    <arg name="properties" direction="out" type="a{sv}"/>
+                    </method>
+                </interface>
+                </node>"""
 
     @dbus.service.method('org.altlinux.GPUIService', in_signature='s', out_signature='v')
     def get(self, path):

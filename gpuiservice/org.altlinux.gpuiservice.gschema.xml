@@ -9,5 +9,13 @@
         The service will monitor this directory for changes and reload data automatically.
       </description>
     </key>
+
+    <key name="sysvol-path" type="s">
+      <default>'/var/lib/freeipa/sysvol'</default>
+      <summary>FreeIPA sysvol directory path</summary>
+      <description>
+        Path to the FreeIPA sysvol directory where GPT structures are stored.
+      </description>
+    </key>
   </schema>
 </schemalist>
