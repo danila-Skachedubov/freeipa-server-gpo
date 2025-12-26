@@ -130,6 +130,22 @@ class DirectoryMonitor:
         logger.info(f"Using default monitor path: {default_path}")
         return default_path
 
+    def get_sysvol_path(self):
+        """Get FreeIPA sysvol path from dconf or use default"""
+        default_path = '/var/lib/freeipa/sysvol'
+
+        if self.settings:
+            try:
+                path = self.settings.get_string('sysvol-path')
+                if path:
+                    logger.info(f"Using sysvol path from dconf: {path}")
+                    return path
+            except Exception as e:
+                logger.warning(f"Could not read sysvol-path from dconf: {e}")
+
+        logger.info(f"Using default sysvol path: {default_path}")
+        return default_path
+
     def on_file_changed(self, monitor, file, other_file, event_type):
         """Callback when ADMX files change in monitored directory"""
         if event_type in (Gio.FileMonitorEvent.CHANGED,
