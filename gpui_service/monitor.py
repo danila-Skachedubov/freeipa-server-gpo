@@ -103,6 +103,7 @@ class DirectoryMonitor:
 
         # Create directory if it doesn't exist
         path_obj = Path(self.monitored_path)
+        print(self.monitored_path, '222')
         try:
             path_obj.mkdir(parents=True, exist_ok=True)
         except Exception as e:

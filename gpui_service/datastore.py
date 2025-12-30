@@ -22,6 +22,7 @@ GPODataStore - Storage for ADMX policy data loaded from directory
 import threading
 from pathlib import Path
 import logging
+from parse_admx_structure import AdmxParser
 
 logger = logging.getLogger('gpuiservice')
 
@@ -32,24 +33,10 @@ class GPODataStore:
         self.data = {}
         self.lock = threading.RLock()
 
-    def load_from_directory(self, directory_path):
+    def load_from_directory(self, directory_path='/usr/share/PolicyDefinitions'):
         """Load ADMX policy definitions from directory"""
-        with self.lock:
-            logger.info(f"Loading ADMX data from {directory_path}")
-            # TODO: Implement actual ADMX parsing logic
-            # This is where you parse ADMX files and populate self.data
-            self.data.clear()
-
-            path = Path(directory_path)
-            if not path.exists():
-                logger.warning(f"Directory {directory_path} does not exist")
-                return
-
-            # Example: scan for ADMX files
-            for admx_file in path.rglob("*.admx"):
-                logger.debug(f"Found ADMX file: {admx_file}")
-                # Parse ADMX policy definitions and store data
-                # self.data[policy_path] = policy_definition
+        self.data = AdmxParser.build_result_for_dir(directory_path)
+        return self.data
 
     def get(self, path):
         """Get value by path"""

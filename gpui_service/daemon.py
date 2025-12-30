@@ -79,10 +79,13 @@ class ServiceDaemon:
 
             # Create data store
             self.data_store = GPODataStore()
+            self.data_store_dict = self.data_store.load_from_directory()
+            
+            print('self.data_store_dict', type(self.data_store_dict))
 
             # Create service object
             print("DEBUG: Creating GPUIService object...")
-            self.service = GPUIService(bus_name, '/org/altlinux/gpuiservice', self.data_store)
+            self.service = GPUIService(bus_name, '/org/altlinux/gpuiservice', self.data_store_dict)
 
             logger.info("DBus service registered successfully")
             print("DEBUG: DBus service registered successfully")
@@ -100,6 +103,7 @@ class ServiceDaemon:
                 logger.info("Data reloaded from monitored directory")
 
             self.monitor = DirectoryMonitor(self.data_store, reload_callback=on_reload)
+            print('qqqqqqqqqqqqqqqqqqqqqqqqqqqqqq')
             self.monitor.start_monitoring()
             logger.info("Directory monitoring started")
             return True

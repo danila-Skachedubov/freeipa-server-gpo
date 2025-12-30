@@ -22,6 +22,7 @@ GPUIService - DBus service for GPO editing functionality
 import dbus
 import dbus.service
 import logging
+import json
 
 logger = logging.getLogger('gpuiservice')
 
@@ -33,9 +34,9 @@ class GPUIService(dbus.service.Object):
     Analog of gpedit.msc for Linux infrastructure based on FreeIPA
     """
 
-    def __init__(self, bus_name, object_path, data_store):
+    def __init__(self, bus_name, object_path, data_store_dict):
         super().__init__(bus_name, object_path)
-        self.data_store = data_store
+        self.data_store = data_store_dict
         logger.info(f"GPUIService initialized at {object_path}")
 
     @dbus.service.method(dbus_interface='org.freedesktop.DBus.Introspectable',
@@ -111,8 +112,10 @@ class GPUIService(dbus.service.Object):
         logger.info(f"get method called with path: {path}")
         value = self.data_store.get(path)
         if value is None:
-            return dbus.Dictionary({}, signature='sv')
-        return value
+            return ""
+        
+        if isinstance(value, (dict, list)):
+            return json.dumps(value)
 
     @dbus.service.method('org.altlinux.GPUIService', in_signature='sv', out_signature='b')
     def set(self, path, value):
