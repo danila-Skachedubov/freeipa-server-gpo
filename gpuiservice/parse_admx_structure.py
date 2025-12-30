@@ -32,7 +32,7 @@ PRESENTATION_REF = re.compile(r"\$\(\s*presentation\.([A-Za-z0-9_.-]+)\s*\)")
 class AdmxParser:
     """Parser for ADMX/ADML files."""
 
-    def __init__(self, admx_filepath: str, locale: str):
+    def __init__(self, admx_filepath: str, locale: str = "en-US"):
         """
         Initialize parser for a single ADMX file.
 
@@ -40,13 +40,88 @@ class AdmxParser:
             admx_filepath: Path to the ADMX file
             locale: Locale for loading ADML strings and presentations
         """
-        self.admx_filepath = Path(admx_filepath)
-        self.base_dir = self.admx_filepath.parent
+        self.admx_filepath = Path(admx_filepath) if admx_filepath else Path()
+        self.base_dir = self.admx_filepath.parent if admx_filepath else Path()
         self.locale = locale
         self.strings = {}
         self.presentations = {}
         self.categories = {}
         self.policies = []
+
+    # --- JSON helpers (as requested) ---
+
+    @staticmethod
+    def dumps(obj: dict, *, ensure_ascii: bool = False, indent: int = 2) -> str:
+        """Provide json.dumps(...) from AdmxParser."""
+        return json.dumps(obj, ensure_ascii=ensure_ascii, indent=indent)
+
+    @classmethod
+    def build_result_for_dir(cls, policy_definitions_path: str, locale: str = "en-US") -> dict:
+        """
+        Build the final result (meta + Machine/User trees) for a directory
+        containing multiple *.admx files and locale subfolders with *.adml.
+        """
+        base_dir = Path(policy_definitions_path).resolve()
+        if not base_dir.is_dir():
+            raise RuntimeError(f"Policy definitions path does not exist: {base_dir}")
+
+        # Aggregate categories and policies from all ADMX files
+        all_categories: dict[str, dict] = {}
+        all_policies: list[dict] = []
+
+        # Track actually used locales (parser may fallback per file)
+        used_locales: set[str] = set()
+
+        for admx_file in base_dir.rglob("*.admx"):
+            parser = cls(str(admx_file), locale)
+            parser.parse()
+            used_locales.add(parser.locale)
+
+            # Merge categories
+            for cat_id, cat in parser.get_categories().items():
+                if cat_id not in all_categories:
+                    all_categories[cat_id] = cat
+                else:
+                    all_categories[cat_id] = merge_category(all_categories[cat_id], cat)
+
+            all_policies.extend(parser.get_policies())
+
+        link_category_inherited(all_categories)
+
+        policy_index = build_policy_index_expanded(all_policies, all_categories)
+
+        machine_tree = build_category_tree_for_class_expanded(all_categories, policy_index["Machine"])
+        user_tree = build_category_tree_for_class_expanded(all_categories, policy_index["User"])
+
+        unc_machine = policy_index["Machine"].get("__UNCATEGORIZED__", [])
+        unc_user = policy_index["User"].get("__UNCATEGORIZED__", [])
+
+        locale_used = None
+        if len(used_locales) == 1:
+            locale_used = next(iter(used_locales))
+        elif len(used_locales) > 1:
+            # Mixed fallbacks across files; expose all
+            locale_used = sorted(used_locales)
+
+        return {
+            "meta": {
+                "baseDir": str(base_dir),
+                "localeRequested": locale,
+                "localeUsed": locale_used or locale,
+                "Total categories": len(all_categories),
+                "Total policies": len(all_policies),
+            },
+            "Machine": {
+                "categories": machine_tree,
+                "uncategorizedPolicies": unc_machine,
+            },
+            "User": {
+                "categories": user_tree,
+                "uncategorizedPolicies": unc_user,
+            },
+        }
+
+    # --- Core parsing logic ---
 
     @staticmethod
     def strip_ns(tag: str) -> str:
@@ -730,62 +805,18 @@ def main() -> int:
     policy_definitions_path = sys.argv[1]
     requested_locale = sys.argv[2] if len(sys.argv) > 2 else "en-US"
 
-    base_dir = Path(policy_definitions_path).resolve()
-    if not base_dir.is_dir():
-        print(f"Error: Policy definitions path does not exist: {base_dir}", file=sys.stderr)
+    try:
+        result = AdmxParser.build_result_for_dir(policy_definitions_path, requested_locale)
+    except RuntimeError as e:
+        print(f"Error: {e}", file=sys.stderr)
         return 1
 
-    # Aggregate categories and policies from all ADMX files
-    all_categories = {}
-    all_policies = []
-
-    for admx_file in base_dir.rglob("*.admx"):
-        parser = AdmxParser(str(admx_file), requested_locale)
-        parser.parse()
-
-        # Merge categories
-        for cat_id, cat in parser.get_categories().items():
-            if cat_id not in all_categories:
-                all_categories[cat_id] = cat
-            else:
-                all_categories[cat_id] = merge_category(all_categories[cat_id], cat)
-
-        all_policies.extend(parser.get_policies())
-
-    link_category_inherited(all_categories)
-
-    policy_index = build_policy_index_expanded(all_policies, all_categories)
-
-    machine_tree = build_category_tree_for_class_expanded(all_categories, policy_index["Machine"])
-    user_tree = build_category_tree_for_class_expanded(all_categories, policy_index["User"])
-
-    unc_machine = policy_index["Machine"].get("__UNCATEGORIZED__", [])
-    unc_user = policy_index["User"].get("__UNCATEGORIZED__", [])
-
-    result = {
-        "meta": {
-            "baseDir": str(base_dir),
-            "localeRequested": requested_locale,
-            "localeUsed": requested_locale,  # Note: actual locale may differ per parser
-            "Total categories": len(all_categories),
-            "Total policies": len(all_policies),
-        },
-        "Machine": {
-            "categories": machine_tree,
-            "uncategorizedPolicies": unc_machine,
-        },
-        "User": {
-            "categories": user_tree,
-            "uncategorizedPolicies": unc_user,
-        },
-    }
-
-    # JSON -> stdout
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    # JSON -> stdout (provided by AdmxParser)
+    print(AdmxParser.dumps(result, ensure_ascii=False, indent=2))
 
     print(f"\nParsing completed:", file=sys.stderr)
-    print(f"  - Total policies: {len(all_policies)}", file=sys.stderr)
-    print(f"  - Total categories: {len(all_categories)}", file=sys.stderr)
+    print(f"  - Total policies: {result['meta']['Total policies']}", file=sys.stderr)
+    print(f"  - Total categories: {result['meta']['Total categories']}", file=sys.stderr)
 
     return 0
 
