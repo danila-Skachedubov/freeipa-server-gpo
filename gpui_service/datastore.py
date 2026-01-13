@@ -1,7 +1,7 @@
 #
 # gpuiservice - GPT Directory Management API Service
 #
-# Copyright (C) 2025 BaseALT Ltd.
+# Copyright (C) 2025-2026 BaseALT Ltd.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -41,22 +41,61 @@ class GPODataStore:
     def get(self, path):
         """Get value by path"""
         with self.lock:
-            return self.data.get(path)
+            # Handle empty or root path
+            if not path or path == "/":
+                return self.data
+
+            # Split path into components
+            parts = path.strip('/').split('/')
+
+            # Start from root dictionary
+            current = self.data
+
+            # Traverse through each level
+            for i, part in enumerate(parts):
+                if isinstance(current, dict) and part in current:
+                    # Move to next level
+                    current = current[part]
+                else:
+                    # Path doesn't exist
+                    return None
+
+            # Return the final value
+            return current
 
     def set(self, path, value):
         """Set value by path"""
-        with self.lock:
-            self.data[path] = value
-            return True
+        # with self.lock:
+        #     self.data[path] = value
+        #     return True
+        pass
 
     def list_children(self, parent_path):
         """List children under parent path"""
         with self.lock:
-            children = []
-            prefix = parent_path.rstrip('/') + '/'
-            for key in self.data.keys():
-                if key.startswith(prefix):
-                    child = key[len(prefix):].split('/')[0]
-                    if child not in children:
-                        children.append(child)
-            return children
+            # Handle root or empty path - return top-level keys
+            if not parent_path or parent_path == "/":
+                # Root level: return all top-level dictionary keys
+                return list(self.data.keys())
+
+            # Split the path into individual components
+            # Remove leading/trailing slashes and split by '/'
+            parts = parent_path.strip('/').split('/')
+
+            # Start at the root dictionary
+            current_level = self.data
+
+            # Traverse through the nested structure one level at a time
+            for part in parts:
+                # Check if current part exists and is a dictionary
+                if part in current_level and isinstance(current_level[part], dict):
+                    # Move down one level in the hierarchy
+                    current_level = current_level[part]
+                else:
+                    # Path doesn't exist or part is not a dictionary
+                    # Return empty list indicating no children at this path
+                    return []
+
+            # We've reached the target level
+            # Return all keys at this level as a list
+            return list(current_level.keys())

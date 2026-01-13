@@ -1,7 +1,7 @@
 #
 # gpuiservice - GPT Directory Management API Service
 #
-# Copyright (C) 2025 BaseALT Ltd.
+# Copyright (C) 2025-2026 BaseALT Ltd.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -80,12 +80,12 @@ class ServiceDaemon:
             # Create data store
             self.data_store = GPODataStore()
             self.data_store_dict = self.data_store.load_from_directory()
-            
-            print('self.data_store_dict', type(self.data_store_dict))
+
+            print('self.data_store_dict', type(self.data_store))
 
             # Create service object
             print("DEBUG: Creating GPUIService object...")
-            self.service = GPUIService(bus_name, '/org/altlinux/gpuiservice', self.data_store_dict)
+            self.service = GPUIService(bus_name, '/org/altlinux/gpuiservice', self.data_store)
 
             logger.info("DBus service registered successfully")
             print("DEBUG: DBus service registered successfully")
