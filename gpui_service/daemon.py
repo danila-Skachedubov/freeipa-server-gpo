@@ -103,7 +103,6 @@ class ServiceDaemon:
                 logger.info("Data reloaded from monitored directory")
 
             self.monitor = DirectoryMonitor(self.data_store, reload_callback=on_reload)
-            print('qqqqqqqqqqqqqqqqqqqqqqqqqqqqqq')
             self.monitor.start_monitoring()
             logger.info("Directory monitoring started")
             return True

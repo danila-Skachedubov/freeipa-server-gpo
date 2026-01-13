@@ -1,7 +1,7 @@
 #
 # gpuiservice - GPT Directory Management API Service
 #
-# Copyright (C) 2025 BaseALT Ltd.
+# Copyright (C) 2025-2026 BaseALT Ltd.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -107,15 +107,19 @@ class GPUIService(dbus.service.Object):
         Args:
             path: Path to the parameter in GPO structure
         Returns:
-            Value of the parameter
+            Value of the parameter as JSON string for complex types
         """
         logger.info(f"get method called with path: {path}")
         value = self.data_store.get(path)
         if value is None:
             return ""
-        
-        if isinstance(value, (dict, list)):
-            return json.dumps(value)
+
+        if isinstance(value, (dict, list, tuple, set)):
+            return json.dumps(value, default=str)
+        elif isinstance(value, (int, float, bool)):
+            return value
+        else:
+            return str(value)
 
     @dbus.service.method('org.altlinux.GPUIService', in_signature='sv', out_signature='b')
     def set(self, path, value):
@@ -130,19 +134,25 @@ class GPUIService(dbus.service.Object):
         logger.info(f"set method called with path: {path}, value: {value}")
         return self.data_store.set(path, value)
 
-    @dbus.service.method('org.altlinux.GPUIService', in_signature='s', out_signature='as')
+    @dbus.service.method('org.altlinux.GPUIService', in_signature='s', out_signature='v')
     def list_children(self, parent_path):
         """
         List child parameters under a parent path
         Args:
             parent_path: Parent path in GPO structure
         Returns:
-            Array of child parameter paths
+            Array of child parameter paths as JSON string
         """
         logger.info(f"list_children method called with parent_path: {parent_path}")
-        return self.data_store.list_children(parent_path)
+        result = self.data_store.list_children(parent_path)
+        if isinstance(result, (dict, list, tuple, set)):
+            return json.dumps(result, default=str)
+        elif isinstance(result, (int, float, bool)):
+            return result
+        else:
+            return str(result)
 
-    @dbus.service.method('org.altlinux.GPUIService', in_signature='ss', out_signature='as')
+    @dbus.service.method('org.altlinux.GPUIService', in_signature='ss', out_signature='v')
     def find(self, search_pattern, search_type):
         """
         Find parameters matching search criteria
@@ -150,20 +160,21 @@ class GPUIService(dbus.service.Object):
             search_pattern: Pattern to search for
             search_type: Type of search (name, value, category, etc.)
         Returns:
-            Array of matching parameter paths
+            Array of matching parameter paths as JSON string
         """
         logger.info(f"find method called with pattern: {search_pattern}, type: {search_type}")
         # TODO: Implement actual search functionality
-        return []
+        result = []
+        return json.dumps(result)
 
-    @dbus.service.method('org.altlinux.GPUIService', in_signature='as', out_signature='a{sv}')
+    @dbus.service.method('org.altlinux.GPUIService', in_signature='as', out_signature='v')
     def get_set_values(self, paths):
         """
         Get current values and set new values for multiple parameters
         Args:
             paths: Array of parameter paths to get/set
         Returns:
-            Dictionary with current values and status for each path
+            Dictionary with current values and status for each path as JSON string
         """
         logger.info(f"get_set_values method called with paths: {paths}")
         results = {}
@@ -171,7 +182,8 @@ class GPUIService(dbus.service.Object):
             value = self.data_store.get(path)
             if value is not None:
                 results[path] = value
-        return dbus.Dictionary(results, signature='sv')
+
+        return json.dumps(results, default=str)
 
     @dbus.service.method('org.altlinux.GPUIService', out_signature='b')
     def reload(self):
