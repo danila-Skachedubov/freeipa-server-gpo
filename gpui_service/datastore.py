@@ -70,7 +70,7 @@ class GPODataStore:
         #     return True
         pass
 
-    def list_children(self, parent_path):
+    def list_children(self, parent_path, target=None):
         """List children under parent path"""
         with self.lock:
             # Handle root or empty path - return top-level keys
