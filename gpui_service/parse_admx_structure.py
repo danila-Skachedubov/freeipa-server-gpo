@@ -110,8 +110,8 @@ class AdmxParser:
         machine_tree = build_category_tree_for_class_expanded(all_categories, policy_index["Machine"])
         user_tree = build_category_tree_for_class_expanded(all_categories, policy_index["User"])
 
-        unc_machine = policy_index["Machine"].get("__UNCATEGORIZED__", [])
-        unc_user = policy_index["User"].get("__UNCATEGORIZED__", [])
+        unc_machine = policy_index["Machine"].get("__UNCATEGORIZED__", {})
+        unc_user = policy_index["User"].get("__UNCATEGORIZED__", {})
 
         locale_used = None
         if len(used_locales) == 1:
@@ -805,7 +805,18 @@ def build_policy_index_expanded(policies: list[dict], categories: dict[str, dict
     idx = {"Machine": {}, "User": {}}
 
     def add(cls: str, cat_id: str, item: dict):
-        idx[cls].setdefault(cat_id, []).append(item)
+        # Generate unique key for policy: category + displayName (as requested)
+        header = item.get("header", {})
+        display_name = item.get("displayName") or header.get("displayName") or header.get("name") or "unknown"
+        # Use cat_id:display_name as key, ensure uniqueness
+        key = f"{cat_id}:{display_name}"
+        if key in idx[cls].get(cat_id, {}):
+            # If duplicate, append suffix
+            suffix = 2
+            while f"{key}_{suffix}" in idx[cls].get(cat_id, {}):
+                suffix += 1
+            key = f"{key}_{suffix}"
+        idx[cls].setdefault(cat_id, {})[key] = item
 
     for p in policies:
         cls_raw = (p.get("class") or "").strip()
@@ -829,22 +840,27 @@ def build_policy_index_expanded(policies: list[dict], categories: dict[str, dict
             add("Machine", cat, item)
             add("User", cat, item)
 
+    # No sorting needed for dict, but we can sort keys if desired
+    # For consistency, sort policies within each category by displayName
     for cls in ("Machine", "User"):
         for cat_id in idx[cls]:
-            idx[cls][cat_id].sort(key=lambda x: (x.get("displayName") or ""))
+            # Convert dict to sorted list by displayName, then reassign as dict
+            policies_dict = idx[cls][cat_id]
+            sorted_items = sorted(policies_dict.items(), key=lambda kv: (kv[1].get("displayName") or ""))
+            idx[cls][cat_id] = dict(sorted_items)
 
     return idx
 
 
 def build_category_tree_for_class_expanded(
     categories: dict[str, dict],
-    policy_index_for_class: dict[str, list[dict]],
+    policy_index_for_class: dict[str, dict[str, dict]],
 ) -> list[dict]:
     def make_node(cat_id: str) -> dict:
         cat = categories[cat_id]
         node = {
             "category": cat.get("displayName") or cat_id,
-            "policies": policy_index_for_class.get(cat_id, []),
+            "policies": policy_index_for_class.get(cat_id, {}),
             "inherited": [make_node(child_id) for child_id in cat.get("inherited_ids", [])],
         }
         node["inherited"].sort(key=lambda x: (x.get("category") or ""))
