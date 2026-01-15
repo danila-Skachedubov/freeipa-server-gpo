@@ -32,6 +32,10 @@ PRESENTATION_REF = re.compile(r"\$\(\s*presentation\.([A-Za-z0-9_.-]+)\s*\)")
 class AdmxParser:
     """Parser for ADMX/ADML files."""
 
+    # Class-level caches for strings and presentations to avoid redundant loading
+    _strings_cache: dict[tuple[Path, str], dict] = {}
+    _presentations_cache: dict[tuple[Path, str], dict] = {}
+
     def __init__(self, admx_filepath: str, locale: str = "en-US"):
         """
         Initialize parser for a single ADMX file.
@@ -68,6 +72,8 @@ class AdmxParser:
         # Aggregate categories and policies from all ADMX files
         all_categories: dict[str, dict] = {}
         all_policies: list[dict] = []
+        seen_policy_keys: set[tuple] = set()
+        duplicates_removed = 0
 
         # Track actually used locales (parser may fallback per file)
         used_locales: set[str] = set()
@@ -84,7 +90,18 @@ class AdmxParser:
                 else:
                     all_categories[cat_id] = merge_category(all_categories[cat_id], cat)
 
-            all_policies.extend(parser.get_policies())
+            # Deduplicate policies by (class, categoryRef, name)
+            for policy in parser.get_policies():
+                policy_json = policy.get("policyJson", {})
+                header = policy_json.get("header", {}) if isinstance(policy_json, dict) else {}
+                name = header.get("name")
+                if name is not None:
+                    key = (policy.get("class"), policy.get("categoryRef"), name)
+                    if key in seen_policy_keys:
+                        duplicates_removed += 1
+                        continue
+                    seen_policy_keys.add(key)
+                all_policies.append(policy)
 
         link_category_inherited(all_categories)
 
@@ -110,6 +127,7 @@ class AdmxParser:
                 "localeUsed": locale_used or locale,
                 "Total categories": len(all_categories),
                 "Total policies": len(all_policies),
+                "Duplicates removed": duplicates_removed,
             },
             "Machine": {
                 "categories": machine_tree,
@@ -207,6 +225,12 @@ class AdmxParser:
         if not locale_dir.is_dir():
             raise RuntimeError(f"Locale directory not found: {locale_dir}")
 
+        cache_key = (self.base_dir, chosen_locale)
+        if cache_key in AdmxParser._strings_cache:
+            self.strings = AdmxParser._strings_cache[cache_key]
+            self.locale = chosen_locale
+            return
+
         strings = {}
         for adml_file in locale_dir.rglob("*.adml"):
             try:
@@ -228,6 +252,7 @@ class AdmxParser:
 
         self.strings = strings
         self.locale = chosen_locale  # update locale to the actual one used
+        AdmxParser._strings_cache[cache_key] = strings
 
     def _extract_presentation_control_label(self, ctrl: ET.Element) -> str | None:
         txt = (ctrl.text or "").strip()
@@ -253,6 +278,11 @@ class AdmxParser:
         locale_dir = self.base_dir / self.locale
         if not locale_dir.is_dir():
             raise RuntimeError(f"Locale directory not found: {locale_dir}")
+
+        cache_key = (self.base_dir, self.locale)
+        if cache_key in AdmxParser._presentations_cache:
+            self.presentations = AdmxParser._presentations_cache[cache_key]
+            return
 
         presentations = {}
         for adml_file in locale_dir.rglob("*.adml"):
@@ -300,6 +330,7 @@ class AdmxParser:
                                     slot[ref_id].setdefault(k, v)
 
         self.presentations = presentations
+        AdmxParser._presentations_cache[cache_key] = presentations
 
     def localize_supported_on(self, supported_on_ref: str | None) -> str | None:
         if not supported_on_ref:
@@ -713,6 +744,16 @@ class AdmxParser:
 # ----------------------- Helper functions for multiple ADMX files -----------------------
 
 def merge_category(existing: dict, incoming: dict) -> dict:
+    # Warn about conflicting parent definitions
+    if existing.get("parent") and incoming.get("parent") and existing["parent"] != incoming["parent"]:
+        print(f"[WARN] Category parent conflict: '{existing.get('id')}' has parent '{existing['parent']}', "
+              f"new definition wants parent '{incoming['parent']}' (keeping existing)", file=sys.stderr)
+
+    # Warn about conflicting displayName definitions
+    if existing.get("displayName") and incoming.get("displayName") and existing["displayName"] != incoming["displayName"]:
+        print(f"[WARN] Category displayName conflict: '{existing.get('id')}' has displayName '{existing['displayName']}', "
+              f"new definition wants '{incoming['displayName']}' (keeping existing)", file=sys.stderr)
+
     if not existing.get("parent") and incoming.get("parent"):
         existing["parent"] = incoming["parent"]
     if not existing.get("displayName") and incoming.get("displayName"):
@@ -720,7 +761,36 @@ def merge_category(existing: dict, incoming: dict) -> dict:
     return existing
 
 
+def detect_and_break_cycles(categories: dict[str, dict]) -> None:
+    """Detect and break circular parent references in categories."""
+    visited = set()
+    for cat_id in categories:
+        current = cat_id
+        path = []
+        while current is not None:
+            if current in path:
+                # Cycle detected
+                cycle_start = path.index(current)
+                cycle = path[cycle_start:] + [current]
+                print(f"[WARN] Circular parent reference detected: {' -> '.join(cycle)}", file=sys.stderr)
+                # Break cycle by removing parent from the last element in cycle
+                broken_cat = cycle[-2] if len(cycle) > 1 else current
+                if broken_cat in categories:
+                    categories[broken_cat]["parent"] = None
+                    print(f"[WARN] Removed parent from category '{broken_cat}' to break cycle", file=sys.stderr)
+                break
+            path.append(current)
+            parent = categories[current].get("parent") if current in categories else None
+            if parent not in categories:
+                break
+            current = parent
+        visited.add(cat_id)
+
+
 def link_category_inherited(categories: dict[str, dict]) -> None:
+    # Detect and break any circular parent references
+    detect_and_break_cycles(categories)
+
     for c in categories.values():
         c["inherited_ids"] = []
     for c in categories.values():
@@ -742,6 +812,7 @@ def build_policy_index_expanded(policies: list[dict], categories: dict[str, dict
         cat = p.get("categoryRef") or "__UNCATEGORIZED__"
 
         if cat != "__UNCATEGORIZED__" and cat not in categories:
+            print(f"[WARN] Policy '{p.get('displayName') or 'unknown'}' references unknown category '{cat}', moving to uncategorized", file=sys.stderr)
             cat = "__UNCATEGORIZED__"
 
         flat = p.get("policyJson") or {}
