@@ -64,14 +64,6 @@ class GPUIService(dbus.service.Object):
                     <arg name="parent_path" direction="in" type="s"/>
                     <arg name="children" direction="out" type="as"/>
                     </method>
-                    <method name="list_children_machine">
-                    <arg name="parent_path" direction="in" type="s"/>
-                    <arg name="children" direction="out" type="as"/>
-                    </method>
-                    <method name="list_children_user">
-                    <arg name="parent_path" direction="in" type="s"/>
-                    <arg name="children" direction="out" type="as"/>
-                    </method>
                     <method name="find">
                     <arg name="search_pattern" direction="in" type="s"/>
                     <arg name="search_type" direction="in" type="s"/>
@@ -160,34 +152,6 @@ class GPUIService(dbus.service.Object):
         else:
             return str(result)
 
-    @dbus.service.method('org.altlinux.GPUIService', in_signature='s', out_signature='v')
-    def list_children_machine(self, parent_path):
-        """
-        List child
-        """
-        logger.info(f"list_children method called with parent_path: {parent_path}")
-        result = self.data_store.list_children(parent_path)
-        if isinstance(result, (dict, list, tuple, set)):
-            return json.dumps(result, default=str)
-        elif isinstance(result, (int, float, bool)):
-            return result
-        else:
-            return str(result)
-
-
-    @dbus.service.method('org.altlinux.GPUIService', in_signature='s', out_signature='v')
-    def list_children_user(self, parent_path):
-        """
-        List child
-        """
-        logger.info(f"list_children method called with parent_path: {parent_path}")
-        result = self.data_store.list_children(parent_path)
-        if isinstance(result, (dict, list, tuple, set)):
-            return json.dumps(result, default=str)
-        elif isinstance(result, (int, float, bool)):
-            return result
-        else:
-            return str(result)
 
     @dbus.service.method('org.altlinux.GPUIService', in_signature='ss', out_signature='v')
     def find(self, search_pattern, search_type):
