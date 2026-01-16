@@ -79,7 +79,7 @@ class ServiceDaemon:
 
             # Create data store
             self.data_store = GPODataStore()
-            self.data_store_dict = self.data_store.load_from_directory()
+            self.data_store.load_from_directory()
 
             print('self.data_store_dict', type(self.data_store))
 

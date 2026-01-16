@@ -36,32 +36,45 @@ class GPODataStore:
     def load_from_directory(self, directory_path='/usr/share/PolicyDefinitions'):
         """Load ADMX policy definitions from directory"""
         self.data = AdmxParser.build_result_for_dir(directory_path)
-        return self.data
 
     def get(self, path):
         """Get value by path"""
         with self.lock:
-            # Handle empty or root path
             if not path or path == "/":
                 return self.data
 
-            # Split path into components
-            parts = path.strip('/').split('/')
-
-            # Start from root dictionary
+            parts = path.strip("/").split("/")
             current = self.data
 
-            # Traverse through each level
-            for i, part in enumerate(parts):
-                if isinstance(current, dict) and part in current:
-                    # Move to next level
+            for part in parts:
+                # CASE 1
+                if isinstance(current, dict):
+                    if part not in current:
+                        return None
                     current = current[part]
-                else:
-                    # Path doesn't exist
-                    return None
+                    continue
 
-            # Return the final value
+                # CASE 2
+                if isinstance(current, list):
+                    found = None
+                    for item in current:
+                        if (
+                            isinstance(item, dict)
+                            and item.get("category") == part
+                        ):
+                            found = item
+                            break
+
+                    if found is None:
+                        return None
+
+                    current = found
+                    continue
+
+                return None
+
             return current
+
 
     def set(self, path, value):
         """Set value by path"""
@@ -72,14 +85,13 @@ class GPODataStore:
 
     def list_children(self, parent_path, target=None):
         """List children under parent path"""
+
         with self.lock:
             # Handle root or empty path - return top-level keys
             if not parent_path or parent_path == "/":
-                # Root level: return all top-level dictionary keys
                 return list(self.data.keys())
 
             # Split the path into individual components
-            # Remove leading/trailing slashes and split by '/'
             parts = parent_path.strip('/').split('/')
 
             # Start at the root dictionary
@@ -87,15 +99,55 @@ class GPODataStore:
 
             # Traverse through the nested structure one level at a time
             for part in parts:
-                # Check if current part exists and is a dictionary
-                if part in current_level and isinstance(current_level[part], dict):
-                    # Move down one level in the hierarchy
-                    current_level = current_level[part]
+                if isinstance(current_level, dict) and part in current_level:
+
+                    # Case 1: next level is a dictionary
+                    if isinstance(current_level[part], dict):
+                        current_level = current_level[part]
+
+                    # Case 2: next level is a list -> convert to dict
+                    elif isinstance(current_level[part], list):
+                        if not current_level[part]:
+                            return []
+
+                        if not isinstance(current_level[part][0], dict):
+                            return []
+
+                        cpart = 'category'
+                        current_level = list_of_dicts_to_dict(
+                            current_level[part],
+                            cpart
+                        )
+
+                    else:
+                        return []
                 else:
-                    # Path doesn't exist or part is not a dictionary
-                    # Return empty list indicating no children at this path
                     return []
 
             # We've reached the target level
-            # Return all keys at this level as a list
-            return list(current_level.keys())
+            if isinstance(current_level, dict):
+                return list(current_level.keys())
+
+        return []
+
+
+
+def list_of_dicts_to_dict(items, key_attr):
+    """
+    items: list[dict]
+    key_attr: 'category'
+    """
+    result = {}
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+
+        key = item.get(key_attr)
+
+        if not isinstance(key, str):
+            continue
+
+        result[key] = item
+
+    return result
