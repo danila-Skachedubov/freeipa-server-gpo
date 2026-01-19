@@ -38,7 +38,6 @@ class GPODataStore:
         self.data = AdmxParser.build_result_for_dir(directory_path)
 
     def get(self, path):
-        """Get value by path"""
         with self.lock:
             if not path or path == "/":
                 return self.data
@@ -46,29 +45,36 @@ class GPODataStore:
             parts = path.strip("/").split("/")
             current = self.data
 
-            for part in parts:
-                # CASE 1
+            i = 0
+            while i < len(parts):
+                part = parts[i]
+
                 if isinstance(current, dict):
+
+                    # POLICIES: terminal node
+                    if part == "policies":
+                        policy_name = "/".join(parts[i+1:])
+                        policy_name = bytes(policy_name, "utf-8").decode("unicode_escape")
+                        return current.get("policies", {}).get(policy_name)
+
                     if part not in current:
                         return None
+
                     current = current[part]
+                    i += 1
                     continue
 
-                # CASE 2
                 if isinstance(current, list):
-                    found = None
-                    for item in current:
-                        if (
-                            isinstance(item, dict)
-                            and item.get("category") == part
-                        ):
-                            found = item
-                            break
-
-                    if found is None:
+                    found = next(
+                        (x for x in current
+                        if isinstance(x, dict) and x.get("category") == part),
+                        None
+                    )
+                    if not found:
                         return None
 
                     current = found
+                    i += 1
                     continue
 
                 return None
@@ -83,52 +89,68 @@ class GPODataStore:
         #     return True
         pass
 
-    def list_children(self, parent_path, target=None):
+    def list_children(self, parent_path):
         """List children under parent path"""
-
         with self.lock:
             # Handle root or empty path - return top-level keys
             if not parent_path or parent_path == "/":
                 return list(self.data.keys())
 
-            # Split the path into individual components
-            parts = parent_path.strip('/').split('/')
+            parts = parent_path.strip("/").split("/")
+            current = self.data
 
-            # Start at the root dictionary
-            current_level = self.data
+            i = 0
+            while i < len(parts):
+                part = parts[i]
 
-            # Traverse through the nested structure one level at a time
-            for part in parts:
-                if isinstance(current_level, dict) and part in current_level:
+                # Case 1: next level is a dictionary
+                if isinstance(current, dict):
 
-                    # Case 1: next level is a dictionary
-                    if isinstance(current_level[part], dict):
-                        current_level = current_level[part]
-
-                    # Case 2: next level is a list -> convert to dict
-                    elif isinstance(current_level[part], list):
-                        if not current_level[part]:
-                            return []
-
-                        if not isinstance(current_level[part][0], dict):
-                            return []
-
-                        cpart = 'category'
-                        current_level = list_of_dicts_to_dict(
-                            current_level[part],
-                            cpart
-                        )
-
-                    else:
+                    # POLICIES: terminal node
+                    if part == "policies":
+                        policies = current.get("policies", {})
+                        if isinstance(policies, dict):
+                            return list(policies.keys())
                         return []
-                else:
-                    return []
+
+                    if part not in current:
+                        return []
+
+                    current = current[part]
+                    i += 1
+                    continue
+
+                # Case 2: list of categories
+                if isinstance(current, list):
+                    found = next(
+                        (
+                            item for item in current
+                            if isinstance(item, dict)
+                            and item.get("category") == part
+                        ),
+                        None
+                    )
+                    if not found:
+                        return []
+
+                    current = found
+                    i += 1
+                    continue
+
+                return []
 
             # We've reached the target level
-            if isinstance(current_level, dict):
-                return list(current_level.keys())
+            if isinstance(current, dict):
+                return list(current.keys())
 
-        return []
+            if isinstance(current, list):
+                return [
+                    item.get("category")
+                    for item in current
+                    if isinstance(item, dict) and "category" in item
+                ]
+
+            return []
 
 
 
