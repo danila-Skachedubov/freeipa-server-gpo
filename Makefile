@@ -43,7 +43,7 @@ install: build
 	done
 
 	# DBUS configuration and handlers
-	install -D -m 644 plugin/dbus_handlers/ipa-gpo.conf $(DESTDIR)/etc/oddjobd.conf.d/ipa-gpo.conf	
+	install -D -m 644 plugin/dbus_handlers/ipa-gpo.conf $(DESTDIR)/etc/oddjobd.conf.d/ipa-gpo.conf
 	install -D -m 755 plugin/dbus_handlers/org.freeipa.server.create-gpo-structure $(DESTDIR)$(PREFIX)/libexec/ipa/oddjob/org.freeipa.server.create-gpo-structure
 	install -D -m 755 plugin/dbus_handlers/org.freeipa.server.delete-gpo-structure $(DESTDIR)$(PREFIX)/libexec/ipa/oddjob/org.freeipa.server.delete-gpo-structure
 

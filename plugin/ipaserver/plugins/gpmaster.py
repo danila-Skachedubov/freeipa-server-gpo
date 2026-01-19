@@ -73,6 +73,30 @@ class gpmaster(LDAPObject):
         ),
     )
 
+    def __json__(self):
+        """Handle missing schema gracefully."""
+        try:
+            return super(gpmaster, self).__json__()
+        except KeyError as e:
+            if 'groupPolicyMaster' in str(e):
+                result = {
+                    'name': self.name,
+                    'doc': self.doc,
+                    'label': self.label,
+                    'label_singular': self.label_singular,
+                    'object_class': self.object_class,
+                }
+                if hasattr(self, 'takes_params'):
+                    result['takes_params'] = [
+                        {'name': p.name, 'label': p.label}
+                        for p in self.takes_params
+                    ]
+
+                if hasattr(self, 'default_attributes'):
+                    result['default_attributes'] = self.default_attributes
+                return result
+            raise
+
     def _on_finalize(self):
         self.env._merge(**dict(PLUGIN_CONFIG))
         self.container_dn = self.env.container_gpmaster
@@ -330,6 +354,7 @@ class gpmaster_mod(LDAPUpdate):
 
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
         """Handle add/remove operations."""
+
         current_entry = ldap.get_entry(dn, attrs_list=['chainlist'])
 
         self._handle_add_operations(entry_attrs, options)

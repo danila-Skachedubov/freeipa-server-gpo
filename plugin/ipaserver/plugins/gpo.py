@@ -22,6 +22,40 @@ PLUGIN_CONFIG = (
     ('container_grouppolicy', DN(('cn', 'Policies'), ('cn', 'System'))),
 )
 
+def verify_gpo_schema(ldap, api):
+    """
+    Checking for the presence of the Group Policy schema for GPO objects.
+    Called at the beginning of each command.
+    """
+    try:
+        gpo_container_dn = DN(('cn', 'Policies'), ('cn', 'System'), api.env.basedn)
+        ldap.get_entry(gpo_container_dn, attrs_list=['cn'])
+    except errors.NotFound:
+        raise errors.NotFound(
+            name=_('Group Policy schema'),
+            reason=_(
+                'Group Policy schema is not installed. '
+                'Cannot create or modify Group Policy Objects. '
+                'Please run the ipa-gpo-install command to extend the schema.'
+            )
+        )
+    except errors.PublicError as e:
+        error_str = str(e).lower()
+        schema_errors = ['object class', 'schema', 'structural object class',
+                         'no such object class', 'undefined object class']
+
+        for schema_error in schema_errors:
+            if schema_error in error_str:
+                raise errors.NotFound(
+                    name=_('Group Policy schema'),
+                    reason=_(
+                        'Group Policy schema is not installed. '
+                        'The required LDAP object class "groupPolicyContainer" is missing.'
+                        'Please run the ipa-gpo-install command to extend the schema.'
+                    )
+                )
+    except Exception as e:
+        logger.debug("GPO schema check error: %s", str(e))
 
 @register()
 class gpo(LDAPObject):
@@ -111,6 +145,29 @@ class gpo(LDAPObject):
         ),
     )
 
+    def __json__(self):
+        """Handle missing schema gracefully."""
+        try:
+            return super(gpo, self).__json__()
+        except KeyError as e:
+            if 'groupPolicyContainer' in str(e):
+                result = {
+                    'name': self.name,
+                    'doc': self.doc,
+                    'label': self.label,
+                    'label_singular': self.label_singular,
+                    'object_class': self.object_class,
+                }
+                if hasattr(self, 'takes_params'):
+                    result['takes_params'] = [
+                        {'name': p.name, 'label': p.label}
+                        for p in self.takes_params
+                    ]
+                if hasattr(self, 'default_attributes'):
+                    result['default_attributes'] = self.default_attributes
+                return result
+            raise
+
     def _on_finalize(self):
         self.env._merge(**dict(PLUGIN_CONFIG))
         self.container_dn = self.env.container_grouppolicy
@@ -175,6 +232,7 @@ class gpo_add(LDAPCreate):
     msg_summary = _('Added Group Policy Object "%(value)s"')
 
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
+        verify_gpo_schema(ldap, self.api)
         displayname = keys[-1]
         try:
             self.obj.find_gpo_by_displayname(ldap, displayname)
@@ -212,6 +270,7 @@ class gpo_del(LDAPDelete):
     msg_summary = _('Deleted Group Policy Object "%(value)s"')
 
     def pre_callback(self, ldap, dn, *keys, **options):
+        verify_gpo_schema(ldap, self.api)
         entry = self.obj.find_gpo_by_displayname(ldap, keys[0])
         return entry.dn
 
@@ -230,6 +289,7 @@ class gpo_show(LDAPRetrieve):
     msg_summary = _('Found Group Policy Object "%(value)s"')
 
     def pre_callback(self, ldap, dn, attrs_list, *keys, **options):
+        verify_gpo_schema(ldap, self.api)
         entry = self.obj.find_gpo_by_displayname(ldap, keys[0])
         return entry.dn
 
@@ -242,6 +302,28 @@ class gpo_find(LDAPSearch):
         '%(count)d Group Policy Objects matched', 0
     )
 
+    def execute(self, *args, **options):
+        """Search for Group Policy Objects."""
+        try:
+            result = super(gpo_find, self).execute(*args, **options)
+            return result
+
+        except errors.NotFound:
+            return {
+                'result': [],
+                'count': 0,
+                'truncated': False,
+                'summary': self.msg_summary % {'count': 0}
+            }
+        except Exception as e:
+            logger.error("Error in gpo_find: %s", str(e))
+            return {
+                'result': [],
+                'count': 0,
+                'truncated': False,
+                'summary': self.msg_summary % {'count': 0}
+            }
+
 
 @register()
 class gpo_mod(LDAPUpdate):
@@ -249,6 +331,7 @@ class gpo_mod(LDAPUpdate):
     msg_summary = _('Modified Group Policy Object "%(value)s"')
 
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
+        verify_gpo_schema(ldap, self.api)
         assert isinstance(dn, DN)
 
         old_entry = self.obj.find_gpo_by_displayname(ldap, keys[0])
