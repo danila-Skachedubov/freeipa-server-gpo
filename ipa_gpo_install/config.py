@@ -8,15 +8,6 @@ FREEIPA_SYSVOL_PATH = os.path.join(FREEIPA_BASE_PATH, "sysvol")
 
 LOG_FILE_PATH = "/var/log/freeipa/ipa-gpo-install.log"
 LOCALE_DIR = "/usr/share/locale"
-STAGING_DIR = "/usr/share/freeipa-server-gpo/staging"
-
-# Source subdirectories within staging
-STAGING_PYTHON_PLUGINS = os.path.join(STAGING_DIR, "plugin/ipaserver/plugins")
-STAGING_UI_PLUGINS = os.path.join(STAGING_DIR, "plugin/ui/grouppolicy")
-STAGING_SCHEMA_DIR = os.path.join(STAGING_DIR, "plugin/schema.d")
-STAGING_UPDATE_DIR = os.path.join(STAGING_DIR, "plugin/update")
-STAGING_DBUS_CONFIG_DIR = os.path.join(STAGING_DIR, "plugin/dbus_handlers")
-STAGING_DBUS_HANDLERS_DIR = os.path.join(STAGING_DIR, "plugin/dbus_handlers")
 
 # Target directories for plugin activation
 TARGET_PYTHON_PLUGINS = "/usr/lib64/python3/site-packages/ipaserver/plugins"

@@ -11,9 +11,7 @@ from pathlib import Path
 from ipalib import api
 from ipapython import ipautil
 from .config import (
-    LOCALE_DIR, FREEIPA_BASE_PATH, get_domain_sysvol_path, STAGING_DIR,
-    STAGING_PYTHON_PLUGINS, STAGING_UI_PLUGINS, STAGING_SCHEMA_DIR,
-    STAGING_UPDATE_DIR, STAGING_DBUS_CONFIG_DIR, STAGING_DBUS_HANDLERS_DIR,
+    LOCALE_DIR, FREEIPA_BASE_PATH, get_domain_sysvol_path,
     TARGET_PYTHON_PLUGINS, TARGET_UI_PLUGINS, TARGET_SCHEMA_DIR,
     TARGET_UPDATE_DIR, TARGET_DBUS_CONFIG_DIR, TARGET_DBUS_HANDLERS_DIR
 )
@@ -225,96 +223,71 @@ class IPAActions:
 
     def are_plugins_activated(self):
         """
-        Check if plugin files have been activated (copied to target directories).
+        Check if plugin files are present in target directories.
 
         Returns:
             True if all plugin files are present in target directories,
             False if any are missing.
         """
-        # List of (source_staging_subdir, target_dir, filenames)
+        # List of (target_dir, filenames)
         file_groups = [
-            (STAGING_PYTHON_PLUGINS, TARGET_PYTHON_PLUGINS,
-             ['chain.py', 'gpmaster.py', 'gpo.py']),
-            (STAGING_UI_PLUGINS, TARGET_UI_PLUGINS,
-             ['chain.js', 'gpo.js']),
-            (STAGING_SCHEMA_DIR, TARGET_SCHEMA_DIR,
-             ['75-chain.ldif', '75-gpc.ldif', '75-gpmaster.ldif']),
-            (STAGING_UPDATE_DIR, TARGET_UPDATE_DIR,
-             ['75-chain.update', '75-gpc.update', '75-gpmaster.update']),
-            (STAGING_DBUS_CONFIG_DIR, TARGET_DBUS_CONFIG_DIR,
-             ['ipa-gpo.conf']),
-            (STAGING_DBUS_HANDLERS_DIR, TARGET_DBUS_HANDLERS_DIR,
+            (TARGET_PYTHON_PLUGINS, ['chain.py', 'gpmaster.py', 'gpo.py']),
+            (TARGET_UI_PLUGINS, ['chain.js', 'gpo.js']),
+            (TARGET_SCHEMA_DIR, ['75-chain.ldif', '75-gpc.ldif', '75-gpmaster.ldif']),
+            (TARGET_UPDATE_DIR, ['75-chain.update', '75-gpc.update', '75-gpmaster.update']),
+            (TARGET_DBUS_CONFIG_DIR, ['ipa-gpo.conf']),
+            (TARGET_DBUS_HANDLERS_DIR,
              ['org.freeipa.server.create-gpo-structure',
               'org.freeipa.server.delete-gpo-structure']),
         ]
 
-        for src_dir, dst_dir, filenames in file_groups:
+        for target_dir, filenames in file_groups:
             for filename in filenames:
-                target_path = os.path.join(dst_dir, filename)
+                target_path = os.path.join(target_dir, filename)
                 if not os.path.exists(target_path):
                     self.logger.debug(
-                        _("Plugin file not activated: {}").format(target_path)
+                        _("Plugin file not found: {}").format(target_path)
                     )
                     return False
         return True
 
     def activate_plugins(self) -> bool:
         """
-        Copy plugin files from staging directory to target directories.
+        Verify that plugin files are present in target directories.
+        Since staging directories have been removed, this method only
+        checks that files are already installed by the package.
 
         Returns:
-            True if activation succeeded, False otherwise.
+            True if all plugin files are present, False otherwise.
         """
-        self.logger.info(_("Activating plugins from staging directory"))
-        # List of (source_staging_subdir, target_dir, filenames)
+        self.logger.info(_("Checking plugin files installation"))
+        # List of (target_dir, filenames)
         file_groups = [
-            (STAGING_PYTHON_PLUGINS, TARGET_PYTHON_PLUGINS,
-             ['chain.py', 'gpmaster.py', 'gpo.py']),
-            (STAGING_UI_PLUGINS, TARGET_UI_PLUGINS,
-             ['chain.js', 'gpo.js']),
-            (STAGING_SCHEMA_DIR, TARGET_SCHEMA_DIR,
-             ['75-chain.ldif', '75-gpc.ldif', '75-gpmaster.ldif']),
-            (STAGING_UPDATE_DIR, TARGET_UPDATE_DIR,
-             ['75-chain.update', '75-gpc.update', '75-gpmaster.update']),
-            (STAGING_DBUS_CONFIG_DIR, TARGET_DBUS_CONFIG_DIR,
-             ['ipa-gpo.conf']),
-            (STAGING_DBUS_HANDLERS_DIR, TARGET_DBUS_HANDLERS_DIR,
+            (TARGET_PYTHON_PLUGINS, ['chain.py', 'gpmaster.py', 'gpo.py']),
+            (TARGET_UI_PLUGINS, ['chain.js', 'gpo.js']),
+            (TARGET_SCHEMA_DIR, ['75-chain.ldif', '75-gpc.ldif', '75-gpmaster.ldif']),
+            (TARGET_UPDATE_DIR, ['75-chain.update', '75-gpc.update', '75-gpmaster.update']),
+            (TARGET_DBUS_CONFIG_DIR, ['ipa-gpo.conf']),
+            (TARGET_DBUS_HANDLERS_DIR,
              ['org.freeipa.server.create-gpo-structure',
               'org.freeipa.server.delete-gpo-structure']),
         ]
 
-        for src_dir, dst_dir, filenames in file_groups:
-            # Create target directory if it doesn't exist
-            try:
-                os.makedirs(dst_dir, exist_ok=True)
-            except Exception as e:
-                self.logger.error(
-                    _("Failed to create directory {}: {}").format(dst_dir, e)
-                )
-                return False
-
+        missing_files = []
+        for target_dir, filenames in file_groups:
             for filename in filenames:
-                src_path = os.path.join(src_dir, filename)
-                dst_path = os.path.join(dst_dir, filename)
-                if os.path.exists(dst_path):
-                    self.logger.debug(
-                        _("Plugin file already activated: {}").format(dst_path)
-                    )
-                    continue
-
-                if not os.path.exists(src_path):
+                target_path = os.path.join(target_dir, filename)
+                if not os.path.exists(target_path):
+                    missing_files.append(target_path)
                     self.logger.error(
-                        _("Source file not found in staging: {}").format(src_path)
+                        _("Plugin file not found: {}").format(target_path)
                     )
-                    return False
 
-                try:
-                    shutil.copy2(src_path, dst_path)
-                except Exception as e:
-                    self.logger.error(
-                        _("Failed to copy plugin file {}: {}").format(src_path, e)
-                    )
-                    return False
+        if missing_files:
+            self.logger.error(
+                _("Plugin files missing. Please ensure the freeipa-server-gpo package is installed.")
+            )
+            return False
 
-        self.logger.info(_("All plugins activated successfully"))
+        self.logger.info(_("All plugin files are present"))
         return True
