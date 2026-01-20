@@ -239,7 +239,7 @@ class AdmxParser:
             try:
                 tree = ET.parse(adml_file)
             except ET.ParseError as e:
-                logger.warning(f"ADML parse error: {adml_file}: {e}")
+                logger.debug(f"ADML parse error: {adml_file}: {e}")
                 continue
 
             root = tree.getroot()
@@ -292,7 +292,7 @@ class AdmxParser:
             try:
                 tree = ET.parse(adml_file)
             except ET.ParseError as e:
-                logger.warning(f"ADML parse error: {adml_file}: {e}")
+                logger.debug(f"ADML parse error: {adml_file}: {e}")
                 continue
 
             root = tree.getroot()
@@ -647,7 +647,7 @@ class AdmxParser:
         try:
             tree = ET.parse(self.admx_filepath)
         except ET.ParseError as e:
-            logger.warning(f"ADMX parse error: {self.admx_filepath}: {e}")
+            logger.debug(f"ADMX parse error: {self.admx_filepath}: {e}")
             return
 
         root = tree.getroot()
@@ -686,7 +686,7 @@ class AdmxParser:
         try:
             tree = ET.parse(self.admx_filepath)
         except ET.ParseError as e:
-            logger.warning(f"ADMX parse error: {self.admx_filepath}: {e}")
+            logger.debug(f"ADMX parse error: {self.admx_filepath}: {e}")
             return
 
         root = tree.getroot()
@@ -749,12 +749,12 @@ class AdmxParser:
 def merge_category(existing: dict, incoming: dict) -> dict:
     # Warn about conflicting parent definitions
     if existing.get("parent") and incoming.get("parent") and existing["parent"] != incoming["parent"]:
-        logger.warning(f"Category parent conflict: '{existing.get('id')}' has parent '{existing['parent']}', "
+        logger.debug(f"Category parent conflict: '{existing.get('id')}' has parent '{existing['parent']}', "
               f"new definition wants parent '{incoming['parent']}' (keeping existing)")
 
     # Warn about conflicting displayName definitions
     if existing.get("displayName") and incoming.get("displayName") and existing["displayName"] != incoming["displayName"]:
-        logger.warning(f"Category displayName conflict: '{existing.get('id')}' has displayName '{existing['displayName']}', "
+        logger.debug(f"Category displayName conflict: '{existing.get('id')}' has displayName '{existing['displayName']}', "
               f"new definition wants '{incoming['displayName']}' (keeping existing)")
 
     if not existing.get("parent") and incoming.get("parent"):
@@ -775,12 +775,12 @@ def detect_and_break_cycles(categories: dict[str, dict]) -> None:
                 # Cycle detected
                 cycle_start = path.index(current)
                 cycle = path[cycle_start:] + [current]
-                logger.warning(f"Circular parent reference detected: {' -> '.join(cycle)}")
+                logger.debug(f"Circular parent reference detected: {' -> '.join(cycle)}")
                 # Break cycle by removing parent from the last element in cycle
                 broken_cat = cycle[-2] if len(cycle) > 1 else current
                 if broken_cat in categories:
                     categories[broken_cat]["parent"] = None
-                    logger.warning(f"Removed parent from category '{broken_cat}' to break cycle")
+                    logger.debug(f"Removed parent from category '{broken_cat}' to break cycle")
                 break
             path.append(current)
             parent = categories[current].get("parent") if current in categories else None
@@ -826,7 +826,7 @@ def build_policy_index_expanded(policies: list[dict], categories: dict[str, dict
         cat = p.get("categoryRef") or "__UNCATEGORIZED__"
 
         if cat != "__UNCATEGORIZED__" and cat not in categories:
-            logger.warning(f"Policy '{p.get('displayName') or 'unknown'}' references unknown category '{cat}', moving to uncategorized")
+            logger.debug(f"Policy '{p.get('displayName') or 'unknown'}' references unknown category '{cat}', moving to uncategorized")
             cat = "__UNCATEGORIZED__"
 
         flat = p.get("policyJson") or {}

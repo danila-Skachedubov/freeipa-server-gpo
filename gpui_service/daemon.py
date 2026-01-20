@@ -130,7 +130,7 @@ class ServiceDaemon:
         # Setup directory monitoring
         logger.debug("Setting up directory monitor...")
         if not self.setup_monitor():
-            logger.warning("Directory monitoring setup failed, continuing without it")
+            logger.debug("Directory monitoring setup failed, continuing without it")
         logger.debug("Directory monitor setup complete")
 
         # Create and run GLib main loop

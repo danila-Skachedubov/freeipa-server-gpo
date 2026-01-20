@@ -39,7 +39,7 @@ class DirectoryMonitor:
         try:
             self.settings = Gio.Settings.new('org.altlinux.gpuiservice')
         except Exception as e:
-            logger.warning(f"Could not load dconf settings: {e}")
+            logger.debug(f"Could not load dconf settings: {e}")
 
     def get_monitor_path(self):
         """Get path to monitor from dconf or use default"""
@@ -52,7 +52,7 @@ class DirectoryMonitor:
                     logger.info(f"Using monitor path from dconf: {path}")
                     return path
             except Exception as e:
-                logger.warning(f"Could not read monitor-path from dconf: {e}")
+                logger.debug(f"Could not read monitor-path from dconf: {e}")
 
         logger.info(f"Using default monitor path: {default_path}")
         return default_path
@@ -68,7 +68,7 @@ class DirectoryMonitor:
                     logger.info(f"Using sysvol path from dconf: {path}")
                     return path
             except Exception as e:
-                logger.warning(f"Could not read sysvol-path from dconf: {e}")
+                logger.debug(f"Could not read sysvol-path from dconf: {e}")
 
         logger.info(f"Using default sysvol path: {default_path}")
         return default_path

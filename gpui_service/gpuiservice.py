@@ -27,7 +27,7 @@ import logging.handlers
 
 # Setup logging to syslog/journald
 logger = logging.getLogger('gpuiservice')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 # Try to use syslog handler
 try:
