@@ -66,34 +66,34 @@ class ServiceDaemon:
     def setup_dbus(self):
         """Setup DBus connection and register service"""
         try:
-            print("DEBUG: Setting DBus main loop...")
+            logger.debug("Setting DBus main loop...")
             dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-            print("DEBUG: Connecting to system bus...")
+            logger.debug("Connecting to system bus...")
             self.bus = dbus.SystemBus()
-            print(f"DEBUG: System bus connected: {self.bus}")
+            logger.debug(f"System bus connected: {self.bus}")
 
             # Request bus name
-            print("DEBUG: Requesting bus name 'org.altlinux.gpuiservice'...")
+            logger.debug("Requesting bus name 'org.altlinux.gpuiservice'...")
             bus_name = dbus.service.BusName('org.altlinux.gpuiservice', self.bus)
-            print(f"DEBUG: Bus name acquired: {bus_name}")
+            logger.debug(f"Bus name acquired: {bus_name}")
 
             # Create data store
             self.data_store = GPODataStore()
             self.data_store.load_from_directory()
 
-            print('self.data_store_dict', type(self.data_store))
+            logger.debug(f"self.data_store_dict {type(self.data_store)}")
 
             # Create service object
-            print("DEBUG: Creating GPUIService object...")
+            logger.debug("Creating GPUIService object...")
             self.service = GPUIService(bus_name, '/org/altlinux/gpuiservice', self.data_store)
 
             logger.info("DBus service registered successfully")
-            print("DEBUG: DBus service registered successfully")
+            logger.debug("DBus service registered successfully")
             return True
         except Exception as e:
             logger.error(f"Failed to setup DBus: {e}")
-            print(f"DEBUG: DBus setup exception: {e}")
-            traceback.print_exc()
+            logger.error(f"DBus setup exception: {e}")
+            logger.exception("DBus setup failed")
             return False
 
     def setup_monitor(self):
@@ -112,26 +112,26 @@ class ServiceDaemon:
 
     def run(self):
         """Main daemon run method"""
-        print("DEBUG: ServiceDaemon.run() called")
+        logger.debug("ServiceDaemon.run() called")
         logger.info("Starting GPUIService daemon")
 
         # Setup signal handlers
         self.setup_signal_handlers()
-        print("DEBUG: Signal handlers setup")
+        logger.debug("Signal handlers setup")
 
         # Setup DBus
-        print("DEBUG: Setting up DBus...")
+        logger.debug("Setting up DBus...")
         if not self.setup_dbus():
             logger.error("Failed to setup DBus, exiting")
-            print("DEBUG: DBus setup failed")
+            logger.error("DBus setup failed")
             return 1
-        print("DEBUG: DBus setup successful")
+        logger.debug("DBus setup successful")
 
         # Setup directory monitoring
-        print("DEBUG: Setting up directory monitor...")
+        logger.debug("Setting up directory monitor...")
         if not self.setup_monitor():
             logger.warning("Directory monitoring setup failed, continuing without it")
-        print("DEBUG: Directory monitor setup complete")
+        logger.debug("Directory monitor setup complete")
 
         # Create and run GLib main loop
         self.loop = GLib.MainLoop()

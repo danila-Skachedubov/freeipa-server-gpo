@@ -46,10 +46,10 @@ from daemon import ServiceDaemon
 
 def main():
     """Main entry point"""
-    print(f"DEBUG: Starting GPUIService, args: {sys.argv}")
+    logger.debug(f"Starting GPUIService, args: {sys.argv}")
     # Check if running as daemon (background mode)
     daemon_mode = '--foreground' not in sys.argv
-    print(f"DEBUG: Daemon mode: {daemon_mode}")
+    logger.debug(f"Daemon mode: {daemon_mode}")
 
     daemon = ServiceDaemon(daemon_mode=daemon_mode)
 

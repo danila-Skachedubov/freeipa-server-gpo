@@ -19,8 +19,11 @@
 import sys
 import json
 import re
+import logging
 from pathlib import Path
 import xml.etree.ElementTree as ET
+
+logger = logging.getLogger('gpuiservice')
 
 
 # $(string.ID)
@@ -236,7 +239,7 @@ class AdmxParser:
             try:
                 tree = ET.parse(adml_file)
             except ET.ParseError as e:
-                print(f"[WARN] ADML parse error: {adml_file}: {e}", file=sys.stderr)
+                logger.warning(f"ADML parse error: {adml_file}: {e}")
                 continue
 
             root = tree.getroot()
@@ -289,7 +292,7 @@ class AdmxParser:
             try:
                 tree = ET.parse(adml_file)
             except ET.ParseError as e:
-                print(f"[WARN] ADML parse error: {adml_file}: {e}", file=sys.stderr)
+                logger.warning(f"ADML parse error: {adml_file}: {e}")
                 continue
 
             root = tree.getroot()
@@ -644,7 +647,7 @@ class AdmxParser:
         try:
             tree = ET.parse(self.admx_filepath)
         except ET.ParseError as e:
-            print(f"[WARN] ADMX parse error: {self.admx_filepath}: {e}", file=sys.stderr)
+            logger.warning(f"ADMX parse error: {self.admx_filepath}: {e}")
             return
 
         root = tree.getroot()
@@ -683,7 +686,7 @@ class AdmxParser:
         try:
             tree = ET.parse(self.admx_filepath)
         except ET.ParseError as e:
-            print(f"[WARN] ADMX parse error: {self.admx_filepath}: {e}", file=sys.stderr)
+            logger.warning(f"ADMX parse error: {self.admx_filepath}: {e}")
             return
 
         root = tree.getroot()
@@ -746,13 +749,13 @@ class AdmxParser:
 def merge_category(existing: dict, incoming: dict) -> dict:
     # Warn about conflicting parent definitions
     if existing.get("parent") and incoming.get("parent") and existing["parent"] != incoming["parent"]:
-        print(f"[WARN] Category parent conflict: '{existing.get('id')}' has parent '{existing['parent']}', "
-              f"new definition wants parent '{incoming['parent']}' (keeping existing)", file=sys.stderr)
+        logger.warning(f"Category parent conflict: '{existing.get('id')}' has parent '{existing['parent']}', "
+              f"new definition wants parent '{incoming['parent']}' (keeping existing)")
 
     # Warn about conflicting displayName definitions
     if existing.get("displayName") and incoming.get("displayName") and existing["displayName"] != incoming["displayName"]:
-        print(f"[WARN] Category displayName conflict: '{existing.get('id')}' has displayName '{existing['displayName']}', "
-              f"new definition wants '{incoming['displayName']}' (keeping existing)", file=sys.stderr)
+        logger.warning(f"Category displayName conflict: '{existing.get('id')}' has displayName '{existing['displayName']}', "
+              f"new definition wants '{incoming['displayName']}' (keeping existing)")
 
     if not existing.get("parent") and incoming.get("parent"):
         existing["parent"] = incoming["parent"]
@@ -772,12 +775,12 @@ def detect_and_break_cycles(categories: dict[str, dict]) -> None:
                 # Cycle detected
                 cycle_start = path.index(current)
                 cycle = path[cycle_start:] + [current]
-                print(f"[WARN] Circular parent reference detected: {' -> '.join(cycle)}", file=sys.stderr)
+                logger.warning(f"Circular parent reference detected: {' -> '.join(cycle)}")
                 # Break cycle by removing parent from the last element in cycle
                 broken_cat = cycle[-2] if len(cycle) > 1 else current
                 if broken_cat in categories:
                     categories[broken_cat]["parent"] = None
-                    print(f"[WARN] Removed parent from category '{broken_cat}' to break cycle", file=sys.stderr)
+                    logger.warning(f"Removed parent from category '{broken_cat}' to break cycle")
                 break
             path.append(current)
             parent = categories[current].get("parent") if current in categories else None
@@ -823,7 +826,7 @@ def build_policy_index_expanded(policies: list[dict], categories: dict[str, dict
         cat = p.get("categoryRef") or "__UNCATEGORIZED__"
 
         if cat != "__UNCATEGORIZED__" and cat not in categories:
-            print(f"[WARN] Policy '{p.get('displayName') or 'unknown'}' references unknown category '{cat}', moving to uncategorized", file=sys.stderr)
+            logger.warning(f"Policy '{p.get('displayName') or 'unknown'}' references unknown category '{cat}', moving to uncategorized")
             cat = "__UNCATEGORIZED__"
 
         flat = p.get("policyJson") or {}
@@ -878,11 +881,14 @@ def build_category_tree_for_class_expanded(
 
 
 def usage(prog: str) -> None:
-    print("Error: Insufficient arguments", file=sys.stderr)
-    print(f"Usage: {prog} <policy_definitions_path> [language]", file=sys.stderr)
+    logger.error("Insufficient arguments")
+    logger.error(f"Usage: {prog} <policy_definitions_path> [language]")
 
 
 def main() -> int:
+    # Setup logging for CLI
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
     # Match the other script's CLI:
     #   <policy_definitions_path> [language]
     if len(sys.argv) < 2:
@@ -895,15 +901,15 @@ def main() -> int:
     try:
         result = AdmxParser.build_result_for_dir(policy_definitions_path, requested_locale)
     except RuntimeError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error(f"{e}")
         return 1
 
     # JSON -> stdout (provided by AdmxParser)
     print(AdmxParser.dumps(result, ensure_ascii=False, indent=2))
 
-    print(f"\nParsing completed:", file=sys.stderr)
-    print(f"  - Total policies: {result['meta']['Total policies']}", file=sys.stderr)
-    print(f"  - Total categories: {result['meta']['Total categories']}", file=sys.stderr)
+    logger.info(f"Parsing completed:")
+    logger.info(f"  - Total policies: {result['meta']['Total policies']}")
+    logger.info(f"  - Total categories: {result['meta']['Total categories']}")
 
     return 0
 
