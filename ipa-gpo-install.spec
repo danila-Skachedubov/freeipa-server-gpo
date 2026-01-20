@@ -1,5 +1,5 @@
 Name:           freeipa-server-gpo
-Version:        0.0.3
+Version:        0.0.4
 Release:        alt1
 
 Summary:        Prepare FreeIPA for Group Policy Management
@@ -30,8 +30,9 @@ and creates the necessary directory structure.
 
 %install
 make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitelibdir
+%find_lang ipa-gpo-install
 
-%files
+%files -f ipa-gpo-install.lang
 %doc README.md
 %doc README.ru.md
 %_bindir/ipa-gpo-install
@@ -56,9 +57,13 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 %_mandir/man8/ipa-gpo-install.8*
 %_mandir/ru/man8/ipa-gpo-install.8*
 %_datadir/bash-completion/completions/ipa-gpo-install
-%_datadir/locale/ru/LC_MESSAGES/ipa-gpo-install.mo
 
 %changelog
+* Tue Jan 20 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.0.4-alt1
+- feat(plugins): add schema verification and error handling
+- revert: remove staging directory for plugins, return to direct
+  file installation
+
 * Tue Dec 23 2025 Danila Skachedubov <skachedubov@altlinux.org> 0.0.3-alt1
 - feat: implement staging directory for plugins and update to
   version 0.0.3
