@@ -93,30 +93,56 @@ class GPODataStore:
             return current
 
 
-    def set(self, path, value):
-        """Set value by path"""
+    def set(self, path, value, name_gpt=None, target=None):
+        """Set value by path
+
+        Args:
+            path: Registry key path (e.g., 'Software\\BaseALT\\Policies\\GPUpdate')
+            value: Value to set - can be raw data or dict with fields:
+                value_name, value_data, value_type, gpo_path, policy_type
+            name_gpt: GPO path (relative to sysvol). If provided, overrides parsing from path.
+            target: Policy type ('Machine' or 'User'). If provided, overrides parsing from path.
+
+        Returns:
+            True if successful, False otherwise
+        """
         if self.gpt_worker is None:
             logger.error("GPTWorker not available, cannot write .pol file")
             return False
 
-        # Parse path: /gpo_path/{Machine|User}/{registry_key_path}
-        parts = path.strip("/").split("/")
+        # Initialize defaults
         gpo_path = self.default_gpo_path
         policy_type = self.default_policy_type
         key_path = ""
 
-        if len(parts) >= 2 and parts[1] in ('Machine', 'User'):
-            # Format: /gpo_path/Machine|User/registry/key/path
-            gpo_path = parts[0]
-            policy_type = parts[1]
-            key_path = "\\".join(parts[2:]) if len(parts) > 2 else ""
-        elif len(parts) >= 1 and parts[0] in ('Machine', 'User'):
-            # Format: /Machine|User/registry/key/path (use default GPO path)
-            policy_type = parts[0]
-            key_path = "\\".join(parts[1:]) if len(parts) > 1 else ""
-        elif len(parts) >= 1:
-            # Assume whole path is registry key path, use defaults for GPO and policy_type
-            key_path = "\\".join(parts)
+        # If name_gpt and target are provided, use them directly
+        if name_gpt is not None or target is not None:
+            # Use provided values, fallback to defaults
+            if name_gpt is not None:
+                gpo_path = name_gpt
+            if target is not None:
+                policy_type = target
+            # Path is treated as registry key path
+            if path:
+                key_path = path.replace("/", "\\") if "/" in path else path
+        else:
+            # Legacy path parsing for backward compatibility
+            # Parse path: /gpo_path/{Machine|User}/{registry_key_path}
+            parts = path.strip("/").split("/")
+            key_path = ""
+
+            if len(parts) >= 2 and parts[1] in ('Machine', 'User'):
+                # Format: /gpo_path/Machine|User/registry/key/path
+                gpo_path = parts[0]
+                policy_type = parts[1]
+                key_path = "\\".join(parts[2:]) if len(parts) > 2 else ""
+            elif len(parts) >= 1 and parts[0] in ('Machine', 'User'):
+                # Format: /Machine|User/registry/key/path (use default GPO path)
+                policy_type = parts[0]
+                key_path = "\\".join(parts[1:]) if len(parts) > 1 else ""
+            elif len(parts) >= 1:
+                # Assume whole path is registry key path, use defaults for GPO and policy_type
+                key_path = "\\".join(parts)
 
         if not gpo_path:
             logger.error("No GPO path specified and no default GPO path configured")
@@ -128,9 +154,11 @@ class GPODataStore:
             value_name = value.get('value_name', '')
             value_data = value.get('value_data', '')
             value_type = value.get('value_type', 'REG_SZ')
-            # Override gpo_path and policy_type if provided
-            gpo_path = value.get('gpo_path', gpo_path)
-            policy_type = value.get('policy_type', policy_type)
+            # Override gpo_path and policy_type if provided (but name_gpt/target have higher priority)
+            if name_gpt is None:
+                gpo_path = value.get('gpo_path', gpo_path)
+            if target is None:
+                policy_type = value.get('policy_type', policy_type)
         else:
             # Treat value as raw data, default value_name empty (default value)
             value_name = ''
