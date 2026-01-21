@@ -97,6 +97,50 @@ class GPTWorker:
         else:  # User
             return gpo_full_path / 'User' / 'Registry.pol'
 
+    def _normalize_gpo_path(self, gpo_path, policy_type='Machine'):
+        """
+        Normalize GPO path argument to handle both GPO paths and .pol file paths
+
+        This method allows callers to pass either:
+        1. GPO path (relative to sysvol) + policy_type
+        2. Full path to registry.pol file (policy_type inferred from parent directory)
+
+        Args:
+            gpo_path: Either GPO path (relative) or Path to registry.pol file
+            policy_type: Default policy type if not inferred from path
+
+        Returns:
+            Tuple of (normalized_gpo_path, policy_type)
+            normalized_gpo_path is relative GPO path (string) ready for _get_pol_file_path
+        """
+        from pathlib import Path
+
+        # Convert to Path object if string
+        path = Path(gpo_path) if isinstance(gpo_path, str) else gpo_path
+
+        # Check if this looks like a registry.pol file path
+        if path.name == 'Registry.pol' and path.suffix == '.pol':
+            # Determine policy type from parent directory name
+            parent = path.parent.name
+            if parent in ('Machine', 'User'):
+                policy_type = parent
+                # Get GPO path relative to sysvol_path
+                # path.parent.parent is the GPO directory (e.g., g1)
+                try:
+                    gpo_relative = path.parent.parent.relative_to(self.sysvol_path)
+                    return str(gpo_relative), policy_type
+                except ValueError:
+                    # Path is not under sysvol_path, treat as absolute GPO path
+                    # Return absolute path as string
+                    return str(path.parent.parent), policy_type
+            # If parent not Machine/User, fall through
+
+        # Not a .pol file path, treat as GPO path
+        # Convert to string if it's a Path
+        if isinstance(gpo_path, Path):
+            gpo_path = str(gpo_path)
+        return gpo_path, policy_type
+
     def create_pol_file(self, gpo_path, policy_type='Machine', policies=None):
         """
         Create a new registry.pol file with given policies
@@ -118,6 +162,9 @@ class GPTWorker:
             logger.error("Cannot create .pol file: Samba GPPolParser not available")
             return False
 
+        # Normalize GPO path (handles both GPO path and .pol file path)
+        gpo_path, policy_type = self._normalize_gpo_path(gpo_path, policy_type)
+
         pol_file_path = self._get_pol_file_path(gpo_path, policy_type)
 
         try:
@@ -130,29 +177,46 @@ class GPTWorker:
             parser.pol_file = self.preg.file()
             parser.pol_file.header.signature = 'PReg'
             parser.pol_file.header.version = 1
-            parser.pol_file.num_entries = len(policies) if policies else 0
             entries = []
+            total_entries = 0
 
             if policies:
-                for key_path, (value_name, value_data, value_type) in policies.items():
-                    # Convert value type to Samba constant
-                    samba_type = self._convert_to_samba_type(value_type)
-                    # Create entry
-                    entry = self.preg.entry()
-                    entry.type = samba_type
-                    entry.keyname = key_path
-                    entry.valuename = value_name if value_name is not None else ''
-                    # Convert value data to appropriate format
-                    entry.data = self._value_to_samba_data(value_data, samba_type)
-                    # size is automatically calculated by NDR packing
-                    entry.size = 0
-                    entries.append(entry)
+                for key_path, value_info in policies.items():
+                    # Handle both nested dict format and legacy tuple format
+                    if isinstance(value_info, dict):
+                        # Nested dict format: {key_path: {value_name: (value_data, value_type)}}
+                        for value_name, (value_data, value_type) in value_info.items():
+                            samba_type = self._convert_to_samba_type(value_type)
+                            entry = self.preg.entry()
+                            entry.type = samba_type
+                            entry.keyname = key_path
+                            entry.valuename = value_name if value_name is not None else ''
+                            entry.data = self._value_to_samba_data(value_data, samba_type)
+                            entry.size = 0
+                            entries.append(entry)
+                            total_entries += 1
+                    elif isinstance(value_info, tuple) and len(value_info) == 3:
+                        # Legacy tuple format: (value_name, value_data, value_type)
+                        value_name, value_data, value_type = value_info
+                        samba_type = self._convert_to_samba_type(value_type)
+                        entry = self.preg.entry()
+                        entry.type = samba_type
+                        entry.keyname = key_path
+                        entry.valuename = value_name if value_name is not None else ''
+                        entry.data = self._value_to_samba_data(value_data, samba_type)
+                        entry.size = 0
+                        entries.append(entry)
+                        total_entries += 1
+                    else:
+                        logger.warning(f"Unexpected policy format for key {key_path}: {value_info}")
+                        continue
 
+            parser.pol_file.num_entries = total_entries
             parser.pol_file.entries = entries
             # Write binary file
             parser.write_binary(str(pol_file_path))
 
-            logger.info(f"Created registry.pol file at {pol_file_path} with {len(policies or {})} policies")
+            logger.info(f"Created registry.pol file at {pol_file_path} with {total_entries} policies")
             return True
 
         except Exception as exp:
@@ -176,6 +240,9 @@ class GPTWorker:
             logger.error("Cannot read .pol file: Samba GPPolParser not available")
             return {}
 
+        # Normalize GPO path (handles both GPO path and .pol file path)
+        gpo_path, policy_type = self._normalize_gpo_path(gpo_path, policy_type)
+
         pol_file_path = self._get_pol_file_path(gpo_path, policy_type)
 
         if not pol_file_path.exists():
@@ -197,7 +264,11 @@ class GPTWorker:
                     # Convert Samba data to Python value
                     value_data = self._samba_data_to_value(entry.data, entry.type)
                     value_type = self._convert_from_samba_type(entry.type)
-                    policies[key_path] = (value_name, value_data, value_type)
+
+                    # Store as nested dict: {key_path: {value_name: (value_data, value_type)}}
+                    if key_path not in policies:
+                        policies[key_path] = {}
+                    policies[key_path][value_name] = (value_data, value_type)
 
             logger.debug(f"Read {len(policies)} policies from {pol_file_path}")
             return policies
@@ -230,22 +301,23 @@ class GPTWorker:
             logger.error("Cannot update policy: Samba GPPolParser not available")
             return False
 
+        # Normalize GPO path (handles both GPO path and .pol file path)
+        gpo_path, policy_type = self._normalize_gpo_path(gpo_path, policy_type)
         pol_file_path = self._get_pol_file_path(gpo_path, policy_type)
 
         try:
-            # Read existing policies
+            # Read existing policies (nested dict format)
             existing_policies = self.read_pol_file(gpo_path, policy_type)
 
-            # Update or add the policy
-            existing_policies[key_path] = (value_name, value_data, value_type)
+            # Ensure key_path exists as dict
+            if key_path not in existing_policies:
+                existing_policies[key_path] = {}
 
-            # Convert policies to format expected by create_pol_file
-            policies_dict = {}
-            for k, (vn, vd, vt) in existing_policies.items():
-                policies_dict[k] = (vn, vd, vt)
+            # Update or add the specific value name
+            existing_policies[key_path][value_name] = (value_data, value_type)
 
-            # Create/update the file
-            return self.create_pol_file(gpo_path, policy_type, policies_dict)
+            # Create/update the file (pass nested dict directly)
+            return self.create_pol_file(gpo_path, policy_type, existing_policies)
 
         except Exception as exp:
             logger.error(f"Failed to update policy value in {pol_file_path}: {exp}")
@@ -267,10 +339,9 @@ class GPTWorker:
         """
         policies = self.read_pol_file(gpo_path, policy_type)
 
-        if key_path in policies:
-            v_name, v_data, v_type = policies[key_path]
-            if v_name == value_name:
-                return v_data, v_type
+        if key_path in policies and value_name in policies[key_path]:
+            v_data, v_type = policies[key_path][value_name]
+            return v_data, v_type
 
         logger.debug(f"Policy value not found: {key_path}\\{value_name}")
         return None
@@ -292,6 +363,8 @@ class GPTWorker:
             logger.error("Cannot delete policy: Samba GPPolParser not available")
             return False
 
+        # Normalize GPO path (handles both GPO path and .pol file path)
+        gpo_path, policy_type = self._normalize_gpo_path(gpo_path, policy_type)
         pol_file_path = self._get_pol_file_path(gpo_path, policy_type)
 
         if not pol_file_path.exists():
@@ -299,30 +372,23 @@ class GPTWorker:
             return True
 
         try:
-            # Read existing policies
+            # Read existing policies (nested dict format)
             existing_policies = self.read_pol_file(gpo_path, policy_type)
 
-            # Remove the policy if it exists
-            if key_path in existing_policies:
-                v_name, _, _ = existing_policies[key_path]
-                if v_name == value_name:
+            # Remove the specific value if it exists
+            if key_path in existing_policies and value_name in existing_policies[key_path]:
+                del existing_policies[key_path][value_name]
+                # If key_path dict becomes empty, remove it
+                if not existing_policies[key_path]:
                     del existing_policies[key_path]
-                else:
-                    # Key exists but value name doesn't match
-                    logger.debug(f"Value name mismatch: expected {value_name}, found {v_name}")
-                    return True
             else:
                 # Policy doesn't exist
+                logger.debug(f"Policy value not found: {key_path}\\{value_name}")
                 return True
 
-            # Convert policies to format expected by create_pol_file
-            policies_dict = {}
-            for k, (vn, vd, vt) in existing_policies.items():
-                policies_dict[k] = (vn, vd, vt)
-
             # Write updated file (or delete if empty)
-            if policies_dict:
-                return self.create_pol_file(gpo_path, policy_type, policies_dict)
+            if existing_policies:
+                return self.create_pol_file(gpo_path, policy_type, existing_policies)
             else:
                 # Delete empty file
                 pol_file_path.unlink()
