@@ -58,7 +58,23 @@ class GPTWorker:
         # Try to import Samba GPPolParser
         try:
             from samba.gp_parse.gp_pol import GPPolParser
+            from samba.dcerpc import misc, preg
             self.pol_parser = GPPolParser
+            self.preg = preg
+            self.reg_constants = misc
+            # Build registry type mapping
+            self.reg_type_map = {
+                'REG_SZ': misc.REG_SZ,
+                'REG_EXPAND_SZ': misc.REG_EXPAND_SZ,
+                'REG_BINARY': misc.REG_BINARY,
+                'REG_DWORD': misc.REG_DWORD,
+                'REG_DWORD_BIG_ENDIAN': misc.REG_DWORD_BIG_ENDIAN,
+                'REG_LINK': misc.REG_LINK,
+                'REG_MULTI_SZ': misc.REG_MULTI_SZ,
+                'REG_QWORD': misc.REG_QWORD,
+                'REG_NONE': misc.REG_NONE,
+            }
+            self.reg_type_reverse = {v: k for k, v in self.reg_type_map.items()}
             logger.debug("Samba GPPolParser imported successfully")
         except ImportError as exp:
             logger.warning(f"Samba GPPolParser not available: {exp}")
@@ -110,17 +126,31 @@ class GPTWorker:
 
             # Create new GPPolParser instance
             parser = self.pol_parser()
+            # Initialize pol_file with signature and version
+            parser.pol_file = self.preg.file()
+            parser.pol_file.header.signature = 'PReg'
+            parser.pol_file.header.version = 1
+            parser.pol_file.num_entries = len(policies) if policies else 0
+            entries = []
 
-            # Add policies to parser
             if policies:
                 for key_path, (value_name, value_data, value_type) in policies.items():
                     # Convert value type to Samba constant
                     samba_type = self._convert_to_samba_type(value_type)
-                    parser.add_policy(key_path, value_name, value_data, samba_type)
+                    # Create entry
+                    entry = self.preg.entry()
+                    entry.type = samba_type
+                    entry.keyname = key_path
+                    entry.valuename = value_name if value_name is not None else ''
+                    # Convert value data to appropriate format
+                    entry.data = self._value_to_samba_data(value_data, samba_type)
+                    # size is automatically calculated by NDR packing
+                    entry.size = 0
+                    entries.append(entry)
 
-            # Write to file
-            with open(pol_file_path, 'wb') as f:
-                parser.write(f)
+            parser.pol_file.entries = entries
+            # Write binary file
+            parser.write_binary(str(pol_file_path))
 
             logger.info(f"Created registry.pol file at {pol_file_path} with {len(policies or {})} policies")
             return True
@@ -156,19 +186,18 @@ class GPTWorker:
             # Parse existing file
             parser = self.pol_parser()
             with open(pol_file_path, 'rb') as f:
-                parser.parse(f)
+                parser.parse(f.read())
 
-            # Extract policies from parser
+            # Extract policies from pol_file entries
             policies = {}
-            # Note: This assumes parser.get_policies() returns a list of policy objects
-            # The actual API may differ - adjust based on Samba's implementation
-            for policy in parser.get_policies():
-                key_path = policy.get_key_path()
-                value_name = policy.get_value_name()
-                value_data = policy.get_value_data()
-                value_type = self._convert_from_samba_type(policy.get_value_type())
-
-                policies[key_path] = (value_name, value_data, value_type)
+            if parser.pol_file and parser.pol_file.entries:
+                for entry in parser.pol_file.entries:
+                    key_path = entry.keyname
+                    value_name = entry.valuename
+                    # Convert Samba data to Python value
+                    value_data = self._samba_data_to_value(entry.data, entry.type)
+                    value_type = self._convert_from_samba_type(entry.type)
+                    policies[key_path] = (value_name, value_data, value_type)
 
             logger.debug(f"Read {len(policies)} policies from {pol_file_path}")
             return policies
@@ -315,9 +344,10 @@ class GPTWorker:
         Returns:
             Samba constant for the registry type
         """
-        # These constants should be available in samba.gp_parse.gp_pol
-        # This is a placeholder - adjust based on actual Samba API
-        type_map = {
+        if hasattr(self, 'reg_type_map'):
+            return self.reg_type_map.get(reg_type, self.reg_constants.REG_SZ)
+        # Fallback mapping if Samba not available
+        fallback_map = {
             'REG_SZ': 1,
             'REG_EXPAND_SZ': 2,
             'REG_BINARY': 3,
@@ -326,8 +356,9 @@ class GPTWorker:
             'REG_LINK': 6,
             'REG_MULTI_SZ': 7,
             'REG_QWORD': 11,
+            'REG_NONE': 0,
         }
-        return type_map.get(reg_type, 1)  # Default to REG_SZ
+        return fallback_map.get(reg_type, 1)  # Default to REG_SZ
 
     def _convert_from_samba_type(self, samba_type):
         """
@@ -339,8 +370,10 @@ class GPTWorker:
         Returns:
             Registry type string
         """
-        # Reverse mapping of _convert_to_samba_type
-        type_map = {
+        if hasattr(self, 'reg_type_reverse'):
+            return self.reg_type_reverse.get(samba_type, 'REG_SZ')
+        # Fallback mapping
+        fallback_map = {
             1: 'REG_SZ',
             2: 'REG_EXPAND_SZ',
             3: 'REG_BINARY',
@@ -349,5 +382,85 @@ class GPTWorker:
             6: 'REG_LINK',
             7: 'REG_MULTI_SZ',
             11: 'REG_QWORD',
+            0: 'REG_NONE',
         }
-        return type_map.get(samba_type, 'REG_SZ')
+        return fallback_map.get(samba_type, 'REG_SZ')
+
+    def _value_to_samba_data(self, value_data, reg_type):
+        """
+        Convert Python value to appropriate Samba entry data format
+
+        Args:
+            value_data: Python value (str, int, list, bytes)
+            reg_type: Registry type constant (from samba.dcerpc.misc)
+
+        Returns:
+            Data formatted for preg.entry.data field
+        """
+        from samba.dcerpc import misc
+        if reg_type == misc.REG_SZ or reg_type == misc.REG_EXPAND_SZ:
+            return str(value_data) if value_data is not None else ''
+        elif reg_type == misc.REG_DWORD or reg_type == misc.REG_DWORD_BIG_ENDIAN or reg_type == misc.REG_QWORD:
+            return int(value_data)
+        elif reg_type == misc.REG_MULTI_SZ:
+            if isinstance(value_data, list):
+                # Join with null characters, double null terminate
+                if not value_data:
+                    return u'\x00'.encode('utf-16le')
+                # Ensure each element is string
+                strings = [str(item) for item in value_data]
+                data = u'\x00'.join(strings) + u'\x00\x00'
+                return data.encode('utf-16le')
+            else:
+                # Assume it's a single string with embedded nulls? Not supported.
+                raise ValueError("REG_MULTI_SZ value must be a list of strings")
+        elif reg_type == misc.REG_BINARY:
+            if isinstance(value_data, bytes):
+                return value_data
+            elif isinstance(value_data, str):
+                # Assume hex string? For simplicity, encode as bytes
+                return value_data.encode('utf-8')
+            else:
+                raise ValueError("REG_BINARY value must be bytes or string")
+        elif reg_type == misc.REG_NONE:
+            return None
+        else:
+            # Unknown type, treat as binary
+            logger.warning(f"Unknown registry type {reg_type}, treating as binary")
+            if isinstance(value_data, bytes):
+                return value_data
+            else:
+                return str(value_data).encode('utf-8')
+
+    def _samba_data_to_value(self, entry_data, reg_type):
+        """
+        Convert Samba entry data to Python value
+
+        Args:
+            entry_data: Data from preg.entry.data field
+            reg_type: Registry type constant
+
+        Returns:
+            Python value (str, int, list, bytes)
+        """
+        from samba.dcerpc import misc
+        if reg_type == misc.REG_SZ or reg_type == misc.REG_EXPAND_SZ:
+            return entry_data if entry_data is not None else ''
+        elif reg_type == misc.REG_DWORD or reg_type == misc.REG_DWORD_BIG_ENDIAN or reg_type == misc.REG_QWORD:
+            return int(entry_data) if entry_data is not None else 0
+        elif reg_type == misc.REG_MULTI_SZ:
+            if entry_data is None:
+                return []
+            # Decode utf-16le, strip trailing nulls, split by null
+            decoded = entry_data.decode('utf-16le').rstrip(u'\x00')
+            if decoded == u'':
+                return []
+            return decoded.split(u'\x00')
+        elif reg_type == misc.REG_BINARY:
+            return entry_data if entry_data is not None else b''
+        elif reg_type == misc.REG_NONE:
+            return None
+        else:
+            # Unknown type, return as is
+            logger.warning(f"Unknown registry type {reg_type}, returning raw data")
+            return entry_data

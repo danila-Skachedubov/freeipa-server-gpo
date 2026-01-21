@@ -29,9 +29,20 @@ logger = logging.getLogger('gpuiservice')
 class GPODataStore:
     """Storage for ADMX policy data loaded from directory"""
 
-    def __init__(self):
+    def __init__(self, sysvol_path='/var/lib/freeipa/sysvol'):
         self.data = {}
         self.lock = threading.RLock()
+        self.sysvol_path = sysvol_path
+        self.default_gpo_path = None
+        self.default_policy_type = 'Machine'
+        self.gpt_worker = None
+        try:
+            from gptworker import GPTWorker
+            self.gpt_worker = GPTWorker(sysvol_path)
+            logger.debug(f"GPTWorker initialized with sysvol path: {sysvol_path}")
+        except ImportError as exp:
+            logger.warning(f"GPTWorker not available: {exp}")
+            logger.warning("GPO policy file operations will be limited")
 
     def load_from_directory(self, directory_path='/usr/share/PolicyDefinitions'):
         """Load ADMX policy definitions from directory"""
@@ -84,10 +95,57 @@ class GPODataStore:
 
     def set(self, path, value):
         """Set value by path"""
-        # with self.lock:
-        #     self.data[path] = value
-        #     return True
-        pass
+        if self.gpt_worker is None:
+            logger.error("GPTWorker not available, cannot write .pol file")
+            return False
+
+        # Parse path: /gpo_path/{Machine|User}/{registry_key_path}
+        parts = path.strip("/").split("/")
+        gpo_path = self.default_gpo_path
+        policy_type = self.default_policy_type
+        key_path = ""
+
+        if len(parts) >= 2 and parts[1] in ('Machine', 'User'):
+            # Format: /gpo_path/Machine|User/registry/key/path
+            gpo_path = parts[0]
+            policy_type = parts[1]
+            key_path = "\\".join(parts[2:]) if len(parts) > 2 else ""
+        elif len(parts) >= 1 and parts[0] in ('Machine', 'User'):
+            # Format: /Machine|User/registry/key/path (use default GPO path)
+            policy_type = parts[0]
+            key_path = "\\".join(parts[1:]) if len(parts) > 1 else ""
+        elif len(parts) >= 1:
+            # Assume whole path is registry key path, use defaults for GPO and policy_type
+            key_path = "\\".join(parts)
+
+        if not gpo_path:
+            logger.error("No GPO path specified and no default GPO path configured")
+            return False
+
+        # Determine value components
+        if isinstance(value, dict):
+            # Extract fields
+            value_name = value.get('value_name', '')
+            value_data = value.get('value_data', '')
+            value_type = value.get('value_type', 'REG_SZ')
+            # Override gpo_path and policy_type if provided
+            gpo_path = value.get('gpo_path', gpo_path)
+            policy_type = value.get('policy_type', policy_type)
+        else:
+            # Treat value as raw data, default value_name empty (default value)
+            value_name = ''
+            value_data = value
+            value_type = 'REG_SZ'
+
+        # Call GPTWorker
+        try:
+            success = self.gpt_worker.update_policy_value(
+                gpo_path, key_path, value_name, value_data, value_type, policy_type
+            )
+            return success
+        except Exception as exp:
+            logger.error(f"Failed to set policy value: {exp}")
+            return False
 
     def list_children(self, parent_path):
         """List children under parent path"""
