@@ -33,8 +33,6 @@ class GPODataStore:
         self.data = {}
         self.lock = threading.RLock()
         self.sysvol_path = sysvol_path
-        self.default_gpo_path = None
-        self.default_policy_type = 'Machine'
         self.gpt_worker = None
         try:
             from gptworker import GPTWorker
@@ -93,15 +91,15 @@ class GPODataStore:
             return current
 
 
-    def set(self, path, value, name_gpt=None, target=None):
+    def set(self, path, value, name_gpt, target=None):
         """Set value by path
 
         Args:
             path: Registry key path (e.g., 'Software\\BaseALT\\Policies\\GPUpdate')
             value: Value to set - can be raw data or dict with fields:
-                value_name, value_data, value_type, gpo_path, policy_type
-            name_gpt: GPO path (relative to sysvol). If provided, overrides parsing from path.
-            target: Policy type ('Machine' or 'User'). If provided, overrides parsing from path.
+                value_name, value_data, value_type, policy_type
+            name_gpt: GPO path (relative to sysvol). Required.
+            target: Policy type ('Machine' or 'User'). If None, uses policy_type from value dict or 'Machine'.
 
         Returns:
             True if successful, False otherwise
@@ -110,55 +108,27 @@ class GPODataStore:
             logger.error("GPTWorker not available, cannot write .pol file")
             return False
 
-        # Initialize defaults
-        gpo_path = self.default_gpo_path
-        policy_type = self.default_policy_type
-        key_path = ""
-
-        # If name_gpt and target are provided, use them directly
-        if name_gpt is not None or target is not None:
-            # Use provided values, fallback to defaults
-            if name_gpt is not None:
-                gpo_path = name_gpt
-            if target is not None:
-                policy_type = target
-            # Path is treated as registry key path
-            if path:
-                key_path = path.replace("/", "\\") if "/" in path else path
-        else:
-            # Legacy path parsing for backward compatibility
-            # Parse path: /gpo_path/{Machine|User}/{registry_key_path}
-            parts = path.strip("/").split("/")
-            key_path = ""
-
-            if len(parts) >= 2 and parts[1] in ('Machine', 'User'):
-                # Format: /gpo_path/Machine|User/registry/key/path
-                gpo_path = parts[0]
-                policy_type = parts[1]
-                key_path = "\\".join(parts[2:]) if len(parts) > 2 else ""
-            elif len(parts) >= 1 and parts[0] in ('Machine', 'User'):
-                # Format: /Machine|User/registry/key/path (use default GPO path)
-                policy_type = parts[0]
-                key_path = "\\".join(parts[1:]) if len(parts) > 1 else ""
-            elif len(parts) >= 1:
-                # Assume whole path is registry key path, use defaults for GPO and policy_type
-                key_path = "\\".join(parts)
-
-        if not gpo_path:
-            logger.error("No GPO path specified and no default GPO path configured")
+        if not name_gpt:
+            logger.error("name_gpt parameter is required")
             return False
+
+        # Convert path to registry key format (forward slashes to backslashes)
+        key_path = path.replace("/", "\\") if "/" in path else path
+
+        # Determine policy_type: target parameter overrides value dict
+        policy_type = 'Machine'  # default
+        if isinstance(value, dict) and target is None:
+            # Use policy_type from value dict if target not provided
+            policy_type = value.get('policy_type', policy_type)
+        elif target is not None:
+            # Use explicit target parameter
+            policy_type = target
 
         # Determine value components
         if isinstance(value, dict):
-            # Extract fields
             value_name = value.get('value_name', '')
             value_data = value.get('value_data', '')
             value_type = value.get('value_type', 'REG_SZ')
-            # Override gpo_path and policy_type if provided (but name_gpt/target have higher priority)
-            if name_gpt is None:
-                gpo_path = value.get('gpo_path', gpo_path)
-            if target is None:
-                policy_type = value.get('policy_type', policy_type)
         else:
             # Treat value as raw data, default value_name empty (default value)
             value_name = ''
@@ -168,7 +138,7 @@ class GPODataStore:
         # Call GPTWorker
         try:
             success = self.gpt_worker.update_policy_value(
-                gpo_path, key_path, value_name, value_data, value_type, policy_type
+                name_gpt, key_path, value_name, value_data, value_type, policy_type
             )
             return success
         except Exception as exp:

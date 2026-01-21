@@ -121,18 +121,22 @@ class GPUIService(dbus.service.Object):
         else:
             return str(value)
 
-    @dbus.service.method('org.altlinux.GPUIService', in_signature='sv', out_signature='b')
-    def set(self, path, value):
+    @dbus.service.method('org.altlinux.GPUIService', in_signature='sssv', out_signature='b')
+    def set(self, path, name_gpt, target, value):
         """
         Set parameter value in GPO
         Args:
-            path: Path to the parameter in GPO structure
+            path: Path to the parameter in GPO structure (registry key)
+            name_gpt: GPO path (relative to sysvol)
+            target: Policy type ('Machine' or 'User'), empty string for default
             value: Value to set
         Returns:
             True if successful, False otherwise
         """
-        logger.info(f"set method called with path: {path}, value: {value}")
-        return self.data_store.set(path, value)
+        logger.info(f"set method called with path: {path}, name_gpt: {name_gpt}, target: {target}, value: {value}")
+        # Convert empty target to None (use defaults)
+        target_param = target if target else None
+        return self.data_store.set(path, value, name_gpt, target_param)
 
     @dbus.service.method('org.altlinux.GPUIService', in_signature='s', out_signature='v')
     def list_children(self, parent_path):
