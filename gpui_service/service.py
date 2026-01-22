@@ -56,22 +56,24 @@ class GPUIService(dbus.service.Object):
                     <arg name="value" direction="out" type="v"/>
                     </method>
                     <method name="set">
+                    <arg name="name_gpt" direction="in" type="s"/>
+                    <arg name="target" direction="in" type="s"/>
                     <arg name="path" direction="in" type="s"/>
-                    <arg name="value" direction="in" type="v"/>
+                    <arg name="value" direction="in" type="s"/>
                     <arg name="success" direction="out" type="b"/>
                     </method>
                     <method name="list_children">
                     <arg name="parent_path" direction="in" type="s"/>
-                    <arg name="children" direction="out" type="as"/>
+                    <arg name="children" direction="out" type="v"/>
                     </method>
                     <method name="find">
                     <arg name="search_pattern" direction="in" type="s"/>
                     <arg name="search_type" direction="in" type="s"/>
-                    <arg name="results" direction="out" type="as"/>
+                    <arg name="results" direction="out" type="v"/>
                     </method>
-                    <method name="get_set_values">
-                    <arg name="paths" direction="in" type="as"/>
-                    <arg name="results" direction="out" type="a{sv}"/>
+                    <method name="get_current_value">
+                    <arg name="paths" direction="in" type="sss"/>
+                    <arg name="results" direction="out" type="v"/>
                     </method>
                     <method name="reload">
                     <arg name="success" direction="out" type="b"/>
@@ -121,8 +123,8 @@ class GPUIService(dbus.service.Object):
         else:
             return str(value)
 
-    @dbus.service.method('org.altlinux.GPUIService', in_signature='sssv', out_signature='b')
-    def set(self, path, name_gpt, target, value):
+    @dbus.service.method('org.altlinux.GPUIService', in_signature='ssss', out_signature='b')
+    def set(self, name_gpt, target, path, value):
         """
         Set parameter value in GPO
         Args:
@@ -172,21 +174,12 @@ class GPUIService(dbus.service.Object):
         result = []
         return json.dumps(result)
 
-    @dbus.service.method('org.altlinux.GPUIService', in_signature='as', out_signature='v')
-    def get_set_values(self, paths):
+    @dbus.service.method('org.altlinux.GPUIService', in_signature='sss', out_signature='v')
+    def get_current_value(self, name_gpt, target, path):
         """
-        Get current values and set new values for multiple parameters
-        Args:
-            paths: Array of parameter paths to get/set
-        Returns:
-            Dictionary with current values and status for each path as JSON string
         """
-        logger.info(f"get_set_values method called with paths: {paths}")
+        logger.info(f"get_current_value method called with path: {path}")
         results = {}
-        for path in paths:
-            value = self.data_store.get(path)
-            if value is not None:
-                results[path] = value
 
         return json.dumps(results, default=str)
 
