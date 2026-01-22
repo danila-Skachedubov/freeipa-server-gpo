@@ -72,7 +72,9 @@ class GPUIService(dbus.service.Object):
                     <arg name="results" direction="out" type="v"/>
                     </method>
                     <method name="get_current_value">
-                    <arg name="paths" direction="in" type="sss"/>
+                    <arg name="name_gpt" direction="in" type="s"/>
+                    <arg name="target" direction="in" type="s"/>
+                    <arg name="path" direction="in" type="s"/>
                     <arg name="results" direction="out" type="v"/>
                     </method>
                     <method name="reload">
@@ -177,11 +179,29 @@ class GPUIService(dbus.service.Object):
     @dbus.service.method('org.altlinux.GPUIService', in_signature='sss', out_signature='v')
     def get_current_value(self, name_gpt, target, path):
         """
+        Get current value from GPO policy file
+        Args:
+            name_gpt: GPO path (relative to sysvol)
+            target: Policy type ('Machine' or 'User'), empty string for default
+            path: Registry key path (e.g., 'Software\\BaseALT\\Policies\\GPUpdate')
+        Returns:
+            JSON string with value_data and value_type if found, empty string otherwise
         """
-        logger.info(f"get_current_value method called with path: {path}")
-        results = {}
+        logger.info(f"get_current_value method called with name_gpt: {name_gpt}, target: {target}, path: {path}")
+        # Convert empty target to None (use defaults)
+        target_param = target if target else None
 
-        return json.dumps(results, default=str)
+        result = self.data_store.get_current_value(path, name_gpt, target_param)
+        if result is None:
+            return ""
+
+        # result is tuple (value_data, value_type)
+        value_data, value_type = result
+        response = {
+            "value_data": value_data,
+            "value_type": value_type
+        }
+        return json.dumps(response, default=str)
 
     @dbus.service.method('org.altlinux.GPUIService', out_signature='b')
     def reload(self):

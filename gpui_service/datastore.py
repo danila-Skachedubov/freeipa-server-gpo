@@ -145,6 +145,44 @@ class GPODataStore:
             logger.error(f"Failed to set policy value: {exp}")
             return False
 
+    def get_current_value(self, path, name_gpt, target=None):
+        """Get current value from GPO policy file
+
+        Args:
+            path: Registry key path (e.g., 'Software\\BaseALT\\Policies\\GPUpdate')
+            name_gpt: GPO path (relative to sysvol). Required.
+            target: Policy type ('Machine' or 'User'). If None, defaults to 'Machine'.
+
+        Returns:
+            Tuple (value_data, value_type) if found, None otherwise
+        """
+        if self.gpt_worker is None:
+            logger.error("GPTWorker not available, cannot read .pol file")
+            return None
+
+        if not name_gpt:
+            logger.error("name_gpt parameter is required")
+            return None
+
+        # Determine policy_type
+        policy_type = 'Machine'  # default
+        if target is not None:
+            policy_type = target
+
+        # Convert path to registry key format (forward slashes to backslashes)
+        key_path = path.replace("/", "\\") if "/" in path else path
+        # Use empty string for default value name
+        value_name = ''
+
+        try:
+            result = self.gpt_worker.get_policy_value(
+                name_gpt, key_path, value_name, policy_type
+            )
+            return result
+        except Exception as exp:
+            logger.error(f"Failed to get policy value: {exp}")
+            return None
+
     def list_children(self, parent_path):
         """List children under parent path"""
         with self.lock:
