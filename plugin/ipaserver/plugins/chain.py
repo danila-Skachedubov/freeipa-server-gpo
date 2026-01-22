@@ -3,6 +3,7 @@ import logging
 from ipalib import api, errors, _, ngettext
 from ipalib import Str, Command, output, Flag, Bool
 from ipalib.plugable import Registry
+from ipalib import constants
 from ipapython.dn import DN
 
 from ipaserver.plugins.baseldap import (
@@ -172,7 +173,8 @@ class chain(LDAPObject):
     takes_params = (
         Str('cn', cli_name='name', label=_('Chain name'),
             doc=_('Group Policy Chain name'), primary_key=True,
-            autofill=False),
+            autofill=False, pattern=constants.PATTERN_GROUPUSER_NAME,
+            pattern_errmsg=constants.ERRMSG_GROUPUSER_NAME.format('chain')),
         Str('displayname?', cli_name='display_name',
             label=_('Display name'),
             doc=_('Display name for the chain')),
@@ -437,6 +439,12 @@ class chain_add(LDAPCreate):
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
         """Convert names to DNs with strict validation."""
         verify_gpo_schema(ldap, self.api)
+        chain_name = keys[0]
+        if not constants.PATTERN_GROUPUSER_NAME.match(chain_name):
+            raise errors.ValidationError(
+                name='cn',
+                error=constants.ERRMSG_GROUPUSER_NAME.format('chain')
+            )
         converted = self.obj.convert_names_to_dns(options, strict=True)
         entry_attrs.update(converted)
         entry_attrs['active'] = 'TRUE'
@@ -582,6 +590,13 @@ class chain_mod(LDAPUpdate):
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
         """Standard operations only - move operations handled in execute."""
         verify_gpo_schema(ldap, self.api)
+        if options.get('rename'):
+            new_name = options['rename']
+            if not constants.PATTERN_GROUPUSER_NAME.match(new_name):
+                raise errors.ValidationError(
+                    name='cn',
+                    error=constants.ERRMSG_GROUPUSER_NAME.format('chain')
+                )
         current_entry = ldap.get_entry(dn, attrs_list=['usergroup', 'computergroup', 'gplink'])
 
         self._handle_add_operations(entry_attrs, options, keys)

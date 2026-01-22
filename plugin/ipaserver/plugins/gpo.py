@@ -5,6 +5,7 @@ import dbus
 import dbus.mainloop.glib
 from ipalib import api, errors, _, ngettext
 from ipalib import Str, Int
+from ipalib import constants
 from ipalib.plugable import Registry
 from ipapython.dn import DN
 
@@ -119,6 +120,8 @@ class gpo(LDAPObject):
             label=_('Policy name'),
             doc=_('Group Policy Object display name'),
             primary_key=True,
+            pattern=constants.PATTERN_GROUPUSER_NAME,
+            pattern_errmsg=constants.ERRMSG_GROUPUSER_NAME.format('Group Policy Object'),
         ),
         Str('cn?',
             label=_('Policy GUID'),
@@ -234,6 +237,11 @@ class gpo_add(LDAPCreate):
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
         verify_gpo_schema(ldap, self.api)
         displayname = keys[-1]
+        if not constants.PATTERN_GROUPUSER_NAME.match(displayname):
+            raise errors.ValidationError(
+                name='displayname',
+                error=constants.ERRMSG_GROUPUSER_NAME.format('Group Policy Object')
+            )
         try:
             self.obj.find_gpo_by_displayname(ldap, displayname)
             raise errors.InvocationError(
@@ -339,6 +347,11 @@ class gpo_mod(LDAPUpdate):
 
         if 'rename' in options and options['rename']:
             new_name = options['rename']
+            if not constants.PATTERN_GROUPUSER_NAME.match(new_name):
+                raise errors.ValidationError(
+                    name='displayname',
+                    error=constants.ERRMSG_GROUPUSER_NAME.format('Group Policy Object')
+                )
             if new_name == keys[0]:
                 raise errors.ValidationError(
                     name='rename',
