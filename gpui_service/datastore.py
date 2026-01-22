@@ -22,6 +22,7 @@ GPODataStore - Storage for ADMX policy data loaded from directory
 import threading
 from pathlib import Path
 import logging
+import json
 from parse_admx_structure import AdmxParser
 
 logger = logging.getLogger('gpuiservice')
@@ -115,25 +116,50 @@ class GPODataStore:
         # Convert path to registry key format (forward slashes to backslashes)
         key_path = path.replace("/", "\\") if "/" in path else path
 
+        # Try to parse value as JSON string to support complex values
+        parsed_value = value
+        if isinstance(value, str):
+            try:
+                parsed_value = json.loads(value)
+            except (json.JSONDecodeError, ValueError):
+                parsed_value = value  # Keep as string
+
         # Determine policy_type: target parameter overrides value dict
         policy_type = 'Machine'  # default
-        if isinstance(value, dict) and target is None:
+        if isinstance(parsed_value, dict) and target is None:
             # Use policy_type from value dict if target not provided
-            policy_type = value.get('policy_type', policy_type)
+            policy_type = parsed_value.get('policy_type', policy_type)
         elif target is not None:
             # Use explicit target parameter
             policy_type = target
 
-        # Determine value components
-        if isinstance(value, dict):
-            value_name = value.get('value_name', '')
-            value_data = value.get('value_data', '')
-            value_type = value.get('value_type', 'REG_SZ')
+        value_name = ''
+        value_data = ''
+        value_type = 'REG_SZ'
+
+        if isinstance(parsed_value, dict):
+            # Check if metadata_path is provided to extract additional info
+            metadata_path = parsed_value.get('metadata_path')
+            metadata = None
+            if metadata_path:
+                metadata = self.get(metadata_path)
+                if isinstance(metadata, dict):
+                    # Extract valueName from metadata header
+                    header = metadata.get('header', {})
+                    if isinstance(header, dict):
+                        meta_value_name = header.get('valueName')
+                        if meta_value_name is not None:
+                            value_name = meta_value_name
+                        # TODO: extract value type from metadata if available
+
+            # Override with explicit values if provided
+            value_name = parsed_value.get('value_name', value_name)
+            value_data = parsed_value.get('value_data', '')
+            value_type = parsed_value.get('value_type', value_type)
         else:
             # Treat value as raw data, default value_name empty (default value)
-            value_name = ''
-            value_data = value
-            value_type = 'REG_SZ'
+            value_data = parsed_value
+            # value_name remains empty, value_type remains REG_SZ
 
         # Call GPTWorker
         try:

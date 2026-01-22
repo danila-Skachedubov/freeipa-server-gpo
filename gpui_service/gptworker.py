@@ -74,6 +74,10 @@ class GPTWorker:
                 'REG_QWORD': misc.REG_QWORD,
                 'REG_NONE': misc.REG_NONE,
             }
+            # Add additional registry types if available in Samba
+            for reg_name in ['REG_RESOURCE_LIST', 'REG_FULL_RESOURCE_DESCRIPTOR', 'REG_RESOURCE_REQUIREMENTS_LIST']:
+                if hasattr(misc, reg_name):
+                    self.reg_type_map[reg_name] = getattr(misc, reg_name)
             self.reg_type_reverse = {v: k for k, v in self.reg_type_map.items()}
             logger.debug("Samba GPPolParser imported successfully")
         except ImportError as exp:
@@ -414,6 +418,7 @@ class GPTWorker:
             return self.reg_type_map.get(reg_type, self.reg_constants.REG_SZ)
         # Fallback mapping if Samba not available
         fallback_map = {
+            'REG_NONE': 0,
             'REG_SZ': 1,
             'REG_EXPAND_SZ': 2,
             'REG_BINARY': 3,
@@ -421,8 +426,10 @@ class GPTWorker:
             'REG_DWORD_BIG_ENDIAN': 5,
             'REG_LINK': 6,
             'REG_MULTI_SZ': 7,
+            'REG_RESOURCE_LIST': 8,
+            'REG_FULL_RESOURCE_DESCRIPTOR': 9,
+            'REG_RESOURCE_REQUIREMENTS_LIST': 10,
             'REG_QWORD': 11,
-            'REG_NONE': 0,
         }
         return fallback_map.get(reg_type, 1)  # Default to REG_SZ
 
@@ -440,6 +447,7 @@ class GPTWorker:
             return self.reg_type_reverse.get(samba_type, 'REG_SZ')
         # Fallback mapping
         fallback_map = {
+            0: 'REG_NONE',
             1: 'REG_SZ',
             2: 'REG_EXPAND_SZ',
             3: 'REG_BINARY',
@@ -447,8 +455,10 @@ class GPTWorker:
             5: 'REG_DWORD_BIG_ENDIAN',
             6: 'REG_LINK',
             7: 'REG_MULTI_SZ',
+            8: 'REG_RESOURCE_LIST',
+            9: 'REG_FULL_RESOURCE_DESCRIPTOR',
+            10: 'REG_RESOURCE_REQUIREMENTS_LIST',
             11: 'REG_QWORD',
-            0: 'REG_NONE',
         }
         return fallback_map.get(samba_type, 'REG_SZ')
 
