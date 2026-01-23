@@ -247,7 +247,7 @@ define([
 
                     dialog.open();
 
-                    // Load ADMX policies
+                    // Load ADMX policies using new API method
                     var parse_command = rpc.command({
                         entity: 'gpo',
                         method: 'parse_admx',
