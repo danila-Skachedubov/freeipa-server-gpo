@@ -266,7 +266,7 @@ class GPODataStore:
         header = metadata_obj.get('header', {})
         if not isinstance(header, dict):
             return key_path, ''
-        
+
         meta_key = header.get('key')
         meta_value_name = header.get('valueName')
         
@@ -279,7 +279,7 @@ class GPODataStore:
             heavy_key = heavy_meta.get('key')
             if heavy_key is not None:
                 meta_key = heavy_key
-        
+
         # Default values
         adjusted_key_path = key_path
         value_name = ''
@@ -290,31 +290,38 @@ class GPODataStore:
         parent = '\\'.join(parts[:-1]) if len(parts) > 1 else ''
         last_part = parts[-1] if len(parts) >= 1 else ''
 
-        # Determine value_name: prefer metadata valueName if it matches last_part,
-        # otherwise use last_part as value_name (overriding metadata)
         candidate_value_name = last_part
-        if meta_value_name and meta_value_name == candidate_value_name:
-            value_name = meta_value_name
-            # Strip matching value name from key path
-            adjusted_key_path = parent
-        elif candidate_value_name:
-            # Last part exists but doesn't match metadata valueName
-            # Use last part as value_name, strip it from key path
+        
+        # Normalize meta_key if present
+        meta_key_norm = None
+        if meta_key:
+            meta_key_norm = meta_key.replace('/', '\\')
+        parent_norm = parent.replace('/', '\\') if parent else ''
+
+        # If meta_key matches parent, treat last component as value name (override metadata)
+        if meta_key_norm and parent_norm and meta_key_norm == parent_norm:
+            # The key path includes an extra component beyond the metadata key
+            # Treat that extra component as the value name (override metadata valueName)
             value_name = candidate_value_name
             adjusted_key_path = parent
         else:
-            # No last part (key_path is empty or single component)
-            # Use metadata valueName if available
+            # Use metadata valueName logic
             if meta_value_name:
-                value_name = meta_value_name
-                # If meta_key provided and matches key_path_norm, we could adjust
-                if meta_key:
-                    meta_key_norm = meta_key.replace('/', '\\')
-                    if key_path_norm == meta_key_norm:
-                        # Key path already matches meta_key, no adjustment needed
-                        pass
-            # adjusted_key_path remains key_path
-        
+                if meta_value_name == candidate_value_name:
+                    # Matching: strip last component, use meta_value_name
+                    value_name = meta_value_name
+                    adjusted_key_path = parent
+                else:
+                    # Mismatch: keep key_path unchanged, use meta_value_name as value_name
+                    value_name = meta_value_name
+                    # adjusted_key_path remains key_path
+            else:
+                # No meta_value_name: use last_part as value_name (if exists) and strip
+                if candidate_value_name:
+                    value_name = candidate_value_name
+                    adjusted_key_path = parent
+                # else both empty, keep defaults
+
         return adjusted_key_path, value_name
     def get_current_value(self, path, name_gpt, target=None):
         """Get current value from GPO policy file
