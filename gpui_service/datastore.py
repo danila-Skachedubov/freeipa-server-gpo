@@ -179,6 +179,9 @@ class GPODataStore:
                 heavy_meta = None
                 header_value_name = header.get('valueName') if isinstance(header, dict) else None
                 header_key = header.get('key') if isinstance(header, dict) else None
+                # Extract candidate value name from key path (last component after backslash)
+                candidate_value_name = key_path.split('\\')[-1] if '\\' in key_path else key_path
+                logger.debug(f"candidate_value_name from key_path: {candidate_value_name}")
 
                 # Helper to check if metadata is wrapped heavy key
                 if 'metadata' in metadata_obj and isinstance(metadata_obj['metadata'], dict):
@@ -197,10 +200,16 @@ class GPODataStore:
                         if isinstance(val, dict) and 'metadata' in val and isinstance(val['metadata'], dict):
                             heavy_candidates.append(val['metadata'])
 
-                    # Try to match by valueName
+                    # Try to match by valueName from header
                     if header_value_name is not None:
                         for candidate in heavy_candidates:
                             if candidate.get('valueName') == header_value_name:
+                                heavy_meta = candidate
+                                break
+                    # If header has no valueName, try to match by candidate value name from key path
+                    if heavy_meta is None and candidate_value_name:
+                        for candidate in heavy_candidates:
+                            if candidate.get('valueName') == candidate_value_name:
                                 heavy_meta = candidate
                                 break
                     # If not matched, try to match by key (for list elements)
@@ -213,7 +222,7 @@ class GPODataStore:
                     # If still not found, take first candidate
                     if heavy_meta is None and heavy_candidates:
                         heavy_meta = heavy_candidates[0]
-                        logger.debug(f"heavy_meta selected: {heavy_meta}")
+                        logger.debug(f"heavy_meta selected: valueName={heavy_meta.get('valueName')}, type={heavy_meta.get('type')}")
 
                 if isinstance(heavy_meta, dict):
                     meta_type = heavy_meta.get('type')
@@ -262,14 +271,14 @@ class GPODataStore:
         """Adjust key_path and value_name based on metadata header and heavy key metadata."""
         if not isinstance(metadata_obj, dict):
             return key_path, ''
-        
+
         header = metadata_obj.get('header', {})
         if not isinstance(header, dict):
             return key_path, ''
 
         meta_key = header.get('key')
         meta_value_name = header.get('valueName')
-        
+
         # If heavy_meta provided and has valueName, use it
         if isinstance(heavy_meta, dict):
             heavy_value_name = heavy_meta.get('valueName')
@@ -291,7 +300,7 @@ class GPODataStore:
         last_part = parts[-1] if len(parts) >= 1 else ''
 
         candidate_value_name = last_part
-        
+
         # Normalize meta_key if present
         meta_key_norm = None
         if meta_key:
