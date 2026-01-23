@@ -210,6 +210,29 @@ class gpo(LDAPObject):
                 logger.warning(error_msg)
                 return None
 
+    def _call_gpuiservice_method(self, method_name, *params):
+        """Call GPUIService DBus method."""
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+        try:
+            bus = dbus.SystemBus()
+            obj = bus.get_object('org.altlinux.gpuiservice', '/org/altlinux/gpuiservice',
+                               follow_name_owner_changes=True)
+            gpuiservice = dbus.Interface(obj, 'org.altlinux.GPUIService')
+
+            method = getattr(gpuiservice, method_name)
+            result = method(*params)
+
+            return result
+
+        except dbus.DBusException as e:
+            error_msg = f'Failed to call GPUIService DBus method {method_name}: {str(e)}'
+            logger.error(error_msg)
+            raise errors.ExecutionError(
+                message=_('Failed to communicate with GPUIService: %(error)s') %
+                        {'error': str(e)}
+            )
+
     def parse_admx_policies(self, policy_definitions_path=None, language='en-US'):
         """
         Parse ADMX/ADML policy definitions.
@@ -222,26 +245,27 @@ class gpo(LDAPObject):
 
         logger.debug(f"parse_admx_policies called with path={policy_definitions_path}, language={language}")
 
-        stdout = self._call_dbus_method_with_output('parse_admx_structure',
-                                                   policy_definitions_path, language,
-                                                   fail_on_error=True)
-
-        if stdout is None:
-            raise errors.ExecutionError(
-                message=_('Failed to parse ADMX policies')
-            )
-
-        # Parse JSON output from stdout
+        # Call GPUIService DBus method
         try:
-            logger.debug(f"Parsing JSON output, length: {len(stdout)}")
-            result = json.loads(stdout)
-            logger.debug(f"Successfully parsed {len(result.get('policies', []))} policies")
+            # Call reload method to ensure fresh data
+            self._call_gpuiservice_method('reload')
+
+            # Get the root data structure
+            result_json = self._call_gpuiservice_method('get', "/")
+            if not result_json:
+                raise errors.ExecutionError(
+                    message=_('Failed to get ADMX policies from GPUIService')
+                )
+
+            # Parse JSON result
+            result = json.loads(result_json)
+            logger.debug(f"Successfully loaded ADMX policies from GPUIService")
             return result
+
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON output from ADMX parser: {e}")
-            logger.error(f"Stdout content (first 500 chars): {stdout[:500]}")
+            logger.error(f"Failed to parse JSON from GPUIService: {e}")
             raise errors.ExecutionError(
-                message=_('Failed to parse ADMX parser output')
+                message=_('Failed to parse ADMX policies from GPUIService')
             )
 
 
@@ -387,60 +411,188 @@ class gpo_parse_admx(Command):
 
             logger.debug(f"parse_admx_policies called with path={policy_definitions_path}, language={language}")
 
-            # Call D-Bus method parse_admx_structure
-            dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+            # Use the gpo object's parse_admx_policies method which now uses GPUIService
+            result = self.api.Command.gpo.parse_admx_policies(
+                policy_definitions_path=policy_definitions_path,
+                language=language
+            )
 
-            try:
-                with open('/tmp/gpo_debug.log', 'a') as f:
-                    import time
-                    f.write(f'{time.time()}: before dbus call\n')
-                bus = dbus.SystemBus()
-                obj = bus.get_object('org.freeipa.server', '/',
-                                   follow_name_owner_changes=True)
-                server = dbus.Interface(obj, 'org.freeipa.server')
-                method = getattr(server, 'parse_admx_structure')
-                ret, stdout, stderr = method(policy_definitions_path, language)
-                with open('/tmp/gpo_debug.log', 'a') as f:
-                    f.write(f'{time.time()}: after dbus call ret={ret}\n')
+            return {'result': result}
 
-                if ret != 0:
-                    error_msg = f"Failed to parse_admx_structure: {stderr}"
-                    logger.error(error_msg)
-                    raise errors.ExecutionError(
-                        message=_('Failed to parse ADMX policies: %(error)s') %
-                                {'error': stderr or _('Unknown error')}
-                    )
-
-            except dbus.DBusException as e:
-                error_msg = f'Failed to call D-Bus parse_admx_structure: {str(e)}'
-                logger.error(error_msg)
-                raise errors.ExecutionError(
-                    message=_('Failed to communicate with D-Bus service')
-                )
-
-            if stdout is None:
-                raise errors.ExecutionError(
-                    message=_('Failed to parse ADMX policies')
-                )
-
-            # Convert dbus.String to Python str
-            stdout = str(stdout)
-
-            # Parse JSON output from stdout
-            try:
-                logger.debug(f"Parsing JSON output, length: {len(stdout)}")
-                result = json.loads(stdout)
-                logger.debug(f"Successfully parsed {len(result.get('policies', []))} policies")
-                with open('/tmp/gpo_debug.log', 'a') as f:
-                    import time
-                    f.write(f'{time.time()}: returning result\n')
-                return {'result': result}
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse JSON output from ADMX parser: {e}")
-                logger.error(f"Stdout content (first 500 chars): {stdout[:500]}")
-                raise errors.ExecutionError(
-                    message=_('Failed to parse ADMX parser output')
-                )
         except Exception as e:
             logger.exception("Unexpected error in gpo_parse_admx")
+            raise
+
+
+@register()
+class gpo_get_policy(Command):
+    __doc__ = _("Get policy value from GPO.")
+    NO_CLI = True
+
+    takes_args = (
+        Str('path',
+            label=_('Policy path'),
+            doc=_('Path to the policy in GPO structure'),
+        ),
+    )
+
+    has_output = (
+        output.Output('result', type=dict, doc=_('Policy value')),
+    )
+
+    def execute(self, path, **options):
+        """
+        Get policy value from GPO.
+        """
+        try:
+            logger.debug(f'gpo_get_policy called with path: {path}')
+
+            # Call GPUIService get method
+            result_json = self.api.Command.gpo._call_gpuiservice_method('get', path)
+
+            if result_json:
+                result = json.loads(result_json)
+            else:
+                result = {}
+
+            return {'result': result}
+
+        except Exception as e:
+            logger.exception("Unexpected error in gpo_get_policy")
+            raise
+
+
+@register()
+class gpo_list_children(Command):
+    __doc__ = _("List child policies under a parent path.")
+    NO_CLI = True
+
+    takes_args = (
+        Str('parent_path',
+            label=_('Parent path'),
+            doc=_('Parent path in GPO structure'),
+        ),
+    )
+
+    has_output = (
+        output.Output('result', type=dict, doc=_('Child policies')),
+    )
+
+    def execute(self, parent_path, **options):
+        """
+        List child policies under a parent path.
+        """
+        try:
+            logger.debug(f'gpo_list_children called with parent_path: {parent_path}')
+
+            # Call GPUIService list_children method
+            result_json = self.api.Command.gpo._call_gpuiservice_method('list_children', parent_path)
+
+            if result_json:
+                result = json.loads(result_json)
+            else:
+                result = []
+
+            return {'result': result}
+
+        except Exception as e:
+            logger.exception("Unexpected error in gpo_list_children")
+            raise
+
+
+@register()
+class gpo_set_policy(Command):
+    __doc__ = _("Set policy value in GPO.")
+    NO_CLI = True
+
+    takes_args = (
+        Str('name_gpt',
+            label=_('GPO name'),
+            doc=_('GPO path (relative to sysvol)'),
+        ),
+        Str('target',
+            label=_('Target'),
+            doc=_('Policy type (Machine or User)'),
+        ),
+        Str('path',
+            label=_('Policy path'),
+            doc=_('Path to the policy in GPO structure'),
+        ),
+        Str('value',
+            label=_('Value'),
+            doc=_('Value to set'),
+        ),
+        Str('metadata?',
+            label=_('Metadata'),
+            doc=_('ADMX metadata path'),
+        ),
+    )
+
+    has_output = (
+        output.Output('success', type=bool, doc=_('Operation success')),
+    )
+
+    def execute(self, name_gpt, target, path, value, metadata=None, **options):
+        """
+        Set policy value in GPO.
+        """
+        try:
+            logger.debug(f'gpo_set_policy called with name_gpt: {name_gpt}, target: {target}, path: {path}, value: {value}, metadata: {metadata}')
+
+            # Call GPUIService set method
+            if metadata is None:
+                metadata = ""
+
+            success = self.api.Command.gpo._call_gpuiservice_method('set', name_gpt, target, path, value, metadata)
+
+            return {'success': bool(success)}
+
+        except Exception as e:
+            logger.exception("Unexpected error in gpo_set_policy")
+            raise
+
+
+@register()
+class gpo_get_current_value(Command):
+    __doc__ = _("Get current value from GPO policy file.")
+    NO_CLI = True
+
+    takes_args = (
+        Str('name_gpt',
+            label=_('GPO name'),
+            doc=_('GPO path (relative to sysvol)'),
+        ),
+        Str('target',
+            label=_('Target'),
+            doc=_('Policy type (Machine or User)'),
+        ),
+        Str('path',
+            label=_('Policy path'),
+            doc=_('Registry key path'),
+        ),
+    )
+
+    has_output = (
+        output.Output('result', type=dict, doc=_('Current value')),
+    )
+
+    def execute(self, name_gpt, target, path, **options):
+        """
+        Get current value from GPO policy file.
+        """
+        try:
+            logger.debug(f'gpo_get_current_value called with name_gpt: {name_gpt}, target: {target}, path: {path}')
+
+            # Call GPUIService get_current_value method
+            result_json = self.api.Command.gpo._call_gpuiservice_method('get_current_value', name_gpt, target, path)
+
+            if result_json:
+                result = json.loads(result_json)
+            else:
+                result = {}
+
+            return {'result': result}
+
+        except Exception as e:
+            logger.exception("Unexpected error in gpo_get_current_value")
             raise
