@@ -23,6 +23,7 @@ import threading
 from pathlib import Path
 import logging
 import json
+import ast
 from parse_admx_structure import AdmxParser
 
 logger = logging.getLogger('gpuiservice')
@@ -92,7 +93,7 @@ class GPODataStore:
             return current
 
 
-    def set(self, path, value, name_gpt, target=None):
+    def set(self, path, value, name_gpt, target=None, metadata=None):
         """Set value by path
 
         Args:
@@ -101,10 +102,12 @@ class GPODataStore:
                 value_name, value_data, value_type, policy_type
             name_gpt: GPO path (relative to sysvol). Required.
             target: Policy type ('Machine' or 'User'). If None, uses policy_type from value dict or 'Machine'.
+            metadata: Optional ADMX metadata path (string). If provided, used instead of extracting from value dict.
 
         Returns:
             True if successful, False otherwise
         """
+        logger.info(f"set called: path={repr(path)}, value={repr(value)}, name_gpt={repr(name_gpt)}, target={repr(target)}, metadata={repr(metadata)}")
         if self.gpt_worker is None:
             logger.error("GPTWorker not available, cannot write .pol file")
             return False
@@ -116,13 +119,27 @@ class GPODataStore:
         # Convert path to registry key format (forward slashes to backslashes)
         key_path = path.replace("/", "\\") if "/" in path else path
 
+        # Convert DBus types to native Python types
+        if hasattr(value, '__class__') and value.__class__.__module__.startswith('dbus'):
+            value = str(value)
+        # Strip trailing commas that may be introduced by DBus argument parsing
+        if isinstance(value, str) and value.endswith(','):
+            value = value.rstrip(',')
+
         # Try to parse value as JSON string to support complex values
         parsed_value = value
         if isinstance(value, str):
             try:
                 parsed_value = json.loads(value)
             except (json.JSONDecodeError, ValueError):
-                parsed_value = value  # Keep as string
+                # Try Python literal eval for Python-style dict syntax
+                try:
+                    if value.strip().startswith('{') and value.strip().endswith('}'):
+                        parsed_value = ast.literal_eval(value)
+                    else:
+                        parsed_value = value  # Keep as string
+                except (SyntaxError, ValueError):
+                    parsed_value = value  # Keep as string
 
         # Determine policy_type: target parameter overrides value dict
         policy_type = 'Machine'  # default
@@ -137,31 +154,96 @@ class GPODataStore:
         value_data = ''
         value_type = 'REG_SZ'
 
-        if isinstance(parsed_value, dict):
-            # Check if metadata_path is provided to extract additional info
-            metadata_path = parsed_value.get('metadata_path')
-            metadata = None
-            if metadata_path:
-                metadata = self.get(metadata_path)
-                if isinstance(metadata, dict):
-                    # Extract valueName from metadata header
-                    header = metadata.get('header', {})
-                    if isinstance(header, dict):
-                        meta_value_name = header.get('valueName')
-                        if meta_value_name is not None:
-                            value_name = meta_value_name
-                        # TODO: extract value type from metadata if available
+        # Determine metadata path: use provided metadata parameter if present
+        metadata_path = None
+        if metadata and metadata.strip():
+            metadata_path = metadata
+        elif isinstance(parsed_value, dict):
+            # Fallback to metadata_path from value dict
+            metadata_path = parsed_value.get('metadata_path') or parsed_value.get('metadata')
 
+        metadata_obj = None
+        if metadata_path:
+            metadata_obj = self.get(metadata_path)
+            logger.debug(f"metadata_path={metadata_path}, metadata_obj={metadata_obj}")
+            if isinstance(metadata_obj, dict):
+                # Extract valueName and type from metadata
+                header = metadata_obj.get('header', {})
+                if isinstance(header, dict):
+                    meta_value_name = header.get('valueName')
+                    if meta_value_name is not None:
+                        value_name = meta_value_name
+                # Try to find heavy key metadata
+                heavy_meta = None
+                header_value_name = header.get('valueName') if isinstance(header, dict) else None
+                header_key = header.get('key') if isinstance(header, dict) else None
+
+                # Helper to check if metadata is wrapped heavy key
+                if 'metadata' in metadata_obj and isinstance(metadata_obj['metadata'], dict):
+                    # Wrapped heavy key metadata
+                    heavy_meta = metadata_obj['metadata']
+                elif 'type' in metadata_obj:
+                    # Metadata is already the heavy key metadata
+                    heavy_meta = metadata_obj
+                else:
+                    # Metadata is likely a policy with header and heavy keys
+                    # Collect all heavy key metadata entries
+                    heavy_candidates = []
+                    for key, val in metadata_obj.items():
+                        if key == 'header':
+                            continue
+                        if isinstance(val, dict) and 'metadata' in val and isinstance(val['metadata'], dict):
+                            heavy_candidates.append(val['metadata'])
+
+                    # Try to match by valueName
+                    if header_value_name is not None:
+                        for candidate in heavy_candidates:
+                            if candidate.get('valueName') == header_value_name:
+                                heavy_meta = candidate
+                                break
+                    # If not matched, try to match by key (for list elements)
+                    if heavy_meta is None and header_key is not None:
+                        for candidate in heavy_candidates:
+                            # List elements have 'key' field in metadata
+                            if candidate.get('key') == header_key:
+                                heavy_meta = candidate
+                                break
+                    # If still not found, take first candidate
+                    if heavy_meta is None and heavy_candidates:
+                        heavy_meta = heavy_candidates[0]
+                        logger.debug(f"heavy_meta selected: {heavy_meta}")
+
+                if isinstance(heavy_meta, dict):
+                    meta_type = heavy_meta.get('type')
+                    if meta_type:
+                        # Map ADMX metadata type to registry type
+                        type_map = {
+                            'text': 'REG_SZ',
+                            'decimal': 'REG_DWORD',
+                            'boolean': 'REG_DWORD',
+                            'enum': 'REG_SZ',
+                            'list': 'REG_MULTI_SZ',
+                            'policyValue': 'REG_DWORD',
+                        }
+                        value_type = type_map.get(meta_type, value_type)
+                    # Override value_name from metadata if present
+                    meta_value_name = heavy_meta.get('valueName')
+                    if meta_value_name is not None:
+                        value_name = meta_value_name
+
+        # Now handle parsed_value to override/extract value_data, value_name, value_type
+        if isinstance(parsed_value, dict):
             # Override with explicit values if provided
             value_name = parsed_value.get('value_name', value_name)
-            value_data = parsed_value.get('value_data', '')
+            value_data = parsed_value.get('value_data', parsed_value.get('data', ''))
             value_type = parsed_value.get('value_type', value_type)
         else:
             # Treat value as raw data, default value_name empty (default value)
             value_data = parsed_value
-            # value_name remains empty, value_type remains REG_SZ
+            # value_name and value_type already set from metadata or defaults
 
         # Call GPTWorker
+        logger.debug(f"Calling GPTWorker.update_policy_value: name_gpt={name_gpt}, key_path={key_path}, value_name={value_name}, value_data={value_data}, value_type={value_type}, policy_type={policy_type}")
         try:
             success = self.gpt_worker.update_policy_value(
                 name_gpt, key_path, value_name, value_data, value_type, policy_type

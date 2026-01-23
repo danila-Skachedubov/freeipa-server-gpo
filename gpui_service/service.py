@@ -60,6 +60,7 @@ class GPUIService(dbus.service.Object):
                     <arg name="target" direction="in" type="s"/>
                     <arg name="path" direction="in" type="s"/>
                     <arg name="value" direction="in" type="s"/>
+                    <arg name="metadata" direction="in" type="s"/>
                     <arg name="success" direction="out" type="b"/>
                     </method>
                     <method name="list_children">
@@ -125,8 +126,8 @@ class GPUIService(dbus.service.Object):
         else:
             return str(value)
 
-    @dbus.service.method('org.altlinux.GPUIService', in_signature='ssss', out_signature='b')
-    def set(self, name_gpt, target, path, value):
+    @dbus.service.method('org.altlinux.GPUIService', in_signature='sssss', out_signature='b')
+    def set(self, name_gpt, target, path, value, metadata):
         """
         Set parameter value in GPO
         Args:
@@ -134,13 +135,14 @@ class GPUIService(dbus.service.Object):
             name_gpt: GPO path (relative to sysvol)
             target: Policy type ('Machine' or 'User'), empty string for default
             value: Value to set
+            metadata: ADMX metadata path (optional, empty string to extract from value)
         Returns:
             True if successful, False otherwise
         """
-        logger.info(f"set method called with path: {path}, name_gpt: {name_gpt}, target: {target}, value: {value}")
+        logger.info(f"set method called with path: {path}, name_gpt: {name_gpt}, target: {target}, value: {value}, metadata: {metadata}")
         # Convert empty target to None (use defaults)
         target_param = target if target else None
-        return self.data_store.set(path, value, name_gpt, target_param)
+        return self.data_store.set(path, value, name_gpt, target_param, metadata)
 
     @dbus.service.method('org.altlinux.GPUIService', in_signature='s', out_signature='v')
     def list_children(self, parent_path):
