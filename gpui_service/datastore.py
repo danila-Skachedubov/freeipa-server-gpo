@@ -151,6 +151,7 @@ class GPODataStore:
             policy_type = target
 
         value_name = ''
+
         value_data = ''
         value_type = 'REG_SZ'
 
@@ -230,6 +231,9 @@ class GPODataStore:
                     meta_value_name = heavy_meta.get('valueName')
                     if meta_value_name is not None:
                         value_name = meta_value_name
+        # Adjust key_path and value_name based on metadata
+        if metadata_obj:
+            key_path, value_name = self._extract_key_and_value_from_metadata(key_path, metadata_obj)
 
         # Now handle parsed_value to override/extract value_data, value_name, value_type
         if isinstance(parsed_value, dict):
@@ -253,6 +257,41 @@ class GPODataStore:
             logger.error(f"Failed to set policy value: {exp}")
             return False
 
+    def _extract_key_and_value_from_metadata(self, key_path, metadata_obj):
+        """Adjust key_path and value_name based on metadata header."""
+        if not isinstance(metadata_obj, dict):
+            return key_path, ''
+        
+        header = metadata_obj.get('header', {})
+        if not isinstance(header, dict):
+            return key_path, ''
+        
+        meta_key = header.get('key')
+        meta_value_name = header.get('valueName')
+        
+        # Default values
+        adjusted_key_path = key_path
+        value_name = ''
+        
+        if meta_value_name:
+            value_name = meta_value_name
+            if meta_key:
+                # Normalize backslashes
+                meta_key_norm = meta_key.replace('/', '\\')
+                meta_value_norm = meta_value_name.replace('/', '\\')
+                key_path_norm = key_path.replace('/', '\\')
+                
+                # Check if key_path ends with value name as separate component
+                if key_path_norm.endswith('\\' + meta_value_norm):
+                    # Strip the value name component
+                    stripped = key_path_norm[:-len('\\' + meta_value_norm)].rstrip('\\')
+                    adjusted_key_path = stripped
+                elif key_path_norm.endswith(meta_value_norm):
+                    # Might be concatenated without separator? Unlikely
+                    stripped = key_path_norm[:-len(meta_value_norm)].rstrip('\\')
+                    adjusted_key_path = stripped
+        
+        return adjusted_key_path, value_name
     def get_current_value(self, path, name_gpt, target=None):
         """Get current value from GPO policy file
 
@@ -281,6 +320,15 @@ class GPODataStore:
         key_path = path.replace("/", "\\") if "/" in path else path
         # Use empty string for default value name
         value_name = ''
+        # Try to extract value_name from key_path (last component)
+        key_parts = key_path.split('\\')
+        if len(key_parts) > 1:
+            potential_value_name = key_parts[-1]
+            # Check if potential_value_name is not empty and not purely numeric?
+            if potential_value_name.strip():
+                value_name = potential_value_name
+                # Adjust key_path to parent
+                key_path = '\\'.join(key_parts[:-1])
 
         try:
             result = self.gpt_worker.get_policy_value(
