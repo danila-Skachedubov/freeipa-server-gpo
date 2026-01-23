@@ -164,6 +164,7 @@ class GPODataStore:
             metadata_path = parsed_value.get('metadata_path') or parsed_value.get('metadata')
 
         metadata_obj = None
+        heavy_meta = None
         if metadata_path:
             metadata_obj = self.get(metadata_path)
             logger.debug(f"metadata_path={metadata_path}, metadata_obj={metadata_obj}")
@@ -233,7 +234,7 @@ class GPODataStore:
                         value_name = meta_value_name
         # Adjust key_path and value_name based on metadata
         if metadata_obj:
-            key_path, value_name = self._extract_key_and_value_from_metadata(key_path, metadata_obj)
+            key_path, value_name = self._extract_key_and_value_from_metadata(key_path, metadata_obj, heavy_meta)
 
         # Now handle parsed_value to override/extract value_data, value_name, value_type
         if isinstance(parsed_value, dict):
@@ -257,8 +258,8 @@ class GPODataStore:
             logger.error(f"Failed to set policy value: {exp}")
             return False
 
-    def _extract_key_and_value_from_metadata(self, key_path, metadata_obj):
-        """Adjust key_path and value_name based on metadata header."""
+    def _extract_key_and_value_from_metadata(self, key_path, metadata_obj, heavy_meta=None):
+        """Adjust key_path and value_name based on metadata header and heavy key metadata."""
         if not isinstance(metadata_obj, dict):
             return key_path, ''
         
@@ -269,27 +270,50 @@ class GPODataStore:
         meta_key = header.get('key')
         meta_value_name = header.get('valueName')
         
+        # If heavy_meta provided and has valueName, use it
+        if isinstance(heavy_meta, dict):
+            heavy_value_name = heavy_meta.get('valueName')
+            if heavy_value_name is not None:
+                meta_value_name = heavy_value_name
+            # For list elements, heavy_meta may have 'key' field
+            heavy_key = heavy_meta.get('key')
+            if heavy_key is not None:
+                meta_key = heavy_key
+        
         # Default values
         adjusted_key_path = key_path
         value_name = ''
-        
-        if meta_value_name:
+
+        # Normalize backslashes
+        key_path_norm = key_path.replace('/', '\\')
+        parts = key_path_norm.split('\\')
+        parent = '\\'.join(parts[:-1]) if len(parts) > 1 else ''
+        last_part = parts[-1] if len(parts) >= 1 else ''
+
+        # Determine value_name: prefer metadata valueName if it matches last_part,
+        # otherwise use last_part as value_name (overriding metadata)
+        candidate_value_name = last_part
+        if meta_value_name and meta_value_name == candidate_value_name:
             value_name = meta_value_name
-            if meta_key:
-                # Normalize backslashes
-                meta_key_norm = meta_key.replace('/', '\\')
-                meta_value_norm = meta_value_name.replace('/', '\\')
-                key_path_norm = key_path.replace('/', '\\')
-                
-                # Check if key_path ends with value name as separate component
-                if key_path_norm.endswith('\\' + meta_value_norm):
-                    # Strip the value name component
-                    stripped = key_path_norm[:-len('\\' + meta_value_norm)].rstrip('\\')
-                    adjusted_key_path = stripped
-                elif key_path_norm.endswith(meta_value_norm):
-                    # Might be concatenated without separator? Unlikely
-                    stripped = key_path_norm[:-len(meta_value_norm)].rstrip('\\')
-                    adjusted_key_path = stripped
+            # Strip matching value name from key path
+            adjusted_key_path = parent
+        elif candidate_value_name:
+            # Last part exists but doesn't match metadata valueName
+            # Use last part as value_name, strip it from key path
+            value_name = candidate_value_name
+            adjusted_key_path = parent
+        else:
+            # No last part (key_path is empty or single component)
+            # Use metadata valueName if available
+            if meta_value_name:
+                value_name = meta_value_name
+                # If meta_key provided and matches key_path_norm, we could adjust
+                if meta_key:
+                    meta_key_norm = meta_key.replace('/', '\\')
+                    if key_path_norm == meta_key_norm:
+                        # Key path already matches meta_key, no adjustment needed
+                        pass
+            # adjusted_key_path remains key_path
         
         return adjusted_key_path, value_name
     def get_current_value(self, path, name_gpt, target=None):
