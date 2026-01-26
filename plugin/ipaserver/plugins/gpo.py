@@ -405,7 +405,71 @@ class gpo_get_policy(Command):
                 raw_result = {}
 
             logger.debug(f'gpo_get_policy returning result: {raw_result}')
-            summary = 'Policy value retrieved for path: {}'.format(path)
+
+            # Format summary based on content
+            if path == '/':
+                # Root path - show meta information
+                meta_info = raw_result.get('meta', {})
+                categories = meta_info.get('Total categories', 0)
+                policies = meta_info.get('Total policies', 0)
+                base_dir = meta_info.get('baseDir', '')
+                locale = meta_info.get('localeUsed', '')
+                summary = 'GPO structure at root: {} categories, {} policies, base dir: {}, locale: {}'.format(
+                    categories, policies, base_dir, locale
+                )
+            elif 'meta' in raw_result and len(raw_result) == 1:
+                # Only meta information
+                meta_info = raw_result.get('meta', {})
+                categories = meta_info.get('Total categories', 0)
+                policies = meta_info.get('Total policies', 0)
+                summary = 'Meta information: {} categories, {} policies'.format(categories, policies)
+            elif 'displayName' in raw_result:
+                # Policy with display name and header
+                display_name = raw_result.get('displayName', '')
+                header = raw_result.get('header', {})
+                explain_text = header.get('explainText', '')
+                policy_class = header.get('class', '')
+                supported_on = header.get('supportedOn', '')
+                key = header.get('key', '')
+
+                # Build multi-line summary
+                summary_lines = []
+                summary_lines.append('Policy: {}'.format(display_name))
+                if policy_class:
+                    summary_lines.append('Class: {}'.format(policy_class))
+                if supported_on:
+                    summary_lines.append('Supported on: {}'.format(supported_on))
+                if key:
+                    summary_lines.append('Registry key: {}'.format(key))
+                if explain_text:
+                    # Take first line of explanation
+                    first_line = explain_text.split('\n')[0]
+                    if len(first_line) > 120:
+                        first_line = first_line[:117] + '...'
+                    summary_lines.append('Description: {}'.format(first_line))
+
+                summary = '\n'.join(summary_lines)
+            elif 'category' in raw_result:
+                # Category information
+                category_name = raw_result.get('category', '')
+                policies_dict = raw_result.get('policies', {})
+                inherited_list = raw_result.get('inherited', [])
+
+                policy_count = len(policies_dict) if isinstance(policies_dict, dict) else 0
+                inherited_count = len(inherited_list) if isinstance(inherited_list, list) else 0
+
+                summary_lines = []
+                summary_lines.append('Category: {}'.format(category_name))
+                if policy_count > 0:
+                    summary_lines.append('Direct policies: {}'.format(policy_count))
+                if inherited_count > 0:
+                    summary_lines.append('Inherited subcategories: {}'.format(inherited_count))
+
+                summary = '\n'.join(summary_lines)
+            else:
+                # Generic summary
+                summary = 'Policy value retrieved for path: {}'.format(path)
+
             return {
                 'summary': summary,
                 'result': raw_result
