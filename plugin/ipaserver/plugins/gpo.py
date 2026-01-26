@@ -385,6 +385,7 @@ class gpo_get_policy(Command):
     )
 
     has_output = (
+        output.summary,
         output.Output('result', type=dict, doc=_('Policy value')),
     )
 
@@ -399,11 +400,16 @@ class gpo_get_policy(Command):
             result_json = self.api.Object.gpo._call_gpuiservice_method('get', path)
 
             if result_json:
-                result = json.loads(result_json)
+                raw_result = json.loads(result_json)
             else:
-                result = {}
+                raw_result = {}
 
-            return {'result': result}
+            logger.debug(f'gpo_get_policy returning result: {raw_result}')
+            summary = 'Policy value retrieved for path: {}'.format(path)
+            return {
+                'summary': summary,
+                'result': raw_result
+            }
 
         except Exception as e:
             logger.exception("Unexpected error in gpo_get_policy")
@@ -503,6 +509,7 @@ class gpo_set_policy(Command):
     )
 
     has_output = (
+        output.summary,
         output.Output('success', type=bool, doc=_('Operation success')),
     )
 
@@ -519,7 +526,15 @@ class gpo_set_policy(Command):
 
             success = self.api.Object.gpo._call_gpuiservice_method('set', name_gpt, target, path, value, metadata)
 
-            return {'success': bool(success)}
+            logger.debug(f'gpo_set_policy returning success: {success}')
+            if success:
+                summary = 'Policy set successfully'
+            else:
+                summary = 'Failed to set policy'
+            return {
+                'summary': summary,
+                'success': bool(success)
+            }
 
         except Exception as e:
             logger.exception("Unexpected error in gpo_set_policy")
@@ -549,6 +564,7 @@ class gpo_get_current_value(Command):
     )
 
     has_output = (
+        output.summary,
         output.Output('result', type=dict, doc=_('Current value')),
     )
 
@@ -563,11 +579,16 @@ class gpo_get_current_value(Command):
             result_json = self.api.Object.gpo._call_gpuiservice_method('get_current_value', name_gpt, target, path)
 
             if result_json:
-                result = json.loads(result_json)
+                raw_result = json.loads(result_json)
             else:
-                result = {}
+                raw_result = {}
 
-            return {'result': result}
+            logger.debug(f'gpo_get_current_value returning result: {raw_result}')
+            summary = 'Current value retrieved for GPO {}, target {}, path: {}'.format(name_gpt, target, path)
+            return {
+                'summary': summary,
+                'result': raw_result
+            }
 
         except Exception as e:
             logger.exception("Unexpected error in gpo_get_current_value")
