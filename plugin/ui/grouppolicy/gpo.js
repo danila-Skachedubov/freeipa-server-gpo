@@ -247,24 +247,24 @@ define([
 
                     dialog.open();
 
-                    // Load ADMX policies using new API method
-                    var parse_command = rpc.command({
+                    // Load ADMX policies from GPUIService
+                    var get_policy_command = rpc.command({
                         entity: 'gpo',
-                        method: 'parse_admx',
-                        args: [],
+                        method: 'gpo_get_policy',
+                        args: ['/'],
                         options: {
                             version: IPA.api_version
                         },
-                        on_success: function(parse_data) {
-                            var parse_result = parse_data.result.result || {};
-                            var json_str = JSON.stringify(parse_result, null, 2);
+                        on_success: function(policy_data) {
+                            var policy_result = policy_data.result.result || {};
+                            var json_str = JSON.stringify(policy_result, null, 2);
                             var admx_field = dialog.get_field('admx_json');
                             if (admx_field && admx_field.widget) {
                                 admx_field.widget.set_value([json_str]);
                             }
                         },
                         on_error: function(xhr, text_status, error_thrown) {
-                            var msg = 'Failed to load ADMX policies';
+                            var msg = 'Failed to load ADMX policies from GPUIService';
                             if (error_thrown && error_thrown.message) {
                                 msg += ': ' + error_thrown.message;
                             }
@@ -276,7 +276,7 @@ define([
                             }
                         }
                     });
-                    parse_command.execute();
+                    get_policy_command.execute();
                 },
                 on_error: function(xhr, text_status, error_thrown) {
                     var msg = 'Failed to load GPO data';

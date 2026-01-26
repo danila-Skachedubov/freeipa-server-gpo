@@ -373,58 +373,6 @@ class gpo_mod(LDAPUpdate):
         return old_dn
 
 @register()
-class gpo_parse_admx(Command):
-    __doc__ = _("Parse ADMX/ADML policy definitions.")
-    NO_CLI = True
-
-    takes_args = (
-        Str('policy_definitions_path?',
-            cli_name='policy_definitions',
-            label=_('Policy definitions path'),
-            doc=_('Path to ADMX/ADML policy definitions (default: /usr/share/PolicyDefinitions/)'),
-        ),
-    )
-
-    takes_options = (
-        Str('language?',
-            cli_name='language',
-            label=_('Language'),
-            doc=_('Language code for ADML files (default: en-US)'),
-            default='en-US',
-        ),
-    )
-
-    has_output = (
-        output.Output('result', type=dict, doc=_('Parsed ADMX/ADML policy definitions')),
-    )
-
-
-
-    def execute(self, policy_definitions_path=None, language='en-US', **options):
-        """
-        Execute ADMX/ADML parsing.
-        """
-        try:
-            logger.debug('gpo_parse_admx execute called')
-            if policy_definitions_path is None:
-                policy_definitions_path = '/usr/share/PolicyDefinitions/'
-
-            logger.debug(f"parse_admx_policies called with path={policy_definitions_path}, language={language}")
-
-            # Use the gpo object's parse_admx_policies method which now uses GPUIService
-            result = self.api.Command.gpo.parse_admx_policies(
-                policy_definitions_path=policy_definitions_path,
-                language=language
-            )
-
-            return {'result': result}
-
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_parse_admx")
-            raise
-
-
-@register()
 class gpo_get_policy(Command):
     __doc__ = _("Get policy value from GPO.")
     NO_CLI = True
