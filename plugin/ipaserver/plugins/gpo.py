@@ -375,10 +375,10 @@ class gpo_mod(LDAPUpdate):
 @register()
 class gpo_get_policy(Command):
     __doc__ = _("Get policy value from GPO.")
-    NO_CLI = True
 
     takes_args = (
         Str('path',
+            cli_name='path',
             label=_('Policy path'),
             doc=_('Path to the policy in GPO structure'),
         ),
@@ -396,7 +396,7 @@ class gpo_get_policy(Command):
             logger.debug(f'gpo_get_policy called with path: {path}')
 
             # Call GPUIService get method
-            result_json = self.api.Command.gpo._call_gpuiservice_method('get', path)
+            result_json = self.api.Object.gpo._call_gpuiservice_method('get', path)
 
             if result_json:
                 result = json.loads(result_json)
@@ -413,17 +413,22 @@ class gpo_get_policy(Command):
 @register()
 class gpo_list_children(Command):
     __doc__ = _("List child policies under a parent path.")
-    NO_CLI = True
 
     takes_args = (
         Str('parent_path',
+            cli_name='parent_path',
             label=_('Parent path'),
             doc=_('Parent path in GPO structure'),
         ),
     )
 
+    has_output_params = (
+        Str('name', label=_('Name')),
+    )
+
     has_output = (
-        output.Output('result', type=dict, doc=_('Child policies')),
+        output.summary,
+        output.ListOfEntries('result', doc=_('Child policies')),
     )
 
     def execute(self, parent_path, **options):
@@ -434,14 +439,32 @@ class gpo_list_children(Command):
             logger.debug(f'gpo_list_children called with parent_path: {parent_path}')
 
             # Call GPUIService list_children method
-            result_json = self.api.Command.gpo._call_gpuiservice_method('list_children', parent_path)
+            result_json = self.api.Object.gpo._call_gpuiservice_method('list_children', parent_path)
 
             if result_json:
-                result = json.loads(result_json)
+                # GPUIService returns JSON string, parse it
+                raw_result = json.loads(result_json)
+                # Convert to list of dicts for CLI output
+                if isinstance(raw_result, (tuple, list)):
+                    result = [{'name': str(item)} for item in raw_result]
+                    count = len(result)
+                    formatted = "\n".join([f"- {item['name']}" for item in result])
+                    summary = f"{count} child policies found:\n{formatted}"
+                elif isinstance(raw_result, dict):
+                    result = [{'key': k, 'value': v} for k, v in raw_result.items()]
+                    summary = f"{len(result)} child policies found"
+                else:
+                    result = [{'value': str(raw_result)}]
+                    summary = "1 child policy found"
             else:
                 result = []
+                summary = "No child policies found"
 
-            return {'result': result}
+            logger.debug(f'gpo_list_children returning summary: {summary}, result: {result}')
+            return {
+                'summary': summary,
+                'result': result
+            }
 
         except Exception as e:
             logger.exception("Unexpected error in gpo_list_children")
@@ -451,22 +474,25 @@ class gpo_list_children(Command):
 @register()
 class gpo_set_policy(Command):
     __doc__ = _("Set policy value in GPO.")
-    NO_CLI = True
 
     takes_args = (
         Str('name_gpt',
+            cli_name='name_gpt',
             label=_('GPO name'),
             doc=_('GPO path (relative to sysvol)'),
         ),
         Str('target',
+            cli_name='target',
             label=_('Target'),
             doc=_('Policy type (Machine or User)'),
         ),
         Str('path',
+            cli_name='path',
             label=_('Policy path'),
             doc=_('Path to the policy in GPO structure'),
         ),
         Str('value',
+            cli_name='value',
             label=_('Value'),
             doc=_('Value to set'),
         ),
@@ -491,7 +517,7 @@ class gpo_set_policy(Command):
             if metadata is None:
                 metadata = ""
 
-            success = self.api.Command.gpo._call_gpuiservice_method('set', name_gpt, target, path, value, metadata)
+            success = self.api.Object.gpo._call_gpuiservice_method('set', name_gpt, target, path, value, metadata)
 
             return {'success': bool(success)}
 
@@ -503,18 +529,20 @@ class gpo_set_policy(Command):
 @register()
 class gpo_get_current_value(Command):
     __doc__ = _("Get current value from GPO policy file.")
-    NO_CLI = True
 
     takes_args = (
         Str('name_gpt',
+            cli_name='name_gpt',
             label=_('GPO name'),
             doc=_('GPO path (relative to sysvol)'),
         ),
         Str('target',
+            cli_name='target',
             label=_('Target'),
             doc=_('Policy type (Machine or User)'),
         ),
         Str('path',
+            cli_name='path',
             label=_('Policy path'),
             doc=_('Registry key path'),
         ),
@@ -532,7 +560,7 @@ class gpo_get_current_value(Command):
             logger.debug(f'gpo_get_current_value called with name_gpt: {name_gpt}, target: {target}, path: {path}')
 
             # Call GPUIService get_current_value method
-            result_json = self.api.Command.gpo._call_gpuiservice_method('get_current_value', name_gpt, target, path)
+            result_json = self.api.Object.gpo._call_gpuiservice_method('get_current_value', name_gpt, target, path)
 
             if result_json:
                 result = json.loads(result_json)
