@@ -427,26 +427,46 @@ class gpo_get_policy(Command):
                 # Policy with display name and header
                 display_name = raw_result.get('displayName', '')
                 header = raw_result.get('header', {})
-                explain_text = header.get('explainText', '')
+                
+                # Extract all header fields
+                policy_name = header.get('name', '')
                 policy_class = header.get('class', '')
-                supported_on = header.get('supportedOn', '')
+                header_display_name = header.get('displayName', '')
+                explain_text = header.get('explainText', '')
                 key = header.get('key', '')
+                value_name = header.get('valueName', '')
+                presentation = header.get('presentation', '')
+                parent_category = header.get('parentCategory', '')
+                supported_on = header.get('supportedOn', '')
 
-                # Build multi-line summary
+                # Build multi-line summary with all header information
                 summary_lines = []
                 summary_lines.append('Policy: {}'.format(display_name))
+                if policy_name:
+                    summary_lines.append('Name: {}'.format(policy_name))
                 if policy_class:
                     summary_lines.append('Class: {}'.format(policy_class))
+                if header_display_name and header_display_name != display_name:
+                    summary_lines.append('Display name: {}'.format(header_display_name))
                 if supported_on:
                     summary_lines.append('Supported on: {}'.format(supported_on))
                 if key:
                     summary_lines.append('Registry key: {}'.format(key))
+                if value_name is not None and value_name != '':
+                    summary_lines.append('Value name: {}'.format(value_name))
+                if presentation:
+                    # Clean up presentation reference
+                    pres = presentation.replace('$(presentation.', '').replace(')', '')
+                    summary_lines.append('Presentation: {}'.format(pres))
+                if parent_category:
+                    # Clean up parent category prefix
+                    parent = parent_category.replace('system:', '')
+                    summary_lines.append('Parent category: {}'.format(parent))
                 if explain_text:
-                    # Take first line of explanation
-                    first_line = explain_text.split('\n')[0]
-                    if len(first_line) > 120:
-                        first_line = first_line[:117] + '...'
-                    summary_lines.append('Description: {}'.format(first_line))
+                    # Include full explanation text, truncate if too long
+                    if len(explain_text) > 500:
+                        explain_text = explain_text[:497] + '...'
+                    summary_lines.append('Description:\n{}'.format(explain_text))
 
                 summary = '\n'.join(summary_lines)
             elif 'category' in raw_result:
