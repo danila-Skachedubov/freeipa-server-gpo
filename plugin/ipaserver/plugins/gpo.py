@@ -433,11 +433,46 @@ class gpo_get_policy(Command):
 
             logger.debug(f'gpo_get_policy returning result: {raw_result}')
 
-            # Format summary as key:value pairs of the entire structure
-            if raw_result:
+            # Format summary based on content
+            if path == '/':
+                # Root path - show meta information
+                meta_info = raw_result.get('meta', {})
+                categories = meta_info.get('Total categories', 0)
+                policies = meta_info.get('Total policies', 0)
+                base_dir = meta_info.get('baseDir', '')
+                locale = meta_info.get('localeUsed', '')
+                summary = 'GPO structure at root: {} categories, {} policies, base dir: {}, locale: {}'.format(
+                    categories, policies, base_dir, locale
+                )
+            elif 'meta' in raw_result and len(raw_result) == 1:
+                # Only meta information
+                meta_info = raw_result.get('meta', {})
+                categories = meta_info.get('Total categories', 0)
+                policies = meta_info.get('Total policies', 0)
+                summary = 'Meta information: {} categories, {} policies'.format(categories, policies)
+            elif 'displayName' in raw_result:
+                # Policy with display name and header - output full nested structure
                 summary = self._format_dict_as_kv(raw_result)
+            elif 'category' in raw_result:
+                # Category information
+                category_name = raw_result.get('category', '')
+                policies_dict = raw_result.get('policies', {})
+                inherited_list = raw_result.get('inherited', [])
+
+                policy_count = len(policies_dict) if isinstance(policies_dict, dict) else 0
+                inherited_count = len(inherited_list) if isinstance(inherited_list, list) else 0
+
+                summary_lines = []
+                summary_lines.append('Category: {}'.format(category_name))
+                if policy_count > 0:
+                    summary_lines.append('Direct policies: {}'.format(policy_count))
+                if inherited_count > 0:
+                    summary_lines.append('Inherited subcategories: {}'.format(inherited_count))
+
+                summary = '\n'.join(summary_lines)
             else:
-                summary = 'No data returned for path: {}'.format(path)
+                # Generic summary
+                summary = 'Policy value retrieved for path: {}'.format(path)
 
             return {
                 'summary': summary,
