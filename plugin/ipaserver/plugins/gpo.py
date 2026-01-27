@@ -596,9 +596,9 @@ class gpo_set_policy(Command):
 
             logger.debug(f'gpo_set_policy returning success: {success}')
             if success:
-                summary = 'Policy set successfully'
+                summary = 'Policy set successfully: {} = "{}"'.format(path, value)
             else:
-                summary = 'Failed to set policy'
+                summary = 'Failed to set policy: {} = "{}"'.format(path, value)
             return {
                 'summary': summary,
                 'success': bool(success)
@@ -652,7 +652,16 @@ class gpo_get_current_value(Command):
                 raw_result = {}
 
             logger.debug(f'gpo_get_current_value returning result: {raw_result}')
-            summary = 'Current value retrieved for GPO {}, target {}, path: {}'.format(name_gpt, target, path)
+            
+            if raw_result and 'value_data' in raw_result:
+                value_data = raw_result.get('value_data', '')
+                value_type = raw_result.get('value_type', '')
+                summary = 'Current value: "{}" (type: {}) for GPO {}, target {}, path: {}'.format(
+                    str(value_data), value_type, name_gpt, target, path
+                )
+            else:
+                summary = 'Current value retrieved for GPO {}, target {}, path: {}'.format(name_gpt, target, path)
+            
             return {
                 'summary': summary,
                 'result': raw_result
