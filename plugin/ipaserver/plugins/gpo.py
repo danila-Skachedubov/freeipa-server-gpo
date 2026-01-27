@@ -17,6 +17,15 @@ from ipaserver.plugins.baseldap import (
 logger = logging.getLogger(__name__)
 logger.debug('gpo plugin loaded')
 
+
+def escape_backslashes(text):
+    """
+    Escape backslashes in strings for display.
+    """
+    if not isinstance(text, str):
+        return text
+    return text.replace('\\', '\\\\')
+
 register = Registry()
 
 PLUGIN_CONFIG = (
@@ -390,6 +399,13 @@ class gpo_get_policy(Command):
     )
 
     @classmethod
+    def _escape_backslashes(cls, text):
+        """
+        Escape backslashes in strings for display.
+        """
+        return escape_backslashes(text)
+
+    @classmethod
     def _format_dict_as_kv(cls, data, indent=0):
         """
         Format dictionary as key:value pairs with indentation for nested structures.
@@ -399,20 +415,24 @@ class gpo_get_policy(Command):
         
         if isinstance(data, dict):
             for key, value in data.items():
+                escaped_key = cls._escape_backslashes(key)
                 if isinstance(value, (dict, list)):
-                    lines.append(f'{spaces}{key}:')
+                    lines.append(f'{spaces}{escaped_key}:')
                     lines.append(cls._format_dict_as_kv(value, indent + 2))
                 else:
-                    lines.append(f'{spaces}{key}: {value}')
+                    escaped_value = cls._escape_backslashes(value) if isinstance(value, str) else value
+                    lines.append(f'{spaces}{escaped_key}: {escaped_value}')
         elif isinstance(data, list):
             for i, item in enumerate(data):
                 if isinstance(item, (dict, list)):
                     lines.append(f'{spaces}-')
                     lines.append(cls._format_dict_as_kv(item, indent + 2))
                 else:
-                    lines.append(f'{spaces}- {item}')
+                    escaped_item = cls._escape_backslashes(item) if isinstance(item, str) else item
+                    lines.append(f'{spaces}- {escaped_item}')
         else:
-            lines.append(f'{spaces}{data}')
+            escaped_data = cls._escape_backslashes(data) if isinstance(data, str) else data
+            lines.append(f'{spaces}{escaped_data}')
         
         return '\n'.join(lines)
 
@@ -596,9 +616,9 @@ class gpo_set_policy(Command):
 
             logger.debug(f'gpo_set_policy returning success: {success}')
             if success:
-                summary = 'Policy set successfully: {} = "{}"'.format(path, value)
+                summary = 'Policy set successfully: {} = "{}"'.format(escape_backslashes(path), escape_backslashes(value))
             else:
-                summary = 'Failed to set policy: {} = "{}"'.format(path, value)
+                summary = 'Failed to set policy: {} = "{}"'.format(escape_backslashes(path), escape_backslashes(value))
             return {
                 'summary': summary,
                 'success': bool(success)
@@ -657,10 +677,10 @@ class gpo_get_current_value(Command):
                 value_data = raw_result.get('value_data', '')
                 value_type = raw_result.get('value_type', '')
                 summary = 'Current value: "{}" (type: {}) for GPO {}, target {}, path: {}'.format(
-                    str(value_data), value_type, name_gpt, target, path
+                    escape_backslashes(str(value_data)), value_type, name_gpt, target, escape_backslashes(path)
                 )
             else:
-                summary = 'Current value retrieved for GPO {}, target {}, path: {}'.format(name_gpt, target, path)
+                summary = 'Current value retrieved for GPO {}, target {}, path: {}'.format(name_gpt, target, escape_backslashes(path))
             
             return {
                 'summary': summary,
