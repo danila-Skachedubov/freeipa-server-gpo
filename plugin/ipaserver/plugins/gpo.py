@@ -389,6 +389,33 @@ class gpo_get_policy(Command):
         output.Output('result', type=dict, doc=_('Policy value')),
     )
 
+    @classmethod
+    def _format_dict_as_kv(cls, data, indent=0):
+        """
+        Format dictionary as key:value pairs with indentation for nested structures.
+        """
+        spaces = ' ' * indent
+        lines = []
+        
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if isinstance(value, (dict, list)):
+                    lines.append(f'{spaces}{key}:')
+                    lines.append(cls._format_dict_as_kv(value, indent + 2))
+                else:
+                    lines.append(f'{spaces}{key}: {value}')
+        elif isinstance(data, list):
+            for i, item in enumerate(data):
+                if isinstance(item, (dict, list)):
+                    lines.append(f'{spaces}-')
+                    lines.append(cls._format_dict_as_kv(item, indent + 2))
+                else:
+                    lines.append(f'{spaces}- {item}')
+        else:
+            lines.append(f'{spaces}{data}')
+        
+        return '\n'.join(lines)
+
     def execute(self, path, **options):
         """
         Get policy value from GPO.
@@ -406,89 +433,11 @@ class gpo_get_policy(Command):
 
             logger.debug(f'gpo_get_policy returning result: {raw_result}')
 
-            # Format summary based on content
-            if path == '/':
-                # Root path - show meta information
-                meta_info = raw_result.get('meta', {})
-                categories = meta_info.get('Total categories', 0)
-                policies = meta_info.get('Total policies', 0)
-                base_dir = meta_info.get('baseDir', '')
-                locale = meta_info.get('localeUsed', '')
-                summary = 'GPO structure at root: {} categories, {} policies, base dir: {}, locale: {}'.format(
-                    categories, policies, base_dir, locale
-                )
-            elif 'meta' in raw_result and len(raw_result) == 1:
-                # Only meta information
-                meta_info = raw_result.get('meta', {})
-                categories = meta_info.get('Total categories', 0)
-                policies = meta_info.get('Total policies', 0)
-                summary = 'Meta information: {} categories, {} policies'.format(categories, policies)
-            elif 'displayName' in raw_result:
-                # Policy with display name and header
-                display_name = raw_result.get('displayName', '')
-                header = raw_result.get('header', {})
-                
-                # Extract all header fields
-                policy_name = header.get('name', '')
-                policy_class = header.get('class', '')
-                header_display_name = header.get('displayName', '')
-                explain_text = header.get('explainText', '')
-                key = header.get('key', '')
-                value_name = header.get('valueName', '')
-                presentation = header.get('presentation', '')
-                parent_category = header.get('parentCategory', '')
-                supported_on = header.get('supportedOn', '')
-
-                # Build multi-line summary with all header information
-                summary_lines = []
-                summary_lines.append('Policy: {}'.format(display_name))
-                if policy_name:
-                    summary_lines.append('Name: {}'.format(policy_name))
-                if policy_class:
-                    summary_lines.append('Class: {}'.format(policy_class))
-                if header_display_name and header_display_name != display_name:
-                    summary_lines.append('Display name: {}'.format(header_display_name))
-                if supported_on:
-                    summary_lines.append('Supported on: {}'.format(supported_on))
-                if key:
-                    summary_lines.append('Registry key: {}'.format(key))
-                if value_name is not None and value_name != '':
-                    summary_lines.append('Value name: {}'.format(value_name))
-                if presentation:
-                    # Clean up presentation reference
-                    pres = presentation.replace('$(presentation.', '').replace(')', '')
-                    summary_lines.append('Presentation: {}'.format(pres))
-                if parent_category:
-                    # Clean up parent category prefix
-                    parent = parent_category.replace('system:', '')
-                    summary_lines.append('Parent category: {}'.format(parent))
-                if explain_text:
-                    # Include full explanation text, truncate if too long
-                    if len(explain_text) > 500:
-                        explain_text = explain_text[:497] + '...'
-                    summary_lines.append('Description:\n{}'.format(explain_text))
-
-                summary = '\n'.join(summary_lines)
-            elif 'category' in raw_result:
-                # Category information
-                category_name = raw_result.get('category', '')
-                policies_dict = raw_result.get('policies', {})
-                inherited_list = raw_result.get('inherited', [])
-
-                policy_count = len(policies_dict) if isinstance(policies_dict, dict) else 0
-                inherited_count = len(inherited_list) if isinstance(inherited_list, list) else 0
-
-                summary_lines = []
-                summary_lines.append('Category: {}'.format(category_name))
-                if policy_count > 0:
-                    summary_lines.append('Direct policies: {}'.format(policy_count))
-                if inherited_count > 0:
-                    summary_lines.append('Inherited subcategories: {}'.format(inherited_count))
-
-                summary = '\n'.join(summary_lines)
+            # Format summary as key:value pairs of the entire structure
+            if raw_result:
+                summary = self._format_dict_as_kv(raw_result)
             else:
-                # Generic summary
-                summary = 'Policy value retrieved for path: {}'.format(path)
+                summary = 'No data returned for path: {}'.format(path)
 
             return {
                 'summary': summary,
