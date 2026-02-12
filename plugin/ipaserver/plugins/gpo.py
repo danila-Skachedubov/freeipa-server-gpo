@@ -1,6 +1,14 @@
 import json
 import logging
 import uuid
+import warnings
+
+# Suppress all warnings from python-yubico and other libraries
+warnings.filterwarnings('ignore', category=Warning)
+warnings.filterwarnings('ignore', category=SyntaxWarning)
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', category=FutureWarning)
+warnings.simplefilter('ignore', category=Warning)
 
 import dbus
 import dbus.mainloop.glib
@@ -412,7 +420,7 @@ class gpo_get_policy(Command):
         """
         spaces = ' ' * indent
         lines = []
-        
+
         if isinstance(data, dict):
             for key, value in data.items():
                 escaped_key = cls._escape_backslashes(key)
@@ -433,7 +441,7 @@ class gpo_get_policy(Command):
         else:
             escaped_data = cls._escape_backslashes(data) if isinstance(data, str) else data
             lines.append(f'{spaces}{escaped_data}')
-        
+
         return '\n'.join(lines)
 
     def execute(self, path, **options):
@@ -530,6 +538,13 @@ class gpo_list_children(Command):
         List child policies under a parent path.
         """
         try:
+            if isinstance(parent_path, str) and parent_path.startswith('parent_path='):
+                parent_path = parent_path[len('parent_path='):]
+
+            # Handle empty path - treat as root
+            if parent_path == '':
+                parent_path = '/'
+
             logger.debug(f'gpo_list_children called with parent_path: {parent_path}')
 
             # Call GPUIService list_children method
@@ -538,15 +553,24 @@ class gpo_list_children(Command):
             if result_json:
                 # GPUIService returns JSON string, parse it
                 raw_result = json.loads(result_json)
+                logger.debug(f'raw_result type: {type(raw_result)}, value: {raw_result}')
                 # Convert to list of dicts for CLI output
                 if isinstance(raw_result, (tuple, list)):
-                    result = [{'name': str(item)} for item in raw_result]
+                    # Filter out empty items - keep all items
+                    filtered_items = list(raw_result)
+                    result = [{'name': str(item)} for item in filtered_items]
                     count = len(result)
-                    formatted = "\n".join([f"- {item['name']}" for item in result])
-                    summary = f"{count} child policies found:\n{formatted}"
+                    if count > 0:
+                        formatted = "\n".join([f"- {item['name']}" for item in result])
+                        summary = f"{count} child policies found:\n{formatted}"
+                    else:
+                        summary = "0 child policies found"
                 elif isinstance(raw_result, dict):
                     result = [{'key': k, 'value': v} for k, v in raw_result.items()]
-                    summary = f"{len(result)} child policies found"
+                    if result:
+                        summary = f"{len(result)} child policies found"
+                    else:
+                        summary = "0 child policies found"
                 else:
                     result = [{'value': str(raw_result)}]
                     summary = "1 child policy found"
@@ -608,6 +632,16 @@ class gpo_set_policy(Command):
         try:
             logger.debug(f'gpo_set_policy called with name_gpt: {name_gpt}, target: {target}, path: {path}, value: {value}, metadata: {metadata}')
 
+            # Strip parameter names if present (IPA bug)
+            if isinstance(target, str) and target.startswith('target='):
+                target = target[len('target='):]
+            if isinstance(path, str) and path.startswith('path='):
+                path = path[len('path='):]
+            if isinstance(value, str) and value.startswith('value='):
+                value = value[len('value='):]
+            if isinstance(metadata, str) and metadata.startswith('metadata='):
+                metadata = metadata[len('metadata='):]
+
             # Call GPUIService set method
             if metadata is None:
                 metadata = ""
@@ -662,6 +696,12 @@ class gpo_get_current_value(Command):
         """
         try:
             logger.debug(f'gpo_get_current_value called with name_gpt: {name_gpt}, target: {target}, path: {path}')
+
+            # Strip parameter names if present (IPA bug)
+            if isinstance(target, str) and target.startswith('target='):
+                target = target[len('target='):]
+            if isinstance(path, str) and path.startswith('path='):
+                path = path[len('path='):]
 
             # Call GPUIService get_current_value method
             result_json = self.api.Object.gpo._call_gpuiservice_method('get_current_value', name_gpt, target, path)
