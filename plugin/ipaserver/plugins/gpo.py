@@ -530,7 +530,6 @@ class gpo_list_children(Command):
 
     has_output = (
         output.summary,
-        output.Output('message', str, _('List of child policies')),
         output.ListOfEntries('result', doc=_('Child policies'), flags=['no_display']),
     )
 
@@ -576,18 +575,10 @@ class gpo_list_children(Command):
             else:
                 summary = '%d child policies found' % count
 
-            if count > 0:
-                formatted = "\n".join(["%s" % item['name'] for item in result])
-                #formatted = "\n".join([item['name'] for item in result])
-                message = "\n%s" % formatted
-            else:
-                message = ""
-
-            logger.debug(f'gpo_list_children returning summary: {summary}, message: {message}, result: {result}')
+            logger.debug(f'gpo_list_children returning summary: {summary}, result: {result}')
 
             return {
                 'summary': summary,
-                'message': message,
                 'result': result,
             }
 
