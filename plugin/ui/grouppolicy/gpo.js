@@ -149,18 +149,70 @@ define([
                                 width: '100%'
                             },
                             {
+                                $type: 'select',
+                                name: 'command',
+                                label: 'Command',
+                                options: [
+                                    {label: 'gpo-get-current-value', value: 'gpo_get_current_value'},
+                                    {label: 'gpo-list-children', value: 'gpo_list_children'},
+                                    {label: 'gpo-set-policy', value: 'gpo_set_policy'},
+                                    {label: 'gpo-get-policy', value: 'gpo_get_policy'}
+                                ],
+                                value: 'gpo_get_policy',
+                                width: '100%'
+                            },
+                            {
+                                $type: 'text',
+                                name: 'path',
+                                label: 'Path',
+                                value: '/',
+                                width: '100%'
+                            },
+                            {
                                 $type: 'textarea',
-                                name: 'admx_json',
-                                label: 'ADMX Policies JSON',
-                                value: 'Loading ADMX policies...',
-                                rows: 20,
+                                name: 'json_data',
+                                label: 'JSON Data (for gpo-set-policy)',
+                                value: '{}',
+                                rows: 5,
+                                width: '100%',
+                                hidden: true
+                            },
+                            {
+                                $type: 'textarea',
+                                name: 'result',
+                                label: 'Result',
+                                value: '',
+                                rows: 15,
                                 read_only: true,
                                 width: '100%'
                             }
                         ]
                     });
 
+                    // Setup command selection handler
+                    var command_widget = dialog.get_field('command').widget;
+                    var json_data_field = dialog.get_field('json_data');
+                    var json_data_widget = json_data_field.widget;
 
+                    function updateJsonDataVisibility() {
+                        var command = command_widget.get_value()[0];
+                        var hidden = command !== 'gpo_set_policy';
+                        json_data_field.hidden = hidden;
+                        // Only call set_visible if widget exists and has container (dialog is open)
+                        if (json_data_widget && json_data_widget.container && json_data_widget.set_visible) {
+                            try {
+                                json_data_widget.set_visible(!hidden);
+                            } catch (e) {
+                                console.warn('Failed to set visibility:', e);
+                            }
+                        }
+                    }
+
+                    // Initial visibility
+                    updateJsonDataVisibility();
+
+                    // Bind change event
+                    command_widget.on('change', updateJsonDataVisibility);
 
                     // Add Save button
                     dialog.create_button({
@@ -236,6 +288,64 @@ define([
                         }
                     });
 
+                    // Add Execute button
+                    dialog.create_button({
+                        name: 'execute',
+                        label: 'Execute Command',
+                        click: function() {
+                            var command_widget = dialog.get_field('command').widget;
+                            var path_widget = dialog.get_field('path').widget;
+                            var json_data_widget = dialog.get_field('json_data').widget;
+                            var result_widget = dialog.get_field('result').widget;
+
+                            var command = command_widget.get_value()[0];
+                            var method = command.replace(/^gpo_/, '');
+                            var path = path_widget.get_value()[0] || '/';
+                            var json_data = json_data_widget.get_value()[0] || '{}';
+
+                            // Prepare arguments based on command
+                            var args = [path];
+                            var options = {
+                                version: IPA.api_version
+                            };
+
+                            // For set-policy, add json data
+                            if (command === 'gpo_set_policy') {
+                                try {
+                                    var json_obj = JSON.parse(json_data);
+                                    options.json = json_obj;
+                                } catch (e) {
+                                    IPA.notify('Invalid JSON data: ' + e.message, 'error');
+                                    return;
+                                }
+                            }
+
+                            // Clear previous result
+                            result_widget.set_value(['Executing...']);
+
+                            var rpc_command = rpc.command({
+                                entity: 'gpo',
+                                method: method,
+                                args: args,
+                                options: options,
+                                on_success: function(data) {
+                                    var result_data = data.result.result || {};
+                                    var json_str = JSON.stringify(result_data, null, 2);
+                                    result_widget.set_value([json_str]);
+                                },
+                                on_error: function(xhr, text_status, error_thrown) {
+                                    var msg = 'Command failed';
+                                    if (error_thrown && error_thrown.message) {
+                                        msg += ': ' + error_thrown.message;
+                                    }
+                                    IPA.notify(msg, 'error');
+                                    result_widget.set_value(['Error: ' + msg]);
+                                }
+                            });
+                            rpc_command.execute();
+                        }
+                    });
+
                     // Add Cancel button
                     dialog.create_button({
                         name: 'cancel',
@@ -246,37 +356,6 @@ define([
                     });
 
                     dialog.open();
-
-                    // Load ADMX policies from GPUIService
-                    var get_policy_command = rpc.command({
-                        entity: 'gpo',
-                        method: 'get_policy',
-                        args: ['/'],
-                        options: {
-                            version: IPA.api_version
-                        },
-                        on_success: function(policy_data) {
-                            var policy_result = policy_data.result.result || {};
-                            var json_str = JSON.stringify(policy_result, null, 2);
-                            var admx_field = dialog.get_field('admx_json');
-                            if (admx_field && admx_field.widget) {
-                                admx_field.widget.set_value([json_str]);
-                            }
-                        },
-                        on_error: function(xhr, text_status, error_thrown) {
-                            var msg = 'Failed to load ADMX policies from GPUIService';
-                            if (error_thrown && error_thrown.message) {
-                                msg += ': ' + error_thrown.message;
-                            }
-                            IPA.notify(msg, 'error');
-                            // Update field with error
-                            var admx_field = dialog.get_field('admx_json');
-                            if (admx_field && admx_field.widget) {
-                                admx_field.widget.set_value(['Error: ' + msg]);
-                            }
-                        }
-                    });
-                    get_policy_command.execute();
                 },
                 on_error: function(xhr, text_status, error_thrown) {
                     var msg = 'Failed to load GPO data';
@@ -397,8 +476,6 @@ define([
 
         return that;
     };
-
-
 
     exp.register = function() {
         var e = reg.entity;
