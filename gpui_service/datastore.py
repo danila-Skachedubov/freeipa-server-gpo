@@ -129,17 +129,22 @@ class GPODataStore:
         # Try to parse value as JSON string to support complex values
         parsed_value = value
         if isinstance(value, str):
-            try:
-                parsed_value = json.loads(value)
-            except (json.JSONDecodeError, ValueError):
-                # Try Python literal eval for Python-style dict syntax
+            # Limit size to prevent resource exhaustion
+            if len(value) > 1024 * 1024:  # 1 MB limit
+                parsed_value = value
+            else:
                 try:
-                    if value.strip().startswith('{') and value.strip().endswith('}'):
-                        parsed_value = ast.literal_eval(value)
-                    else:
+                    parsed_value = json.loads(value)
+                except (json.JSONDecodeError, ValueError):
+                    # Try Python literal eval for Python-style dict syntax
+                    # ast.literal_eval is safe for literals only (no code execution)
+                    try:
+                        if value.strip().startswith('{') and value.strip().endswith('}'):
+                            parsed_value = ast.literal_eval(value)
+                        else:
+                            parsed_value = value  # Keep as string
+                    except (SyntaxError, ValueError, MemoryError):
                         parsed_value = value  # Keep as string
-                except (SyntaxError, ValueError):
-                    parsed_value = value  # Keep as string
 
         # Determine policy_type: target parameter overrides value dict
         policy_type = 'Machine'  # default
