@@ -133,7 +133,7 @@ define([
                     // Ensure we have result data
                     // Note: data.result contains {result: {...}, value: "...", summary: "..."}
                     var result = (data.result && data.result.result) || {};
-                    console.log('Loaded GPO data:', data, 'Extracted result:', result);
+
 
                     // Create edit dialog with current values
                     var dialog = IPA.dialog({
@@ -203,7 +203,7 @@ define([
                             try {
                                 json_data_widget.set_visible(!hidden);
                             } catch (e) {
-                                console.warn('Failed to set visibility:', e);
+
                             }
                         }
                     }
@@ -246,14 +246,7 @@ define([
                             mod_data.versionnumber = new_version;
 
                             // Execute modify command
-                            console.log('Sending GPO mod command:', {
-                                entity: 'gpo',
-                                method: 'mod',
-                                args: [gpo_name],
-                                options: mod_data,
-                                current_version: current_version,
-                                new_version: new_version
-                            });
+
                             var mod_command = rpc.command({
                                 entity: 'gpo',
                                 method: 'mod',
@@ -274,12 +267,7 @@ define([
                                     if (error_thrown && error_thrown.message) {
                                         msg += ': ' + error_thrown.message;
                                     }
-                                    // Log full error details for debugging
-                                    console.error('GPO update error - full details:');
-                                    console.error('xhr:', xhr);
-                                    console.error('xhr.responseText:', xhr.responseText);
-                                    console.error('text_status:', text_status);
-                                    console.error('error_thrown:', error_thrown);
+
                                     IPA.notify(msg, 'error');
                                     if (on_error) on_error(xhr, text_status, error_thrown);
                                 }
