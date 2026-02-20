@@ -250,7 +250,7 @@ define([
                     // Load ADMX policies from GPUIService
                     var get_policy_command = rpc.command({
                         entity: 'gpo',
-                        method: 'gpo_get_policy',
+                        method: 'get_policy',
                         args: ['/'],
                         options: {
                             version: IPA.api_version
