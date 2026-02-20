@@ -530,8 +530,10 @@ class gpo_list_children(Command):
 
     has_output = (
         output.summary,
-        output.ListOfEntries('result', doc=_('Child policies')),
+        output.Output('message', str, _('List of child policies')),
+        output.ListOfEntries('result', doc=_('Child policies'), flags=['no_display']),
     )
+
 
     def execute(self, parent_path, **options):
         """
@@ -556,38 +558,42 @@ class gpo_list_children(Command):
                 logger.debug(f'raw_result type: {type(raw_result)}, value: {raw_result}')
                 # Convert to list of dicts for CLI output
                 if isinstance(raw_result, (tuple, list)):
-                    # Filter out empty items - keep all items
-                    filtered_items = list(raw_result)
+                    # Filter out empty items
+                    filtered_items = [item for item in raw_result if item]
                     result = [{'name': str(item)} for item in filtered_items]
-                    count = len(result)
-                    if count > 0:
-                        formatted = "\n".join([f"- {item['name']}" for item in result])
-                        summary = f"{count} child policies found:\n{formatted}"
-                    else:
-                        summary = "0 child policies found"
                 elif isinstance(raw_result, dict):
-                    result = [{'key': k, 'value': v} for k, v in raw_result.items()]
-                    if result:
-                        summary = f"{len(result)} child policies found"
-                    else:
-                        summary = "0 child policies found"
+                    result = [{'name': k, 'value': str(v)} for k, v in raw_result.items()]
                 else:
-                    result = [{'value': str(raw_result)}]
-                    summary = "1 child policy found"
+                    result = [{'name': str(raw_result)}]
             else:
                 result = []
-                summary = "No child policies found"
 
-            logger.debug(f'gpo_list_children returning summary: {summary}, result: {result}')
+            count = len(result)
+            if count == 0:
+                summary = 'No child policies found'
+            elif count == 1:
+                summary = '1 child policy found'
+            else:
+                summary = '%d child policies found' % count
+
+            if count > 0:
+                formatted = "\n".join(["%s" % item['name'] for item in result])
+                #formatted = "\n".join([item['name'] for item in result])
+                message = "\n%s" % formatted
+            else:
+                message = ""
+
+            logger.debug(f'gpo_list_children returning summary: {summary}, message: {message}, result: {result}')
+
             return {
                 'summary': summary,
-                'result': result
+                'message': message,
+                'result': result,
             }
 
         except Exception as e:
             logger.exception("Unexpected error in gpo_list_children")
             raise
-
 
 @register()
 class gpo_set_policy(Command):
@@ -712,7 +718,7 @@ class gpo_get_current_value(Command):
                 raw_result = {}
 
             logger.debug(f'gpo_get_current_value returning result: {raw_result}')
-            
+
             if raw_result and 'value_data' in raw_result:
                 value_data = raw_result.get('value_data', '')
                 value_type = raw_result.get('value_type', '')
@@ -721,7 +727,7 @@ class gpo_get_current_value(Command):
                 )
             else:
                 summary = 'Current value retrieved for GPO {}, target {}, path: {}'.format(name_gpt, target, escape_backslashes(path))
-            
+
             return {
                 'summary': summary,
                 'result': raw_result
