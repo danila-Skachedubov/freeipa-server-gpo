@@ -1,14 +1,7 @@
 import json
 import logging
 import uuid
-import warnings
 
-# Suppress all warnings from python-yubico and other libraries
-warnings.filterwarnings('ignore', category=Warning)
-warnings.filterwarnings('ignore', category=SyntaxWarning)
-warnings.filterwarnings('ignore', category=DeprecationWarning)
-warnings.filterwarnings('ignore', category=FutureWarning)
-warnings.simplefilter('ignore', category=Warning)
 
 import dbus
 import dbus.mainloop.glib
