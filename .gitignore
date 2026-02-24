@@ -172,3 +172,25 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Agent documentation files - DO NOT COMMIT
+AGENTS.md
+GPO_CLI_CONTEXT.md
+GPO_JS_ANALYSIS.md
+INSTALL_ADMX.md
+
+# Agent debug/test files
+gpui_service/debug_*.py
+gpui_service/test_*.py
+gpui_service/fix_*.py
+gpui_service/*_temp.py
+gpui_service/*_tool.py
+gpui_service/*_helper.py
+gpui_service/*_fix.py
+
+# Temporary test files
+test_*.py
+test_*.json
+policies.json
+eeee.json
+plugin/dbus_handlers/gg.txt

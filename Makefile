@@ -47,6 +47,7 @@ install: build
 	install -D -m 755 plugin/dbus_handlers/org.freeipa.server.create-gpo-structure $(DESTDIR)$(PREFIX)/libexec/ipa/oddjob/org.freeipa.server.create-gpo-structure
 	install -D -m 755 plugin/dbus_handlers/org.freeipa.server.delete-gpo-structure $(DESTDIR)$(PREFIX)/libexec/ipa/oddjob/org.freeipa.server.delete-gpo-structure
 
+
 	# Documentation
 	install -D -m 644 doc/ipa-gpo-install.8 $(DESTDIR)$(PREFIX)/share/man/man8/ipa-gpo-install.8
 	install -D -m 644 doc/ru/ipa-gpo-install.8 $(DESTDIR)$(PREFIX)/share/man/ru/man8/ipa-gpo-install.8

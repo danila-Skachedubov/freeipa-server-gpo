@@ -1,9 +1,11 @@
+import json
 import logging
 import uuid
 
+
 import dbus
 import dbus.mainloop.glib
-from ipalib import api, errors, _, ngettext
+from ipalib import api, errors, _, ngettext, Command, output
 from ipalib import Str, Int
 from ipalib import constants
 from ipalib.plugable import Registry
@@ -15,6 +17,16 @@ from ipaserver.plugins.baseldap import (
 )
 
 logger = logging.getLogger(__name__)
+logger.debug('gpo plugin loaded')
+
+
+def escape_backslashes(text):
+    """
+    Escape backslashes in strings for display.
+    """
+    if not isinstance(text, str):
+        return text
+    return text.replace('\\', '\\\\')
 
 register = Registry()
 
@@ -228,6 +240,104 @@ class gpo(LDAPObject):
             else:
                 logger.warning(error_msg)
 
+    def _call_dbus_method_with_output(self, method_name, *params, fail_on_error=True):
+        """D-Bus method caller that returns stdout."""
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+        try:
+            bus = dbus.SystemBus()
+            obj = bus.get_object('org.freeipa.server', '/',
+                               follow_name_owner_changes=True)
+            server = dbus.Interface(obj, 'org.freeipa.server')
+
+            method = getattr(server, method_name)
+            ret, stdout, stderr = method(*params)
+
+            if ret != 0:
+                error_msg = f"Failed to {method_name.replace('_', ' ')}: {stderr}"
+                logger.error(error_msg)
+
+                if fail_on_error:
+                    raise errors.ExecutionError(
+                        message=_(f'Failed to {method_name.replace("_", " ")}: %(error)s')
+                                % {'error': stderr or _('Unknown error')}
+                    )
+                else:
+                    logger.warning(error_msg)
+                    return None
+
+            return stdout
+
+        except dbus.DBusException as e:
+            error_msg = f'Failed to call D-Bus {method_name}: {str(e)}'
+            logger.error(error_msg)
+
+            if fail_on_error:
+                raise errors.ExecutionError(
+                    message=_('Failed to communicate with D-Bus service')
+                )
+            else:
+                logger.warning(error_msg)
+                return None
+
+    def _call_gpuiservice_method(self, method_name, *params):
+        """Call GPUIService DBus method."""
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+        try:
+            bus = dbus.SystemBus()
+            obj = bus.get_object('org.altlinux.gpuiservice', '/org/altlinux/gpuiservice',
+                               follow_name_owner_changes=True)
+            gpuiservice = dbus.Interface(obj, 'org.altlinux.GPUIService')
+
+            method = getattr(gpuiservice, method_name)
+            result = method(*params)
+
+            return result
+
+        except dbus.DBusException as e:
+            error_msg = f'Failed to call GPUIService DBus method {method_name}: {str(e)}'
+            logger.error(error_msg)
+            raise errors.ExecutionError(
+                message=_('Failed to communicate with GPUIService: %(error)s') %
+                        {'error': str(e)}
+            )
+
+    def parse_admx_policies(self, policy_definitions_path=None, language='en-US'):
+        """
+        Parse ADMX/ADML policy definitions.
+
+        If policy_definitions_path is not provided, defaults to
+        /usr/share/PolicyDefinitions/
+        """
+        if policy_definitions_path is None:
+            policy_definitions_path = '/usr/share/PolicyDefinitions/'
+
+        logger.debug(f"parse_admx_policies called with path={policy_definitions_path}, language={language}")
+
+        # Call GPUIService DBus method
+        try:
+            # Call reload method to ensure fresh data
+            self._call_gpuiservice_method('reload')
+
+            # Get the root data structure
+            result_json = self._call_gpuiservice_method('get', "/")
+            if not result_json:
+                raise errors.ExecutionError(
+                    message=_('Failed to get ADMX policies from GPUIService')
+                )
+
+            # Parse JSON result
+            result = json.loads(result_json)
+            logger.debug(f"Successfully loaded ADMX policies from GPUIService")
+            return result
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON from GPUIService: {e}")
+            raise errors.ExecutionError(
+                message=_('Failed to parse ADMX policies from GPUIService')
+            )
+
 
 @register()
 class gpo_add(LDAPCreate):
@@ -367,3 +477,342 @@ class gpo_mod(LDAPUpdate):
                 pass
 
         return old_dn
+
+@register()
+class gpo_get_policy(Command):
+    __doc__ = _("Get policy value from GPO.")
+
+    takes_args = (
+        Str('path',
+            cli_name='path',
+            label=_('Policy path'),
+            doc=_('Path to the policy in GPO structure'),
+        ),
+    )
+
+    has_output = (
+        output.summary,
+        output.Output('result', type=dict, doc=_('Policy value')),
+    )
+
+    @classmethod
+    def _escape_backslashes(cls, text):
+        """
+        Escape backslashes in strings for display.
+        """
+        return escape_backslashes(text)
+
+    @classmethod
+    def _format_dict_as_kv(cls, data, indent=0):
+        """
+        Format dictionary as key:value pairs with indentation for nested structures.
+        """
+        spaces = ' ' * indent
+        lines = []
+
+        if isinstance(data, dict):
+            for key, value in data.items():
+                escaped_key = cls._escape_backslashes(key)
+                if isinstance(value, (dict, list)):
+                    lines.append(f'{spaces}{escaped_key}:')
+                    lines.append(cls._format_dict_as_kv(value, indent + 2))
+                else:
+                    escaped_value = cls._escape_backslashes(value) if isinstance(value, str) else value
+                    lines.append(f'{spaces}{escaped_key}: {escaped_value}')
+        elif isinstance(data, list):
+            for i, item in enumerate(data):
+                if isinstance(item, (dict, list)):
+                    lines.append(f'{spaces}-')
+                    lines.append(cls._format_dict_as_kv(item, indent + 2))
+                else:
+                    escaped_item = cls._escape_backslashes(item) if isinstance(item, str) else item
+                    lines.append(f'{spaces}- {escaped_item}')
+        else:
+            escaped_data = cls._escape_backslashes(data) if isinstance(data, str) else data
+            lines.append(f'{spaces}{escaped_data}')
+
+        return '\n'.join(lines)
+
+    def execute(self, path, **options):
+        """
+        Get policy value from GPO.
+        """
+        try:
+            logger.debug(f'gpo_get_policy called with path: {path}')
+
+            # Call GPUIService get method
+            result_json = self.api.Object.gpo._call_gpuiservice_method('get', path)
+
+            if result_json:
+                raw_result = json.loads(result_json)
+            else:
+                raw_result = {}
+
+            logger.debug(f'gpo_get_policy returning result: {raw_result}')
+
+            # Format summary based on content
+            if path == '/':
+                # Root path - show meta information
+                meta_info = raw_result.get('meta', {})
+                categories = meta_info.get('Total categories', 0)
+                policies = meta_info.get('Total policies', 0)
+                base_dir = meta_info.get('baseDir', '')
+                locale = meta_info.get('localeUsed', '')
+                summary = 'GPO structure at root: {} categories, {} policies, base dir: {}, locale: {}'.format(
+                    categories, policies, base_dir, locale
+                )
+            elif 'meta' in raw_result and len(raw_result) == 1:
+                # Only meta information
+                meta_info = raw_result.get('meta', {})
+                categories = meta_info.get('Total categories', 0)
+                policies = meta_info.get('Total policies', 0)
+                summary = 'Meta information: {} categories, {} policies'.format(categories, policies)
+            elif 'displayName' in raw_result:
+                # Policy with display name and header - output full nested structure
+                summary = self._format_dict_as_kv(raw_result)
+            elif 'category' in raw_result:
+                # Category information
+                category_name = raw_result.get('category', '')
+                policies_dict = raw_result.get('policies', {})
+                inherited_list = raw_result.get('inherited', [])
+
+                policy_count = len(policies_dict) if isinstance(policies_dict, dict) else 0
+                inherited_count = len(inherited_list) if isinstance(inherited_list, list) else 0
+
+                summary_lines = []
+                summary_lines.append('Category: {}'.format(category_name))
+                if policy_count > 0:
+                    summary_lines.append('Direct policies: {}'.format(policy_count))
+                if inherited_count > 0:
+                    summary_lines.append('Inherited subcategories: {}'.format(inherited_count))
+
+                summary = '\n'.join(summary_lines)
+            else:
+                # Generic summary
+                summary = 'Policy value retrieved for path: {}'.format(path)
+
+            return {
+                'summary': summary,
+                'result': raw_result
+            }
+
+        except Exception as e:
+            logger.exception("Unexpected error in gpo_get_policy")
+            raise
+
+
+@register()
+class gpo_list_children(Command):
+    __doc__ = _("List child policies under a parent path.")
+
+    takes_args = (
+        Str('parent_path',
+            cli_name='parent_path',
+            label=_('Parent path'),
+            doc=_('Parent path in GPO structure'),
+        ),
+    )
+
+    has_output_params = (
+        Str('name', label=_('Name')),
+    )
+
+    has_output = (
+        output.summary,
+        output.ListOfEntries('result', doc=_('Child policies'), flags=['no_display']),
+    )
+
+
+    def execute(self, parent_path, **options):
+        """
+        List child policies under a parent path.
+        """
+        try:
+            if isinstance(parent_path, str) and parent_path.startswith('parent_path='):
+                parent_path = parent_path[len('parent_path='):]
+
+            # Handle empty path - treat as root
+            if parent_path == '':
+                parent_path = '/'
+
+            logger.debug(f'gpo_list_children called with parent_path: {parent_path}')
+
+            # Call GPUIService list_children method
+            result_json = self.api.Object.gpo._call_gpuiservice_method('list_children', parent_path)
+
+            if result_json:
+                # GPUIService returns JSON string, parse it
+                raw_result = json.loads(result_json)
+                logger.debug(f'raw_result type: {type(raw_result)}, value: {raw_result}')
+                # Convert to list of dicts for CLI output
+                if isinstance(raw_result, (tuple, list)):
+                    # Filter out empty items
+                    filtered_items = [item for item in raw_result if item]
+                    result = [{'name': str(item)} for item in filtered_items]
+                elif isinstance(raw_result, dict):
+                    result = [{'name': k, 'value': str(v)} for k, v in raw_result.items()]
+                else:
+                    result = [{'name': str(raw_result)}]
+            else:
+                result = []
+
+            count = len(result)
+            if count == 0:
+                summary = 'No child policies found'
+            elif count == 1:
+                summary = '1 child policy found'
+            else:
+                summary = '%d child policies found' % count
+
+            logger.debug(f'gpo_list_children returning summary: {summary}, result: {result}')
+
+            return {
+                'summary': summary,
+                'result': result,
+            }
+
+        except Exception as e:
+            logger.exception("Unexpected error in gpo_list_children")
+            raise
+
+@register()
+class gpo_set_policy(Command):
+    __doc__ = _("Set policy value in GPO.")
+
+    takes_args = (
+        Str('name_gpt',
+            cli_name='name_gpt',
+            label=_('GPO name'),
+            doc=_('GPO path (relative to sysvol)'),
+        ),
+        Str('target',
+            cli_name='target',
+            label=_('Target'),
+            doc=_('Policy type (Machine or User)'),
+        ),
+        Str('path',
+            cli_name='path',
+            label=_('Policy path'),
+            doc=_('Path to the policy in GPO structure'),
+        ),
+        Str('value',
+            cli_name='value',
+            label=_('Value'),
+            doc=_('Value to set'),
+        ),
+        Str('metadata?',
+            label=_('Metadata'),
+            doc=_('ADMX metadata path'),
+        ),
+    )
+
+    has_output = (
+        output.summary,
+        output.Output('success', type=bool, doc=_('Operation success')),
+    )
+
+    def execute(self, name_gpt, target, path, value, metadata=None, **options):
+        """
+        Set policy value in GPO.
+        """
+        try:
+            logger.debug(f'gpo_set_policy called with name_gpt: {name_gpt}, target: {target}, path: {path}, value: {value}, metadata: {metadata}')
+
+            # Strip parameter names if present (IPA bug)
+            if isinstance(target, str) and target.startswith('target='):
+                target = target[len('target='):]
+            if isinstance(path, str) and path.startswith('path='):
+                path = path[len('path='):]
+            if isinstance(value, str) and value.startswith('value='):
+                value = value[len('value='):]
+            if isinstance(metadata, str) and metadata.startswith('metadata='):
+                metadata = metadata[len('metadata='):]
+
+            # Call GPUIService set method
+            if metadata is None:
+                metadata = ""
+
+            success = self.api.Object.gpo._call_gpuiservice_method('set', name_gpt, target, path, value, metadata)
+
+            logger.debug(f'gpo_set_policy returning success: {success}')
+            if success:
+                summary = 'Policy set successfully: {} = "{}"'.format(escape_backslashes(path), escape_backslashes(value))
+            else:
+                summary = 'Failed to set policy: {} = "{}"'.format(escape_backslashes(path), escape_backslashes(value))
+            return {
+                'summary': summary,
+                'success': bool(success)
+            }
+
+        except Exception as e:
+            logger.exception("Unexpected error in gpo_set_policy")
+            raise
+
+
+@register()
+class gpo_get_current_value(Command):
+    __doc__ = _("Get current value from GPO policy file.")
+
+    takes_args = (
+        Str('name_gpt',
+            cli_name='name_gpt',
+            label=_('GPO name'),
+            doc=_('GPO path (relative to sysvol)'),
+        ),
+        Str('target',
+            cli_name='target',
+            label=_('Target'),
+            doc=_('Policy type (Machine or User)'),
+        ),
+        Str('path',
+            cli_name='path',
+            label=_('Policy path'),
+            doc=_('Registry key path'),
+        ),
+    )
+
+    has_output = (
+        output.summary,
+        output.Output('result', type=dict, doc=_('Current value')),
+    )
+
+    def execute(self, name_gpt, target, path, **options):
+        """
+        Get current value from GPO policy file.
+        """
+        try:
+            logger.debug(f'gpo_get_current_value called with name_gpt: {name_gpt}, target: {target}, path: {path}')
+
+            # Strip parameter names if present (IPA bug)
+            if isinstance(target, str) and target.startswith('target='):
+                target = target[len('target='):]
+            if isinstance(path, str) and path.startswith('path='):
+                path = path[len('path='):]
+
+            # Call GPUIService get_current_value method
+            result_json = self.api.Object.gpo._call_gpuiservice_method('get_current_value', name_gpt, target, path)
+
+            if result_json:
+                raw_result = json.loads(result_json)
+            else:
+                raw_result = {}
+
+            logger.debug(f'gpo_get_current_value returning result: {raw_result}')
+
+            if raw_result and 'value_data' in raw_result:
+                value_data = raw_result.get('value_data', '')
+                value_type = raw_result.get('value_type', '')
+                summary = 'Current value: "{}" (type: {}) for GPO {}, target {}, path: {}'.format(
+                    escape_backslashes(str(value_data)), value_type, name_gpt, target, escape_backslashes(path)
+                )
+            else:
+                summary = 'Current value retrieved for GPO {}, target {}, path: {}'.format(name_gpt, target, escape_backslashes(path))
+
+            return {
+                'summary': summary,
+                'result': raw_result
+            }
+
+        except Exception as e:
+            logger.exception("Unexpected error in gpo_get_current_value")
+            raise
