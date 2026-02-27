@@ -195,19 +195,10 @@ class IPAActions:
             True если перезапуск прошел успешно, False иначе
         """
         try:
-            self.logger.info(_("Initiating oddjob service restart"))
+            self.logger.info(_("Restarting oddjob service"))
 
-            status_cmd = ['systemctl', 'is-active', 'oddjobd']
-            status_result = ipautil.run(status_cmd, raiseonerr=False)
-
-            if status_result.returncode != 0:
-                self.logger.info(_("oddjob service is not running, starting it"))
-                start_cmd = ['systemctl', 'start', 'oddjobd']
-                result = ipautil.run(start_cmd, raiseonerr=False)
-            else:
-                self.logger.info(_("Restarting oddjob service"))
-                restart_cmd = ['systemctl', 'restart', 'oddjobd']
-                result = ipautil.run(restart_cmd, raiseonerr=False)
+            restart_cmd = ['systemctl', 'restart', 'oddjobd']
+            result = ipautil.run(restart_cmd, raiseonerr=False)
 
             if result.returncode == 0:
                 self.logger.info(_("oddjob service restarted successfully"))

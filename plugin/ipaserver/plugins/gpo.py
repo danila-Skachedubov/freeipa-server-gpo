@@ -1,7 +1,7 @@
 import json
 import logging
 import uuid
-
+import re
 
 import dbus
 import dbus.mainloop.glib
@@ -347,7 +347,7 @@ class gpo_add(LDAPCreate):
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
         verify_gpo_schema(ldap, self.api)
         displayname = keys[-1]
-        if not constants.PATTERN_GROUPUSER_NAME.match(displayname):
+        if not re.match(constants.PATTERN_GROUPUSER_NAME, displayname):
             raise errors.ValidationError(
                 name='displayname',
                 error=constants.ERRMSG_GROUPUSER_NAME.format('Group Policy Object')
@@ -457,7 +457,7 @@ class gpo_mod(LDAPUpdate):
 
         if 'rename' in options and options['rename']:
             new_name = options['rename']
-            if not constants.PATTERN_GROUPUSER_NAME.match(new_name):
+            if not re.match(constants.PATTERN_GROUPUSER_NAME, new_name):
                 raise errors.ValidationError(
                     name='displayname',
                     error=constants.ERRMSG_GROUPUSER_NAME.format('Group Policy Object')

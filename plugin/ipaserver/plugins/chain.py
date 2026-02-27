@@ -1,4 +1,5 @@
 import logging
+import re
 
 from ipalib import api, errors, _, ngettext
 from ipalib import Str, Command, output, Flag, Bool
@@ -440,7 +441,7 @@ class chain_add(LDAPCreate):
         """Convert names to DNs with strict validation."""
         verify_gpo_schema(ldap, self.api)
         chain_name = keys[0]
-        if not constants.PATTERN_GROUPUSER_NAME.match(chain_name):
+        if not re.match(constants.PATTERN_GROUPUSER_NAME, chain_name):
             raise errors.ValidationError(
                 name='cn',
                 error=constants.ERRMSG_GROUPUSER_NAME.format('chain')
@@ -592,7 +593,7 @@ class chain_mod(LDAPUpdate):
         verify_gpo_schema(ldap, self.api)
         if options.get('rename'):
             new_name = options['rename']
-            if not constants.PATTERN_GROUPUSER_NAME.match(new_name):
+            if not re.match(constants.PATTERN_GROUPUSER_NAME, new_name):
                 raise errors.ValidationError(
                     name='cn',
                     error=constants.ERRMSG_GROUPUSER_NAME.format('chain')
