@@ -112,7 +112,8 @@ class IPAChecker:
                 'krb5kdc',
                 'ipa',
                 'sssd',
-                'oddjobd'
+                'oddjobd',
+                'gpuiservice'
             ]
             self.logger.debug(_("Checking IPA services"))
 
@@ -123,7 +124,7 @@ class IPAChecker:
                 result = ipautil.run(cmd, raiseonerr=False)
 
                 if result.returncode != 0:
-                    if service == 'oddjobd':
+                    if service == 'oddjobd' or service == 'gpuiservice':
                         self.logger.warning(_(
                             "Service {} is not active - will be started during installation"
                         ).format(service))

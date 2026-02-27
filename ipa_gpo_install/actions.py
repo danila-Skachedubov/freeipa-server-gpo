@@ -221,6 +221,39 @@ class IPAActions:
             self.logger.error(_("Error restarting oddjob service: {}").format(e))
             return False
 
+    def start_gpuiservice(self):
+        """
+        Start GPUIService if not already running.
+
+        Returns:
+            True if service is running after operation, False otherwise.
+        """
+        try:
+            self.logger.info(_("Checking GPUIService status"))
+
+            status_cmd = ['systemctl', 'is-active', 'gpuiservice']
+            status_result = ipautil.run(status_cmd, raiseonerr=False)
+
+            if status_result.returncode != 0:
+                self.logger.info(_("GPUIService is not running, starting it"))
+                start_cmd = ['systemctl', 'start', 'gpuiservice']
+                result = ipautil.run(start_cmd, raiseonerr=False)
+            else:
+                self.logger.info(_("GPUIService is already running"))
+                return True
+
+            if result.returncode == 0:
+                self.logger.info(_("GPUIService started successfully"))
+                return True
+            else:
+                error_msg = result.error_output or _("Unknown error")
+                self.logger.error(_("Failed to start GPUIService: {}").format(error_msg))
+                return False
+
+        except Exception as e:
+            self.logger.error(_("Error starting GPUIService: {}").format(e))
+            return False
+
     def are_plugins_activated(self):
         """
         Check if plugin files are present in target directories.

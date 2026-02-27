@@ -6,7 +6,7 @@ Requires=dbus.socket
 [Service]
 Type=dbus
 BusName=org.altlinux.gpuiservice
-ExecStart=/usr/bin/python3 /usr/lib/gpuiservice/gpuiservice.py
+ExecStart=/usr/sbin/gpuiservice
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5
