@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ipa_gpo_install 0.0.1\n"
-"Report-Msgid-Bugs-To: skachedubov@altlinux.org\n"
-"POT-Creation-Date: 2025-12-22 16:43+0400\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-27 17:00+0400\n"
 "Last-Translator: Skachedubov Danila <skachedubov@altlinux.org>\n"
 "Language-Team: Russian <gnu@d07.ru>\n"
 "Language: ru\n"
@@ -75,7 +75,7 @@ msgstr "Проверка прав администратора"
 msgid "Administrative privileges required."
 msgstr "Требуются права администратора."
 
-#: ipa_gpo_install/cli.py:105 ipa_gpo_install/checks.py:117
+#: ipa_gpo_install/cli.py:105 ipa_gpo_install/checks.py:118
 msgid "Checking IPA services"
 msgstr "Проверка служб IPA"
 
@@ -136,26 +136,30 @@ msgid "Plugins already activated"
 msgstr "Плагины уже активированы"
 
 #: ipa_gpo_install/cli.py:172
+msgid "Start GPUIService"
+msgstr "Запуск GPUIService"
+
+#: ipa_gpo_install/cli.py:176
 msgid "About to perform irreversible schema update"
 msgstr "Выполняется необратимое обновление схемы"
 
-#: ipa_gpo_install/cli.py:173
+#: ipa_gpo_install/cli.py:177
 msgid "Run ipa-server-upgrade"
 msgstr "Выполнить ipa-server-upgrade"
 
-#: ipa_gpo_install/cli.py:187
+#: ipa_gpo_install/cli.py:191
 msgid "Checking critical requirements"
 msgstr "Проверка критических требований"
 
-#: ipa_gpo_install/cli.py:191
+#: ipa_gpo_install/cli.py:195
 msgid "Performing configuration environment checks"
 msgstr "Выполнение проверок конфигурации окружения"
 
-#: ipa_gpo_install/cli.py:195
+#: ipa_gpo_install/cli.py:199
 msgid "Check-only mode: all checks completed"
 msgstr "Режим только проверки: все проверки завершены"
 
-#: ipa_gpo_install/cli.py:202
+#: ipa_gpo_install/cli.py:206
 msgid ""
 "\n"
 "=============================================================================\n"
@@ -211,243 +215,275 @@ msgstr "Ошибка проверки прав администратора: {}"
 msgid "Cannot determine domain name for services check"
 msgstr "Невозможно определить имя домена для проверки служб"
 
-#: ipa_gpo_install/checks.py:121 ipa_gpo_install/actions.py:63
-#: ipa_gpo_install/actions.py:144 ipa_gpo_install/actions.py:154
-#: ipa_gpo_install/actions.py:177
+#: ipa_gpo_install/checks.py:122 ipa_gpo_install/actions.py:61
+#: ipa_gpo_install/actions.py:142 ipa_gpo_install/actions.py:152
+#: ipa_gpo_install/actions.py:175
 msgid "Running: {}"
 msgstr "Выполнение: {}"
 
-#: ipa_gpo_install/checks.py:128
+#: ipa_gpo_install/checks.py:129
 msgid "Service {} is not active - will be started during installation"
 msgstr "Служба {} не активна - будет запущена во время установки"
 
-#: ipa_gpo_install/checks.py:131
+#: ipa_gpo_install/checks.py:132
 msgid "Service {} is not active"
 msgstr "Служба {} не активна"
 
-#: ipa_gpo_install/checks.py:134
+#: ipa_gpo_install/checks.py:135
 msgid "Service {} is active"
 msgstr "Служба {} активна"
 
-#: ipa_gpo_install/checks.py:136
+#: ipa_gpo_install/checks.py:137
 msgid "All essential services are running"
 msgstr "Все основные службы работают"
 
-#: ipa_gpo_install/checks.py:140
+#: ipa_gpo_install/checks.py:141
 msgid "Error checking IPA services: {}"
 msgstr "Ошибка проверки служб IPA: {}"
 
-#: ipa_gpo_install/checks.py:159
+#: ipa_gpo_install/checks.py:160
 msgid "cn=schema not found, fallback to cn=subschema"
 msgstr "cn=schema не найден, использование резервного варианта cn=subschema"
 
-#: ipa_gpo_install/checks.py:168
+#: ipa_gpo_install/checks.py:169
 msgid "Object class '{}' does not exist in schema"
 msgstr "Класс объекта '{}' не существует в схеме"
 
-#: ipa_gpo_install/checks.py:172
+#: ipa_gpo_install/checks.py:173
 msgid "All required object classes exist in schema"
 msgstr "Все необходимые классы объектов существуют в схеме"
 
-#: ipa_gpo_install/checks.py:176
+#: ipa_gpo_install/checks.py:177
 msgid "Error checking schema object classes: {}"
 msgstr "Ошибка проверки классов объектов схемы: {}"
 
-#: ipa_gpo_install/checks.py:188
+#: ipa_gpo_install/checks.py:189
 msgid "AD Trust command not available"
 msgstr "Команда доверия AD недоступна"
 
-#: ipa_gpo_install/checks.py:193
+#: ipa_gpo_install/checks.py:194
 msgid "AD Trust is enabled"
 msgstr "Доверие AD включено"
 
-#: ipa_gpo_install/checks.py:195
+#: ipa_gpo_install/checks.py:196
 msgid "AD Trust is not enabled"
 msgstr "Доверие AD не включено"
 
-#: ipa_gpo_install/checks.py:200
+#: ipa_gpo_install/checks.py:201
 msgid "Error checking AD Trust status: {}"
 msgstr "Ошибка проверки статуса доверия AD: {}"
 
-#: ipa_gpo_install/checks.py:222
+#: ipa_gpo_install/checks.py:223
 msgid "SYSVOL directory exists with required structure"
 msgstr "Каталог SYSVOL существует с требуемой структурой"
 
-#: ipa_gpo_install/checks.py:225
+#: ipa_gpo_install/checks.py:226
 msgid "SYSVOL directory exists but missing subdirectories"
 msgstr "Каталог SYSVOL существует, но отсутствуют подкаталоги"
 
-#: ipa_gpo_install/checks.py:228
+#: ipa_gpo_install/checks.py:229
 msgid "SYSVOL directory does not exist: {}"
 msgstr "Каталог SYSVOL не существует: {}"
 
-#: ipa_gpo_install/checks.py:232
+#: ipa_gpo_install/checks.py:233
 msgid "Error checking SYSVOL directory: {}"
 msgstr "Ошибка проверки каталога SYSVOL: {}"
 
-#: ipa_gpo_install/checks.py:243
+#: ipa_gpo_install/checks.py:244
 msgid "Checking if SYSVOL share exists"
 msgstr "Проверка, существует ли общий ресурс SYSVOL"
 
-#: ipa_gpo_install/checks.py:247
+#: ipa_gpo_install/checks.py:248
 msgid "Error listing Samba shares: {}"
 msgstr "Ошибка при перечислении общих ресурсов Samba: {}"
 
-#: ipa_gpo_install/checks.py:252
+#: ipa_gpo_install/checks.py:253
 msgid "SYSVOL share exists"
 msgstr "Общий ресурс SYSVOL существует"
 
-#: ipa_gpo_install/checks.py:254
+#: ipa_gpo_install/checks.py:255
 msgid "SYSVOL share does not exist"
 msgstr "Общий ресурс SYSVOL не существует"
 
-#: ipa_gpo_install/checks.py:259
+#: ipa_gpo_install/checks.py:260
 msgid "Error checking SYSVOL share: {}"
 msgstr "Ошибка проверки общего ресурса SYSVOL: {}"
 
-#: ipa_gpo_install/actions.py:57
+#: ipa_gpo_install/actions.py:55
 msgid "Installing AD Trust support"
 msgstr "Установка поддержки доверия AD"
 
-#: ipa_gpo_install/actions.py:59
+#: ipa_gpo_install/actions.py:57
 msgid "ipa-adtrust-install not found"
 msgstr "ipa-adtrust-install не найден"
 
-#: ipa_gpo_install/actions.py:67
+#: ipa_gpo_install/actions.py:65
 msgid "Failed to install AD Trust: {}"
 msgstr "Не удалось установить доверие AD: {}"
 
-#: ipa_gpo_install/actions.py:69
+#: ipa_gpo_install/actions.py:67
 msgid "AD Trust installed successfully"
 msgstr "Доверие AD успешно установлено"
 
-#: ipa_gpo_install/actions.py:73
+#: ipa_gpo_install/actions.py:71
 msgid "Error installing AD Trust: {}"
 msgstr "Ошибка установки доверия AD: {}"
 
-#: ipa_gpo_install/actions.py:93
+#: ipa_gpo_install/actions.py:91
 msgid "Created directory: {}"
 msgstr "Создание директории: {}"
 
-#: ipa_gpo_install/actions.py:96
+#: ipa_gpo_install/actions.py:94
 msgid "Using standard permissions for SYSVOL directories"
 msgstr "Использование стандартных разрешений для каталогов SYSVOL"
 
-#: ipa_gpo_install/actions.py:100
+#: ipa_gpo_install/actions.py:98
 msgid "SYSVOL directory structure created successfully"
 msgstr "Структура каталога SYSVOL успешно создана"
 
-#: ipa_gpo_install/actions.py:104
+#: ipa_gpo_install/actions.py:102
 msgid "Error creating SYSVOL directory: {}"
 msgstr "Ошибка создания каталога SYSVOL: {}"
 
-#: ipa_gpo_install/actions.py:115
+#: ipa_gpo_install/actions.py:113
 msgid "Setting default ACLs on {}"
 msgstr "Установка ACL по умолчанию для {}"
 
-#: ipa_gpo_install/actions.py:120
+#: ipa_gpo_install/actions.py:118
 msgid "Failed to set ACLs on {}: {}"
 msgstr "Не удалось установить ACL для {}: {}"
 
-#: ipa_gpo_install/actions.py:123
+#: ipa_gpo_install/actions.py:121
 msgid "Successfully set default ACLs on {}"
 msgstr "Успешно установлены ACL по умолчанию для {}"
 
-#: ipa_gpo_install/actions.py:135
+#: ipa_gpo_install/actions.py:133
 msgid "Creating SYSVOL share for: {}"
 msgstr "Создание общего ресурса SYSVOL для: {}"
 
-#: ipa_gpo_install/actions.py:139
+#: ipa_gpo_install/actions.py:137
 msgid "Cannot create share: directory {} does not exist"
 msgstr "Невозможно создать общий ресурс: каталог {} не существует"
 
-#: ipa_gpo_install/actions.py:149
+#: ipa_gpo_install/actions.py:147
 msgid "Failed to create SYSVOL share: {}"
 msgstr "Не удалось создать общий ресурс SYSVOL: {}"
 
-#: ipa_gpo_install/actions.py:158
+#: ipa_gpo_install/actions.py:156
 msgid "Failed to set create mask parameter: {}"
 msgstr "Не удалось установить параметр create mask: {}"
 
-#: ipa_gpo_install/actions.py:160
+#: ipa_gpo_install/actions.py:158
 msgid "SYSVOL share created successfully"
 msgstr "Общий ресурс SYSVOL успешно создан"
 
-#: ipa_gpo_install/actions.py:164
+#: ipa_gpo_install/actions.py:162
 msgid "Error creating SYSVOL share: {}"
 msgstr "Ошибка создания общего ресурса SYSVOL: {}"
 
-#: ipa_gpo_install/actions.py:175
+#: ipa_gpo_install/actions.py:173
 msgid "Running ipa-server-upgrade to apply schema changes"
 msgstr "Запуск ipa-server-upgrade для обновления схемы"
 
-#: ipa_gpo_install/actions.py:181
+#: ipa_gpo_install/actions.py:179
 msgid "ipa-server-upgrade completed successfully"
 msgstr "Обновление схемы прошло успешно"
 
-#: ipa_gpo_install/actions.py:184 ipa_gpo_install/actions.py:218
+#: ipa_gpo_install/actions.py:182 ipa_gpo_install/actions.py:216
+#: ipa_gpo_install/actions.py:249
 msgid "Unknown error"
 msgstr "Неизвестная ошибка"
 
-#: ipa_gpo_install/actions.py:185
+#: ipa_gpo_install/actions.py:183
 msgid "ipa-server-upgrade failed: {}"
 msgstr "ipa-server-upgrade закончилось с ошибкой"
 
-#: ipa_gpo_install/actions.py:189
+#: ipa_gpo_install/actions.py:187
 msgid "Error running ipa-server-upgrade: {}"
 msgstr "Ошибка при обновления сервера"
 
-#: ipa_gpo_install/actions.py:200
+#: ipa_gpo_install/actions.py:198
 msgid "Initiating oddjob service restart"
 msgstr "Инициирование перезапуска службы oddjob"
 
-#: ipa_gpo_install/actions.py:206
+#: ipa_gpo_install/actions.py:204
 msgid "oddjob service is not running, starting it"
 msgstr "Служба oddjob не запущена, запускаем ее"
 
-#: ipa_gpo_install/actions.py:210
+#: ipa_gpo_install/actions.py:208
 msgid "Restarting oddjob service"
 msgstr "Выполняется перезапуск службы oddjob"
 
-#: ipa_gpo_install/actions.py:215
+#: ipa_gpo_install/actions.py:213
 msgid "oddjob service restarted successfully"
 msgstr "Служба oddjob успешно перезапущена"
 
-#: ipa_gpo_install/actions.py:219
+#: ipa_gpo_install/actions.py:217
 msgid "Failed to restart oddjob: {}"
 msgstr "Не удалось перезапустить службу oddjob: {}"
 
-#: ipa_gpo_install/actions.py:223
+#: ipa_gpo_install/actions.py:221
 msgid "Error restarting oddjob service: {}"
 msgstr "Ошибка перезапуска службы oddjob: {}"
 
-#: ipa_gpo_install/actions.py:256
-msgid "Plugin file not activated: {}"
-msgstr "Файл плагина не активирован: {}"
+#: ipa_gpo_install/actions.py:232
+msgid "Checking GPUIService status"
+msgstr "Проверка состояния GPUIService"
 
-#: ipa_gpo_install/actions.py:268
-msgid "Activating plugins from staging directory"
-msgstr "Активация плагинов из промежуточной директории"
+#: ipa_gpo_install/actions.py:238
+msgid "GPUIService is not running, starting it"
+msgstr "GPUIService не запущена, запускаем ее"
 
-#: ipa_gpo_install/actions.py:292
-msgid "Failed to create directory {}: {}"
-msgstr "Не удалось создать директорию {}: {}"
+#: ipa_gpo_install/actions.py:242
+msgid "GPUIService is already running"
+msgstr "GPUIService уже запущена"
 
-#: ipa_gpo_install/actions.py:301
-msgid "Plugin file already activated: {}"
-msgstr "Файл плагина уже активирован: {}"
+#: ipa_gpo_install/actions.py:246
+msgid "GPUIService started successfully"
+msgstr "GPUIService успешно запущена"
 
-#: ipa_gpo_install/actions.py:307
-msgid "Source file not found in staging: {}"
-msgstr "Исходный файл не найден в промежуточной директории: {}"
+#: ipa_gpo_install/actions.py:250
+msgid "Failed to start GPUIService: {}"
+msgstr "Не удалось запустить GPUIService: {}"
 
-#: ipa_gpo_install/actions.py:315
-msgid "Failed to copy plugin file {}: {}"
-msgstr "Не удалось скопировать файл плагина {}: {}"
+#: ipa_gpo_install/actions.py:254
+msgid "Error starting GPUIService: {}"
+msgstr "Ошибка запуска GPUIService: {}"
 
-#: ipa_gpo_install/actions.py:319
-msgid "All plugins activated successfully"
-msgstr "Все плагины успешно активированы"
+#: ipa_gpo_install/actions.py:282 ipa_gpo_install/actions.py:316
+msgid "Plugin file not found: {}"
+msgstr "Файл плагина не найден: {}"
 
-#~ msgid "Failed to restart oddjob service"
-#~ msgstr "Не удалось перезапустить службу oddjob"
+#: ipa_gpo_install/actions.py:296
+msgid "Checking plugin files installation"
+msgstr "Проверка установки файлов плагинов"
+
+#: ipa_gpo_install/actions.py:321
+msgid ""
+"Plugin files missing. Please ensure the freeipa-server-gpo package is "
+"installed."
+msgstr ""
+"Файлы плагинов отсутствуют. Убедитесь, что пакет freeipa-server-gpo "
+"установлен."
+
+#: ipa_gpo_install/actions.py:325
+msgid "All plugin files are present"
+msgstr "Все файлы плагинов присутствуют"
+
+#~ msgid "Activating plugins from staging directory"
+#~ msgstr "Активация плагинов из промежуточной директории"
+
+#~ msgid "Failed to create directory {}: {}"
+#~ msgstr "Не удалось создать директорию {}: {}"
+
+#~ msgid "Plugin file already activated: {}"
+#~ msgstr "Файл плагина уже активирован: {}"
+
+#~ msgid "Source file not found in staging: {}"
+#~ msgstr "Исходный файл не найден в промежуточной директории: {}"
+
+#~ msgid "Failed to copy plugin file {}: {}"
+#~ msgstr "Не удалось скопировать файл плагина {}: {}"
+
+#~ msgid "All plugins activated successfully"
+#~ msgstr "Все плагины успешно активированы"
