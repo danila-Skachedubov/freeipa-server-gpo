@@ -1,5 +1,5 @@
 PACKAGE_NAME = freeipa-server-gpo
-VERSION = 0.0.4
+VERSION = 0.0.5
 
 PREFIX ?= /usr
 DESTDIR =
