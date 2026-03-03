@@ -1,7 +1,7 @@
 %add_python3_req_skip parse_admx_structure
 
 Name:           freeipa-server-gpo
-Version:        0.0.5
+Version:        0.0.6
 Release:        alt1
 
 Summary:        Prepare FreeIPA for Group Policy Management
@@ -70,6 +70,9 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 
 
 %changelog
+* Tue Mar 03 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.0.6-alt1
+- feat(gpuiservice): improve service management with enable --now
+
 * Fri Feb 27 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.0.5-alt1
 - feat(gpuiservice): add GPUIService support with systemd integration
 - feat(plugins): add ipaclient plugin for GPO operations
