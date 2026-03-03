@@ -214,35 +214,33 @@ class IPAActions:
 
     def start_gpuiservice(self):
         """
-        Start GPUIService if not already running.
+        Start GPUIService if not already running and enable it for autostart.
 
         Returns:
-            True if service is running after operation, False otherwise.
+            True if service is running and enabled after operation, False otherwise.
         """
         try:
-            self.logger.info(_("Checking GPUIService status"))
+            self.logger.info(_("Enabling and starting gpuiservice"))
 
-            status_cmd = ['systemctl', 'is-active', 'gpuiservice']
-            status_result = ipautil.run(status_cmd, raiseonerr=False)
-
-            if status_result.returncode != 0:
-                self.logger.info(_("GPUIService is not running, starting it"))
-                start_cmd = ['systemctl', 'start', 'gpuiservice']
-                result = ipautil.run(start_cmd, raiseonerr=False)
-            else:
-                self.logger.info(_("GPUIService is already running"))
-                return True
-
-            if result.returncode == 0:
-                self.logger.info(_("GPUIService started successfully"))
-                return True
-            else:
-                error_msg = result.error_output or _("Unknown error")
-                self.logger.error(_("Failed to start GPUIService: {}").format(error_msg))
+            result = ipautil.run(
+                ["systemctl", "enable", "--now", "gpuiservice"],
+                raiseonerr=False
+            )
+            if result.returncode != 0:
+                stderr = (result.error_output or b"").decode("utf-8", errors="replace").strip()
+                self.logger.error(_("Failed to enable/start gpuiservice: %s"), stderr or "unknown error")
                 return False
 
+            check = ipautil.run(["systemctl", "is-active", "gpuiservice"], raiseonerr=False)
+            if check.returncode != 0:
+                self.logger.error(_("gpuiservice is not active after start"))
+                return False
+
+            self.logger.info(_("gpuiservice is enabled and running"))
+            return True
+
         except Exception as e:
-            self.logger.error(_("Error starting GPUIService: {}").format(e))
+            self.logger.error(_("Unexpected error managing gpuiservice: %s"), e, exc_info=True)
             return False
 
     def are_plugins_activated(self):

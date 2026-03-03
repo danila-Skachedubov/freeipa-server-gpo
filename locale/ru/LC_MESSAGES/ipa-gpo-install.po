@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ipa_gpo_install 0.0.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-27 17:00+0400\n"
+"POT-Creation-Date: 2026-03-03 17:10+0400\n"
 "Last-Translator: Skachedubov Danila <skachedubov@altlinux.org>\n"
 "Language-Team: Russian <gnu@d07.ru>\n"
 "Language: ru\n"
@@ -128,12 +128,12 @@ msgid "Activate plugins"
 msgstr "Активировать плагины"
 
 #: ipa_gpo_install/cli.py:166
-msgid "Restart oddjob service"
-msgstr "Перезапуск службы oddjob"
-
-#: ipa_gpo_install/cli.py:169
 msgid "Plugins already activated"
 msgstr "Плагины уже активированы"
+
+#: ipa_gpo_install/cli.py:168
+msgid "Restart oddjob service"
+msgstr "Перезапуск службы oddjob"
 
 #: ipa_gpo_install/cli.py:172
 msgid "Start GPUIService"
@@ -389,8 +389,7 @@ msgstr "Запуск ipa-server-upgrade для обновления схемы"
 msgid "ipa-server-upgrade completed successfully"
 msgstr "Обновление схемы прошло успешно"
 
-#: ipa_gpo_install/actions.py:182 ipa_gpo_install/actions.py:216
-#: ipa_gpo_install/actions.py:249
+#: ipa_gpo_install/actions.py:182 ipa_gpo_install/actions.py:207
 msgid "Unknown error"
 msgstr "Неизвестная ошибка"
 
@@ -403,62 +402,52 @@ msgid "Error running ipa-server-upgrade: {}"
 msgstr "Ошибка при обновления сервера"
 
 #: ipa_gpo_install/actions.py:198
-msgid "Initiating oddjob service restart"
-msgstr "Инициирование перезапуска службы oddjob"
-
-#: ipa_gpo_install/actions.py:204
-msgid "oddjob service is not running, starting it"
-msgstr "Служба oddjob не запущена, запускаем ее"
-
-#: ipa_gpo_install/actions.py:208
 msgid "Restarting oddjob service"
 msgstr "Выполняется перезапуск службы oddjob"
 
-#: ipa_gpo_install/actions.py:213
+#: ipa_gpo_install/actions.py:204
 msgid "oddjob service restarted successfully"
 msgstr "Служба oddjob успешно перезапущена"
 
-#: ipa_gpo_install/actions.py:217
+#: ipa_gpo_install/actions.py:208
 msgid "Failed to restart oddjob: {}"
 msgstr "Не удалось перезапустить службу oddjob: {}"
 
-#: ipa_gpo_install/actions.py:221
+#: ipa_gpo_install/actions.py:212
 msgid "Error restarting oddjob service: {}"
 msgstr "Ошибка перезапуска службы oddjob: {}"
 
-#: ipa_gpo_install/actions.py:232
-msgid "Checking GPUIService status"
-msgstr "Проверка состояния GPUIService"
+#: ipa_gpo_install/actions.py:223
+msgid "Enabling and starting gpuiservice"
+msgstr "Включение и запуск gpuiservice"
 
-#: ipa_gpo_install/actions.py:238
-msgid "GPUIService is not running, starting it"
-msgstr "GPUIService не запущена, запускаем ее"
+#: ipa_gpo_install/actions.py:231
+#, python-format
+msgid "Failed to enable/start gpuiservice: %s"
+msgstr "Не удалось включить/запустить gpuiservice: %s"
 
-#: ipa_gpo_install/actions.py:242
-msgid "GPUIService is already running"
-msgstr "GPUIService уже запущена"
+#: ipa_gpo_install/actions.py:236
+msgid "gpuiservice is not active after start"
+msgstr "gpuiservice не активна после запуска"
 
-#: ipa_gpo_install/actions.py:246
-msgid "GPUIService started successfully"
-msgstr "GPUIService успешно запущена"
+#: ipa_gpo_install/actions.py:239
+msgid "gpuiservice is enabled and running"
+msgstr "gpuiservice включена и запущена"
 
-#: ipa_gpo_install/actions.py:250
-msgid "Failed to start GPUIService: {}"
-msgstr "Не удалось запустить GPUIService: {}"
+#: ipa_gpo_install/actions.py:243
+#, python-format
+msgid "Unexpected error managing gpuiservice: %s"
+msgstr "Неожиданная ошибка управления gpuiservice: %s"
 
-#: ipa_gpo_install/actions.py:254
-msgid "Error starting GPUIService: {}"
-msgstr "Ошибка запуска GPUIService: {}"
-
-#: ipa_gpo_install/actions.py:282 ipa_gpo_install/actions.py:316
+#: ipa_gpo_install/actions.py:271 ipa_gpo_install/actions.py:305
 msgid "Plugin file not found: {}"
 msgstr "Файл плагина не найден: {}"
 
-#: ipa_gpo_install/actions.py:296
+#: ipa_gpo_install/actions.py:285
 msgid "Checking plugin files installation"
 msgstr "Проверка установки файлов плагинов"
 
-#: ipa_gpo_install/actions.py:321
+#: ipa_gpo_install/actions.py:310
 msgid ""
 "Plugin files missing. Please ensure the freeipa-server-gpo package is "
 "installed."
@@ -466,9 +455,27 @@ msgstr ""
 "Файлы плагинов отсутствуют. Убедитесь, что пакет freeipa-server-gpo "
 "установлен."
 
-#: ipa_gpo_install/actions.py:325
+#: ipa_gpo_install/actions.py:314
 msgid "All plugin files are present"
 msgstr "Все файлы плагинов присутствуют"
+
+#~ msgid "Initiating oddjob service restart"
+#~ msgstr "Инициирование перезапуска службы oddjob"
+
+#~ msgid "oddjob service is not running, starting it"
+#~ msgstr "Служба oddjob не запущена, запускаем ее"
+
+#~ msgid "Checking GPUIService status"
+#~ msgstr "Проверка состояния GPUIService"
+
+#~ msgid "GPUIService is not running, starting it"
+#~ msgstr "GPUIService не запущена, запускаем ее"
+
+#~ msgid "GPUIService started successfully"
+#~ msgstr "GPUIService успешно запущена"
+
+#~ msgid "Error starting GPUIService: {}"
+#~ msgstr "Ошибка запуска GPUIService: {}"
 
 #~ msgid "Activating plugins from staging directory"
 #~ msgstr "Активация плагинов из промежуточной директории"
