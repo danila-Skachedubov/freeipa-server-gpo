@@ -2,7 +2,7 @@
 %add_python3_req_skip utils
 
 Name:           freeipa-server-gpo
-Version:        0.0.6
+Version:        0.0.7
 Release:        alt1
 
 Summary:        Prepare FreeIPA for Group Policy Management
@@ -72,6 +72,15 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 
 
 %changelog
+* Thu Apr 30 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.0.7-alt1
+- feat: improved ADMX support (localization, help texts, parsing, and navigation)
+- feat: added full Group Policy Preferences (GPP) support, including validation, XML generation, and DBus API
+- feat: enhanced path handling (config-driven paths, normalization, sysvol mapping, update utility with rollback)
+- fix: multiple fixes for policy handling, registry processing, JSON/Unicode output, and API compatibility
+- fix: improved stability (thread safety, error handling, correct data parsing)
+- refactor: simplified architecture, added type hints, and introduced shared configuration modules
+- docs/build: added testing documentation and updated build utilities/dependencies
+
 * Tue Mar 03 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.0.6-alt1
 - feat(gpuiservice): improve service management with enable --now
 
