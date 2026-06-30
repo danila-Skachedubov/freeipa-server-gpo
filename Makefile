@@ -55,6 +55,7 @@ install: build
 	# GPUIService
 	install -D -m 644 gpui_service/gpuiservice.service $(DESTDIR)$(PREFIX)/lib/systemd/system/gpuiservice.service
 	install -D -m 644 gpui_service/org.altlinux.gpuiservice.conf $(DESTDIR)/etc/dbus-1/system.d/org.altlinux.gpuiservice.conf
+	install -D -m 644 gpui_service/org.altlinux.gpuiservice.service $(DESTDIR)$(PREFIX)/share/dbus-1/system-services/org.altlinux.gpuiservice.service
 	install -D -m 644 gpui_service/org.altlinux.gpuiservice.gschema.xml $(DESTDIR)$(PREFIX)/share/glib-2.0/schemas/org.altlinux.gpuiservice.gschema.xml
 	@mkdir -p $(DESTDIR)$(PYTHON_SITELIBDIR)/gpui_service
 	cp -r gpui_service/*.py $(DESTDIR)$(PYTHON_SITELIBDIR)/gpui_service/

@@ -67,6 +67,7 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 %_prefix/sbin/gpuiservice
 %_prefix/lib/systemd/system/gpuiservice.service
 %config(noreplace) %_sysconfdir/dbus-1/system.d/org.altlinux.gpuiservice.conf
+%_datadir/dbus-1/system-services/org.altlinux.gpuiservice.service
 %_datadir/glib-2.0/schemas/org.altlinux.gpuiservice.gschema.xml
 
 
