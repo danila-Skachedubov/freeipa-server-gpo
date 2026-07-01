@@ -211,9 +211,10 @@ define(["freeipa/ipa", "freeipa/rpc"], function(IPA, rpc) {
      * @param {string} target — область применения политики (Machine/User)
      * @param {string} path — путь политики
      * @param {string} value — новое значение политики
+     * @param {string} metadata — путь к ADMX metadata
      * @returns {Promise<*>} — промис с результатом сохранения
      */
-    function set(nameGpt, target, path, value) {
+    function set(nameGpt, target, path, value, metadata) {
         return new Promise(function(resolve, reject) {
             rpc.command({
                 entity: 'gpo',
@@ -222,7 +223,8 @@ define(["freeipa/ipa", "freeipa/rpc"], function(IPA, rpc) {
                     nameGpt || '',
                     target || '',
                     path || '/',
-                    value || ''
+                    value || '',
+                    metadata || ''
                 ],
                 options: {
                     version: IPA.api_version
