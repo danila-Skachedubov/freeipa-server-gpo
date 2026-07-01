@@ -29,12 +29,14 @@ from typing import Any, Optional, Union
 
 try:
     from .parse_admx_structure import AdmxParser
+    from .admx_value_types import reg_type_for_metadata_value
     from . import utils
     from .config import set_locale as gsettings_set_locale
     from .config import DEFAULT_SYSVOL_PATH, DEFAULT_MONITOR_PATH, SUPPORTED_LOCALES
     from .admxnavigator import ADMXNavigator
 except ImportError:
     from parse_admx_structure import AdmxParser
+    from admx_value_types import reg_type_for_metadata_value
     import utils
     from config import set_locale as gsettings_set_locale
     from config import DEFAULT_SYSVOL_PATH, DEFAULT_MONITOR_PATH, SUPPORTED_LOCALES
@@ -268,6 +270,32 @@ class GPODataStore:
                                 return item
             return None
 
+    def _find_metadata_by_storage_path(self, storage_path: str):
+        """Find a wrapped heavy-key metadata entry by its registry storage path."""
+        if not storage_path:
+            return None
+
+        normalized_path = AdmxParser.normalize_registry_key(storage_path)
+
+        def walk(node):
+            if isinstance(node, dict):
+                direct = node.get(normalized_path)
+                if isinstance(direct, dict) and isinstance(direct.get('metadata'), dict):
+                    return direct
+
+                for value in node.values():
+                    found = walk(value)
+                    if found is not None:
+                        return found
+            elif isinstance(node, list):
+                for item in node:
+                    found = walk(item)
+                    if found is not None:
+                        return found
+            return None
+
+        return walk(self.data)
+
 
     def set(self, path, value, name_gpt, target=None, metadata=None):
         """Set value by path
@@ -355,6 +383,8 @@ class GPODataStore:
         heavy_meta = None
         if metadata_path:
             metadata_obj = self.get(metadata_path)
+            if metadata_obj is None:
+                metadata_obj = self._find_metadata_by_storage_path(metadata_path)
             logger.debug(f"metadata_path={metadata_path}, metadata_obj={metadata_obj}")
             if isinstance(metadata_obj, dict):
                 # Extract valueName and type from metadata
@@ -413,18 +443,6 @@ class GPODataStore:
                         logger.debug(f"heavy_meta selected: valueName={heavy_meta.get('valueName')}, type={heavy_meta.get('type')}")
 
                 if isinstance(heavy_meta, dict):
-                    meta_type = heavy_meta.get('type')
-                    if meta_type:
-                        # Map ADMX metadata type to registry type
-                        type_map = {
-                            'text': 'REG_SZ',
-                            'decimal': 'REG_DWORD',
-                            'boolean': 'REG_DWORD',
-                            'enum': 'REG_SZ',
-                            'list': 'REG_MULTI_SZ',
-                            'policyValue': 'REG_DWORD',
-                        }
-                        value_type = type_map.get(meta_type, value_type)
                     # Override value_name from metadata if present
                     meta_value_name = heavy_meta.get('valueName')
                     if meta_value_name is not None:
@@ -438,11 +456,18 @@ class GPODataStore:
             # Override with explicit values if provided
             value_name = parsed_value.get('value_name', value_name)
             value_data = parsed_value.get('value_data', parsed_value.get('data', ''))
-            value_type = parsed_value.get('value_type', value_type)
+            explicit_value_type = parsed_value.get('value_type')
+            if explicit_value_type:
+                value_type = explicit_value_type
         else:
             # Treat value as raw data, default value_name empty (default value)
             value_data = parsed_value
             # value_name and value_type already set from metadata or defaults
+
+        if isinstance(heavy_meta, dict) and not (
+            isinstance(parsed_value, dict) and parsed_value.get('value_type')
+        ):
+            value_type = reg_type_for_metadata_value(heavy_meta, value_data, value_type)
 
         # If no metadata and value_name not set, extract from key_path
         if not metadata_obj and not value_name:
