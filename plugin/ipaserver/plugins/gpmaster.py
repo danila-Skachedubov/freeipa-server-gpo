@@ -108,9 +108,7 @@ class gpmaster(LDAPObject):
             return chain_name
 
         try:
-            chain_dn = DN(('cn', chain_name),
-                         ('cn', 'System'),
-                         api.env.basedn)
+            chain_dn = self.api.Object.chain.get_dn(chain_name)
 
             if strict:
                 ldap = self.api.Backend.ldap2

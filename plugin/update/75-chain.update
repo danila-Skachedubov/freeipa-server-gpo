@@ -15,3 +15,11 @@ add: referint-membership-attr: userGroup
 ###############################################################################
 dn: cn=referential integrity postoperation,cn=plugins,cn=config
 add: referint-membership-attr: computerGroup
+
+###############################################################################
+# Create container for Group Policy Chains
+###############################################################################
+dn: cn=Chains,cn=System,$SUFFIX
+default: objectClass: top
+default: objectClass: nsContainer
+default: cn: Chains
