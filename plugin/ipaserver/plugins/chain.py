@@ -17,7 +17,7 @@ register = Registry()
 
 PLUGIN_CONFIG = (
     ('container_system', DN(('cn', 'System'))),
-    ('container_grouppolicychain', DN(('cn', 'System'))),
+    ('container_grouppolicychain', DN(('cn', 'Chains'), ('cn', 'System'))),
 )
 
 OBJECT_TYPE_MAPPING = {
