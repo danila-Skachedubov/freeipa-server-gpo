@@ -286,6 +286,9 @@ class gpmaster_mod(LDAPUpdate):
             chain_to_move = current_chains.pop(current_index)
             current_chains.insert(new_index, chain_to_move)
 
+        entry['chainlist'] = []
+        ldap.update_entry(entry)
+
         entry = ldap.get_entry(dn)
         entry['chainlist'] = current_chains
         ldap.update_entry(entry)
