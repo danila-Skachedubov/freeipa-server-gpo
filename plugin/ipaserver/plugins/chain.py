@@ -581,6 +581,9 @@ class chain_mod(LDAPUpdate):
             gp_to_move = current_gplinks.pop(current_index)
             current_gplinks.insert(new_index, gp_to_move)
 
+        entry['gplink'] = []
+        ldap.update_entry(entry)
+
         entry = ldap.get_entry(dn)
         entry['gplink'] = current_gplinks
         ldap.update_entry(entry)
