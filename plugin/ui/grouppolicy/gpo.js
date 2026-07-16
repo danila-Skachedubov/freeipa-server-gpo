@@ -64,7 +64,7 @@ define([
                     $type: 'details',
                     name: 'details',
                     check_rights: false,
-                    actions: ['save', 'revert', 'refresh'],
+                    actions: ['gpo_save', 'revert', 'refresh'],
                     sections: [
                         {
                             name: 'identity',
@@ -86,12 +86,9 @@ define([
                                     read_only: true
                                 },
                                 {
-                                    name: 'gpcfilesyspath',
-                                    label: 'File System Path'
-                                },
-                                {
                                     name: 'versionnumber',
-                                    label: 'Version Number'
+                                    label: 'Version Number',
+                                    read_only: true
                                 },
                                 {
                                     name: 'flags',
@@ -119,7 +116,7 @@ define([
 
     exp.save_action = function(spec) {
         spec = spec || {};
-        spec.name = spec.name || 'save';
+        spec.name = spec.name || 'gpo_save';
         spec.label = spec.label || 'Save';
         spec.enable_cond = spec.enable_cond || ['dirty'];
         spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : false;
@@ -131,58 +128,28 @@ define([
             var values = facet.get_values();
             var original_values = facet.get_original_values();
 
-            // Prepare modification data
             var mod_data = {};
             var has_changes = false;
 
-            // Check ONLY for rename (displayname change)
-            // Convert both to strings and trim for comparison
             var current_displayname = String(original_values.displayname || '').trim();
             var new_displayname = String(values.displayname || '').trim();
 
-            // Only rename if name is actually different (not empty, not same)
             if (new_displayname && new_displayname !== current_displayname) {
                 mod_data.rename = new_displayname;
                 has_changes = true;
             }
 
-            // DO NOT check for changes in other fields
-            // Only version will be automatically incremented
-            // Other fields remain unchanged unless explicitly renamed
-            // Always set has_changes to true to allow version increment
-            if (!has_changes) {
+            var current_flags = parseInt(original_values.flags || 0, 10);
+            var new_flags = parseInt(values.flags || 0, 10);
+            if (Number.isFinite(new_flags) && new_flags !== current_flags) {
+                mod_data.flags = new_flags;
                 has_changes = true;
             }
 
-            // Check if versionnumber was manually changed
-            var version_changed_manually = parseInt(values.versionnumber) !== parseInt(original_values.versionnumber || 0);
-            if (version_changed_manually) {
-                // Validate manual version change
-                var new_version = parseInt(values.versionnumber);
-                var current_version = parseInt(original_values.versionnumber || 0);
-
-                if (new_version <= current_version) {
-                    IPA.notify('Version number must be greater than current version (' + current_version + '). Auto-incrementing to version ' + (current_version + 1) + '.', 'warning');
-                    // Auto-increment instead
-                    mod_data.versionnumber = current_version + 1;
-                } else {
-                    mod_data.versionnumber = new_version;
-                    IPA.notify('Using manually specified version: ' + new_version, 'info');
-                }
-                has_changes = true;
-            }
-
-            // If no changes, just return
             if (!has_changes) {
                 IPA.notify('No changes made', 'info');
                 if (on_success) on_success();
                 return;
-            }
-
-            // Automatically increment version if there are changes (unless manually changed with valid version)
-            if (has_changes && !version_changed_manually) {
-                var current_version = parseInt(original_values.versionnumber || 0);
-                mod_data.versionnumber = current_version + 1;
             }
 
             // Get the GPO name (primary key)
@@ -199,10 +166,6 @@ define([
                     var success_msg = 'GPO "' + gpo_name + '" updated successfully';
                     if (mod_data.rename) {
                         success_msg = 'GPO renamed from "' + gpo_name + '" to "' + mod_data.rename + '" successfully';
-                    }
-                    // Add version info to success message
-                    if (mod_data.versionnumber !== undefined) {
-                        success_msg += ' (version: ' + mod_data.versionnumber + ')';
                     }
                     IPA.notify_success(success_msg);
                     if (on_success) on_success(mod_result);
@@ -299,7 +262,7 @@ define([
         var e = reg.entity;
         var a = reg.action;
 
-        a.register('save', exp.save_action);
+        a.register('gpo_save', exp.save_action);
         a.register('gpui', exp.gpui_action);
         e.register({type: 'gpo', spec: exp.gpo_entity_spec});
     };
