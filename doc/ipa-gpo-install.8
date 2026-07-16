@@ -36,6 +36,9 @@ Installs AD trust support if it is not already installed
 Creates the SYSVOL directory structure
 .IP \(bu 4
 Configures the Samba SYSVOL share
+.IP \(bu 4
+Grants the FreeIPA web service controlled editor access to GPO payloads and
+creates private libadmix publication state
 .
 .SH OPTIONS
 .TP
@@ -61,12 +64,19 @@ The ipa-gpo-install log file.
 \fB/var/lib/freeipa/sysvol\fR
 The SYSVOL directory for storing group policies.
 .TP
+\fB/var/lib/freeipa/gpo-editor-state\fR
+Private host-local libadmix publication recovery state, owned by the FreeIPA
+service account and not shared through SYSVOL.
+.TP
 \fB/etc/samba/smb.conf\fR
 The Samba configuration file.
 .
 .SH REQUIREMENTS
-This utility requires a correctly installed and configured FreeIPA server. It must be run with root privileges on the FreeIPA
- server and requires a valid Kerberos ticket for a user who is a domain administrator or a member of the 'admins' group.
+This utility requires a correctly installed and configured FreeIPA server,
+python3-module-admix binding API version 3, and Administrative Templates. It
+must be run with root privileges on the FreeIPA server and requires a valid
+Kerberos ticket for a user who is a domain administrator or a member of the
+'admins' group.
 .
 .SH "SEE ALSO"
 ipa-adtrust-install(1), ipa(1), kinit(1)

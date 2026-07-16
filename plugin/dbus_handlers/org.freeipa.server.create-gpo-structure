@@ -7,6 +7,7 @@ from ipa_gpo_install.config import (
     get_policies_path, get_policy_path, get_gpt_ini_path,
     is_valid_guid, is_valid_domain
 )
+from ipa_gpo_install.filesystem import ensure_new_gpo_acls
 
 
 def main():
@@ -51,6 +52,8 @@ def main():
             gpt_file.write("[General]\n")
             gpt_file.write("displayName={}\n".format(displayname))
             gpt_file.write("Version=0\n")
+
+        ensure_new_gpo_acls(policies_path, policy_path)
 
         print("Created GPT.INI file: {}".format(gpt_ini_path))
         print("GPO structure creation completed successfully")

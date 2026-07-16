@@ -1,6 +1,3 @@
-%add_python3_req_skip parse_admx_structure
-%add_python3_req_skip utils
-
 Name:           freeipa-server-gpo
 Version:        0.0.8
 Release:        alt1
@@ -19,7 +16,12 @@ Requires: python3-module-ipaserver
 Requires: freeipa-server-trust-ad
 Requires: samba-common-tools
 Requires: admx-basealt
+Requires: python3-module-admix
+Requires: acl
 Source0: %name-%version.tar
+
+%define legacy_editor_retirement_marker /var/lib/freeipa/.gpo-editor-libadmix-migration-v1
+%define legacy_editor_schema_marker /var/lib/freeipa/.gpo-editor-libadmix-schema-dirty-v1
 
 %description
 A utility for preparing FreeIPA for Group Policy Management.
@@ -36,17 +38,47 @@ and creates the necessary directory structure.
 make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitelibdir
 %find_lang ipa-gpo-install
 
+%pre
+if [ "$1" -gt 1 ] && [ ! -e %legacy_editor_retirement_marker ]; then
+    if [ -e %_datadir/glib-2.0/schemas/org.altlinux.gpuiservice.gschema.xml ]; then
+        if [ ! -x /usr/bin/glib-compile-schemas ]; then
+            echo "freeipa-server-gpo: glib-compile-schemas is required to retire the installed gpuiservice schema" >&2
+            exit 1
+        fi
+        install -D -m 600 /dev/null %legacy_editor_schema_marker || exit 1
+    fi
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl stop gpuiservice.service >/dev/null 2>&1 || :
+        systemctl disable gpuiservice.service >/dev/null 2>&1 || :
+    fi
+fi
+
+%posttrans
+if [ "$1" -gt 1 ] && [ ! -e %legacy_editor_retirement_marker ]; then
+    if [ -e %legacy_editor_schema_marker ]; then
+        /usr/bin/python3 -c 'from ipa_gpo_install.filesystem import retire_legacy_editor_runtime; retire_legacy_editor_runtime(manage_services=False, rebuild_schema_cache=True, manage_retirement_marker=False)' || exit 1
+    else
+        /usr/bin/python3 -c 'from ipa_gpo_install.filesystem import retire_legacy_editor_runtime; retire_legacy_editor_runtime(manage_services=False, manage_retirement_marker=False)' || exit 1
+    fi
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl daemon-reload >/dev/null 2>&1 || exit 1
+        if systemctl is-active --quiet gpuiservice.service; then
+            echo "freeipa-server-gpo: legacy gpuiservice is still active after upgrade" >&2
+            exit 1
+        fi
+    fi
+    rm -f %legacy_editor_schema_marker || exit 1
+    install -D -m 600 /dev/null %legacy_editor_retirement_marker || exit 1
+fi
+
 %files -f ipa-gpo-install.lang
 %doc README.md
 %doc README.ru.md
 %_bindir/ipa-gpo-install
-%_bindir/ipa-gpo-update-paths
 %python3_sitelibdir/ipa_gpo_install/
 %python3_sitelibdir/ipaserver/plugins/gpo.py*
 %python3_sitelibdir/ipaserver/plugins/chain.py*
 %python3_sitelibdir/ipaserver/plugins/gpmaster.py*
-%python3_sitelibdir/ipaclient/plugins/gpo_client.py*
-%python3_sitelibdir/ipaclient/plugins/__pycache__/gpo_client.*
 %python3_sitelibdir/ipaserver/plugins/__pycache__/gpo.*
 %python3_sitelibdir/ipaserver/plugins/__pycache__/chain.*
 %python3_sitelibdir/ipaserver/plugins/__pycache__/gpmaster.*
@@ -63,13 +95,6 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 %_mandir/man8/ipa-gpo-install.8*
 %_mandir/ru/man8/ipa-gpo-install.8*
 %_datadir/bash-completion/completions/ipa-gpo-install
-%python3_sitelibdir/gpui_service/
-%_prefix/sbin/gpuiservice
-%_prefix/lib/systemd/system/gpuiservice.service
-%config(noreplace) %_sysconfdir/dbus-1/system.d/org.altlinux.gpuiservice.conf
-%_datadir/glib-2.0/schemas/org.altlinux.gpuiservice.gschema.xml
-
-
 %changelog
 * Mon Jun 15 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.0.8-alt1
 - feat: add unsaved changes confirmation modal on tree navigation (thx vladimirovicp)

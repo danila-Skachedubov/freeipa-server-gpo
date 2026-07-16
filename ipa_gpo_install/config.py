@@ -6,6 +6,9 @@ import re
 
 FREEIPA_BASE_PATH = "/var/lib/freeipa"
 FREEIPA_SYSVOL_PATH = os.path.join(FREEIPA_BASE_PATH, "sysvol")
+GPO_EDITOR_STATE_DIR = os.path.join(FREEIPA_BASE_PATH, "gpo-editor-state")
+GPO_EDITOR_USER = "ipaapi"
+GPO_EDITOR_GROUP = "ipaapi"
 
 LOG_FILE_PATH = "/var/log/freeipa/ipa-gpo-install.log"
 LOCALE_DIR = "/usr/share/locale"

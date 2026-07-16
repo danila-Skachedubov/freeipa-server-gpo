@@ -5,13 +5,21 @@ import subprocess
 import logging
 import gettext
 import locale
+from pathlib import Path
 
 import ldap
 
 from ipalib import api
 from ipalib import krb_utils
 from ipapython import ipautil
-from .config import LOCALE_DIR, get_domain_sysvol_path
+from .config import (
+    GPO_EDITOR_STATE_DIR,
+    GPO_EDITOR_USER,
+    LOCALE_DIR,
+    get_domain_sysvol_path,
+    get_policies_path,
+)
+from .filesystem import editor_state_directory_status
 
 
 try:
@@ -113,7 +121,6 @@ class IPAChecker:
                 'ipa',
                 'sssd',
                 'oddjobd',
-                'gpuiservice'
             ]
             self.logger.debug(_("Checking IPA services"))
 
@@ -124,7 +131,7 @@ class IPAChecker:
                 result = ipautil.run(cmd, raiseonerr=False)
 
                 if result.returncode != 0:
-                    if service == 'oddjobd' or service == 'gpuiservice':
+                    if service == 'oddjobd':
                         self.logger.warning(_(
                             "Service {} is not active - will be started during installation"
                         ).format(service))
@@ -232,6 +239,169 @@ class IPAChecker:
         except Exception as e:
             self.logger.error(_("Error checking SYSVOL directory: {}").format(e))
             return False
+
+    def check_editor_state_directory(self):
+        """Verify private state ownership and permissions."""
+        healthy, reason = editor_state_directory_status()
+        if healthy:
+            self.logger.info(
+                _("GPO editor state directory is private and correctly owned")
+            )
+            return True
+
+        self.logger.warning(
+            _("GPO editor state directory is not ready ({}): {}").format(
+                GPO_EDITOR_STATE_DIR, reason
+            )
+        )
+        return False
+
+    @staticmethod
+    def _acl_entries(path):
+        result = subprocess.run(
+            ["getfacl", "-cp", str(path)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        return {
+            line.partition("#")[0].strip()
+            for line in result.stdout.splitlines()
+            if line and not line.startswith("#")
+        }
+
+    @staticmethod
+    def _identity_can_access(path, permissions):
+        flags = {"r": "-r", "w": "-w", "x": "-x"}
+        for permission in permissions:
+            result = subprocess.run(
+                [
+                    "runuser", "-u", GPO_EDITOR_USER, "--", "test",
+                    flags[permission], str(path),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode != 0:
+                return False
+        return True
+
+    def _check_editor_directory(
+            self,
+            path,
+            access_permissions="rwx",
+            identity_permissions="rwx",
+            require_default=True,
+            forbid_write=False):
+        entries = self._acl_entries(path)
+        if entries is None:
+            self.logger.warning(_("Cannot read ACLs from {}").format(path))
+            return False
+
+        required = {
+            "user:{}:{}".format(GPO_EDITOR_USER, access_permissions)
+        }
+        if require_default:
+            required.add("default:user:{}:rwx".format(GPO_EDITOR_USER))
+        if not required.issubset(entries):
+            self.logger.warning(
+                _("GPO editor ACL entries are incomplete on {}").format(path)
+            )
+            return False
+        if not self._identity_can_access(path, identity_permissions):
+            self.logger.warning(
+                _("{} cannot access GPO directory {}").format(
+                    GPO_EDITOR_USER, path
+                )
+            )
+            return False
+        if forbid_write and self._identity_can_access(path, "w"):
+            self.logger.warning(
+                _("{} must not write to Policies root {}").format(
+                    GPO_EDITOR_USER, path
+                )
+            )
+            return False
+        return True
+
+    def check_policies_editor_access(self):
+        """Verify inherited ACLs and representative access as ipaapi."""
+        policies_path = Path(get_policies_path(self.api.env.domain))
+        try:
+            if policies_path.is_symlink() or not policies_path.is_dir():
+                self.logger.warning(
+                    _("Policies path is not a real directory: {}").format(
+                        policies_path
+                    )
+                )
+                return False
+            if not self._check_editor_directory(
+                    policies_path,
+                    access_permissions="r-x",
+                    identity_permissions="rx",
+                    forbid_write=True):
+                return False
+
+            gpo_directories = sorted(
+                child for child in policies_path.iterdir()
+                if child.is_dir() and not child.is_symlink()
+            )
+            if not gpo_directories:
+                self.logger.info(
+                    _("Policies ACLs are ready; no existing GPO needs sampling")
+                )
+                return True
+
+            representative = gpo_directories[0]
+            if not self._check_editor_directory(representative):
+                return False
+
+            representative_file = representative / "GPT.INI"
+            if (representative_file.is_symlink()
+                    or not representative_file.is_file()):
+                representative_file = None
+                for current, child_dirs, files in os.walk(
+                        representative, followlinks=False):
+                    child_dirs[:] = [
+                        name for name in child_dirs
+                        if not (Path(current) / name).is_symlink()
+                    ]
+                    for name in sorted(files):
+                        candidate = Path(current) / name
+                        if candidate.is_file() and not candidate.is_symlink():
+                            representative_file = candidate
+                            break
+                    if representative_file is not None:
+                        break
+
+            if (representative_file is not None
+                    and not self._identity_can_access(
+                        representative_file, "rw")):
+                self.logger.warning(
+                    _("{} cannot edit representative GPO file {}").format(
+                        GPO_EDITOR_USER, representative_file
+                    )
+                )
+                return False
+
+            self.logger.info(
+                _("Policies ACLs grant the required GPO editor access")
+            )
+            return True
+        except (OSError, ValueError) as exc:
+            self.logger.error(
+                _("Error checking GPO editor ACLs: {}").format(exc)
+            )
+            return False
+
+    def check_editor_filesystem(self):
+        """Run all filesystem health checks required by the editor plugin."""
+        state_healthy = self.check_editor_state_directory()
+        policies_healthy = self.check_policies_editor_access()
+        return state_healthy and policies_healthy
 
     def check_sysvol_share(self):
         """
