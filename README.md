@@ -178,7 +178,7 @@ This approach provides predictable and controlled policy inheritance with flexib
 ### Requirements
 
 - FreeIPA server
-- `python3-module-admix` with binding API version 3
+- `python3-module-admix` with binding API version 1
 - Administrative Templates provided by `admx-basealt`
 - Administrator rights
 - Valid Kerberos ticket
@@ -213,15 +213,6 @@ Options:
 ## Technical implementation
 
 ### LDAP Schema
-- `cn` - Policy GUID
-- `displayName` - Display name of policy
-- `distinguishedName` - Object DN
-- `flags` - Policy flags
-- `gPCFileSysPath` - Path to policy files in SYSVOL
-- `versionNumber` - Policy version number
-- `gPCMachineExtensionNames` - Published machine-side policy extensions
-- `gPCUserExtensionNames` - Published user-side policy extensions
-
 **groupPolicyContainer (GPC)**
 - `cn` - Policy GUID
 - `displayName` - Display name of policy
@@ -366,13 +357,15 @@ The extension includes a full-featured web interface integrated into the FreeIPA
 
 ### SYSVOL
 After installation, directory structure is created:
+```
 /var/lib/freeipa/sysvol/
-└── domain.example.com/
-├── Policies/
-│ └── {GUID}/
-│ ├── GPT.INI
-│ ├── Machine/
-│ └── User/
+├── domain.example.com/
+│ ├── Policies/
+│ │ ├── {GUID}/
+│ │ │ ├── GPT.INI
+│ │ │ ├── Machine/
+│ │ │ └── User/
+```
 
 
 ### Policy files

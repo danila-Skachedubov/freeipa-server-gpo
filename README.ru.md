@@ -180,7 +180,7 @@ policy-1 → policy-2 → policy-3 → policy-4
 ### Требования
 
 - FreeIPA сервер
-- `python3-module-admix` с binding API версии 3
+- `python3-module-admix` с binding API версии 1
 - Административные шаблоны из пакета `admx-basealt`
 - Права администратора
 - Действующий Kerberos-билет
@@ -216,15 +216,6 @@ ipa-gpo-install [OPTIONS]
 ## Техническая реализация
 
 ### Схема LDAP
-- `cn` — GUID политики
-- `displayName` — отображаемое имя политики
-- `distinguishedName` — DN объекта
-- `flags` — флаги политики
-- `gPCFileSysPath` — путь к файлам политики в SYSVOL
-- `versionNumber` — номер версии политики
-- `gPCMachineExtensionNames` — опубликованные расширения машинной части политики
-- `gPCUserExtensionNames` — опубликованные расширения пользовательской части политики
-
 **groupPolicyContainer (GPC)**
 - `cn` — GUID политики
 - `displayName` — отображаемое имя политики
@@ -381,14 +372,15 @@ ipa-gpo-install [OPTIONS]
 
 ### SYSVOL
 После установки создается структура каталогов:
-
+```
 /var/lib/freeipa/sysvol/
-└── domain.example.com/
-    ├── Policies/
-    │   └── {GUID}/
-    │       ├── GPT.INI
-    │       ├── Machine/
-    │       └── User/
+├── domain.example.com/
+│ ├── Policies/
+│ │ ├── {GUID}/
+│ │ │ ├── GPT.INI
+│ │ │ ├── Machine/
+│ │ │ └── User/
+```
 
 ### Файлы политик
 Каждая политика создает в SYSVOL структуру:
