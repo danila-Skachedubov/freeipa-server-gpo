@@ -13,11 +13,17 @@ BuildRequires: gettext-tools
 
 Requires: python3-module-freeipa
 Requires: python3-module-ipaserver
+Requires: freeipa-server-core
 Requires: freeipa-server-trust-ad
 Requires: samba-common-tools
 Requires: admx-basealt
 Requires: python3-module-admix
 Requires: acl
+Requires: coreutils
+Requires: libgio
+Requires: oddjob
+Requires: systemd
+Requires: util-linux
 Source0: %name-%version.tar
 
 %define legacy_editor_retirement_marker /var/lib/freeipa/.gpo-editor-libadmix-migration-v1
