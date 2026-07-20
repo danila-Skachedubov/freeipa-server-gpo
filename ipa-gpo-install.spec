@@ -53,7 +53,7 @@ if [ "$1" -gt 1 ] && [ ! -e %legacy_editor_retirement_marker ]; then
     fi
 fi
 
-%posttrans
+%post
 if [ "$1" -gt 1 ] && [ ! -e %legacy_editor_retirement_marker ]; then
     if [ -e %legacy_editor_schema_marker ]; then
         /usr/bin/python3 -c 'from ipa_gpo_install.filesystem import retire_legacy_editor_runtime; retire_legacy_editor_runtime(manage_services=False, rebuild_schema_cache=True, manage_retirement_marker=False)' || exit 1
