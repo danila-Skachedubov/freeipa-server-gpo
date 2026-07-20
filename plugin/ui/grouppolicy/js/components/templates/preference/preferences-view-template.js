@@ -10,6 +10,7 @@ define([
     var createElement = elementCreator.createElement;
     var t = translations.t;
     var nextHeaderOwnerId = 1;
+    var nextFieldControlId = 1;
 
     function pt(key) {
         return t('preferences.editor.' + key);
@@ -34,41 +35,71 @@ define([
         return prefix + String(candidate && candidate.label || '');
     }
 
-    function fieldControl(field, forceReadonly) {
+    function scopeField(field, scope) {
+        var result = dto.clone(field);
+        if (!result || result.id !== 'metadata.userContext') return result;
+        if (scope === 'user') {
+            result.label = pt('userContext');
+        } else {
+            result.hidden = true;
+            result.editable = false;
+        }
+        return result;
+    }
+
+    function hiddenFieldControl(field) {
+        return {
+            id: field.id,
+            field: field,
+            read: function() { return dto.clone(field.value); },
+            setError: function() {},
+            focus: function() {}
+        };
+    }
+
+    function fieldControl(field, forceReadonly, materializeOptionalDefault) {
         var value = dto.clone(field.value || { kind: 'text', value: '' });
         var disabled = Boolean(forceReadonly || field.editable === false);
         var controlKind = field.control || '';
         var input;
-        var optionalTextPresence = null;
         var inputElement = null;
+        var optionalBooleanTouched = false;
+        var checkboxValueKind = null;
+        function checkboxControl(checked) {
+            var controlId = 'gpo-preference-field-' + nextFieldControlId++;
+            var checkbox = createElement('input', {
+                attrs: {
+                    id: controlId,
+                    type: 'checkbox',
+                    disabled: disabled ? 'disabled' : null
+                }
+            });
+            checkbox.getElement().checked = Boolean(checked);
+            checkbox.on('change', function() { optionalBooleanTouched = true; });
+            inputElement = checkbox.getElement();
+            return createElement('span', {
+                className: 'gpo-editor-boolean',
+                children: [
+                    checkbox,
+                    createElement('label', {
+                        attrs: { 'for': controlId, 'aria-label': field.label || field.id }
+                    })
+                ]
+            });
+        }
         if (controlKind.indexOf('generated_') === 0) {
             input = createElement('div', {
                 className: 'gpo-editor-field__generated',
                 text: value.value === null || value.value === undefined ? '' : String(value.value)
             });
         } else if (value.kind === 'boolean') {
-            input = createElement('input', { attrs: { type: 'checkbox', disabled: disabled ? 'disabled' : null } });
-            input.getElement().checked = Boolean(value.value);
+            input = checkboxControl(value.value);
         } else if (value.kind === 'optional_boolean') {
-            input = createElement('select', {
-                attrs: { disabled: disabled ? 'disabled' : null },
-                children: [
-                    createElement('option', { attrs: { value: '' }, text: pt('unspecified') }),
-                    createElement('option', { attrs: { value: 'true' }, text: pt('yes') }),
-                    createElement('option', { attrs: { value: 'false' }, text: pt('no') })
-                ]
-            });
-            input.getElement().value = value.value === null ? '' : String(value.value);
+            checkboxValueKind = 'optional_boolean';
+            input = checkboxControl(value.value === true);
         } else if (controlKind === 'optional_boolean_u8') {
-            input = createElement('select', {
-                attrs: { disabled: disabled ? 'disabled' : null },
-                children: [
-                    createElement('option', { attrs: { value: '' }, text: pt('unspecified') }),
-                    createElement('option', { attrs: { value: '1' }, text: pt('yes') }),
-                    createElement('option', { attrs: { value: '0' }, text: pt('no') })
-                ]
-            });
-            input.getElement().value = value.value === null ? '' : String(value.value);
+            checkboxValueKind = 'optional_boolean_u8';
+            input = checkboxControl(value.value === 1);
         } else if (value.kind === 'action') {
             input = createElement('select', {
                 attrs: { disabled: disabled ? 'disabled' : null },
@@ -91,29 +122,12 @@ define([
                 text: Array.isArray(value.value) ? value.value.join('\n') : ''
             });
         } else if (value.kind === 'optional_text') {
-            var optionalTextInput = createElement('input', {
+            input = createElement('input', {
                 attrs: {
                     type: 'text',
-                    disabled: disabled || value.value === null ? 'disabled' : null,
+                    disabled: disabled ? 'disabled' : null,
                     value: value.value === null ? '' : value.value
                 }
-            });
-            optionalTextPresence = createElement('input', {
-                attrs: { type: 'checkbox', disabled: disabled ? 'disabled' : null }
-            });
-            optionalTextPresence.getElement().checked = value.value !== null;
-            optionalTextPresence.on('change', function() {
-                optionalTextInput.getElement().disabled = disabled || !optionalTextPresence.getElement().checked;
-            });
-            input = createElement('div', {
-                className: 'gpo-editor-optional-text',
-                children: [
-                    createElement('span', {
-                        className: 'gpo-editor-optional-text__presence',
-                        children: [optionalTextPresence, createElement('span', { text: pt('specified') })]
-                    }),
-                    optionalTextInput
-                ]
             });
         } else {
             var numeric = value.kind === 'integer' || value.kind === 'unsigned_byte' || value.kind === 'optional_unsigned_byte';
@@ -128,11 +142,9 @@ define([
                 }
             });
         }
-        inputElement = value.kind === 'optional_text'
-            ? input.getElement().querySelector('input[type="text"]')
-            : input.getElement();
+        if (!inputElement) inputElement = input.getElement();
         var errorElement = createElement('span', { className: 'gpo-editor-field__error' });
-        var element = createElement('label', {
+        var element = createElement('div', {
                 className: ['gpo-editor-field', disabled ? 'gpo-editor-field--readonly' : null],
                 attrs: { 'data-field-id': field.id },
                 children: [
@@ -158,11 +170,15 @@ define([
             element: element,
             read: function() {
                 if (disabled || controlKind.indexOf('generated_') === 0) return dto.clone(value);
-                if (value.kind === 'optional_text') {
-                    return dto.optionalTextValue(
-                        optionalTextPresence.getElement().checked,
-                        inputElement.value
-                    );
+                if (checkboxValueKind && value.value === null
+                        && !materializeOptionalDefault && !optionalBooleanTouched) {
+                    return dto.clone(value);
+                }
+                if (checkboxValueKind === 'optional_boolean_u8') {
+                    return { kind: value.kind, value: inputElement.checked ? 1 : 0 };
+                }
+                if (checkboxValueKind === 'optional_boolean') {
+                    return { kind: value.kind, value: Boolean(inputElement.checked) };
                 }
                 return dto.preferenceValueFromInput(value, inputElement.value, inputElement.checked);
             },
@@ -514,7 +530,11 @@ define([
                     return;
                 }
                 (filterDrafts.get(key) || []).forEach(function(field) {
-                    var control = fieldControl(field, readonly || formState.busy);
+                    var control = fieldControl(
+                        field,
+                        readonly || formState.busy,
+                        Boolean(selectedFilter && selectedFilter._temporaryId)
+                    );
                     selectedControls.push(control);
                     slot.appendChild(control.element.getElement());
                 });
@@ -795,7 +815,9 @@ define([
                 var readonly = !documentDto.editable;
                 var fields = dto.clone(creating
                     ? (response.new_item_fields || response.fields || [])
-                    : (response.fields || []));
+                    : (response.fields || [])).map(function(field) {
+                        return scopeField(field, item.scope);
+                    });
                 var parentCandidates = creating && Array.isArray(response.parent_candidates)
                     ? dto.clone(response.parent_candidates) : [];
                 var controls = [];
@@ -941,11 +963,13 @@ define([
                 if (nameField) fieldSlot.appendChild(nameField.getElement());
                 if (parentField) fieldSlot.appendChild(parentField.getElement());
                 fields.forEach(function(field) {
-                    var control = fieldControl(field, readonly);
+                    var control = field.hidden
+                        ? hiddenFieldControl(field)
+                        : fieldControl(field, readonly, creating);
                     controls.push(control);
                     if (!controlsById.has(field.id)) controlsById.set(field.id, []);
                     controlsById.get(field.id).push(control);
-                    fieldSlot.appendChild(control.element.getElement());
+                    if (control.element) fieldSlot.appendChild(control.element.getElement());
                 });
                 if (!readonly) {
                     form.getElement().addEventListener('input', function() {

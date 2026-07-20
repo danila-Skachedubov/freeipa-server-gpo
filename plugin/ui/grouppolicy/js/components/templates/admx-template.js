@@ -9,6 +9,7 @@ define([
 
     var createElement = elementCreator.createElement;
     var t = translations.t;
+    var nextParameterControlId = 1;
 
     function appendLines(container, text) {
         String(text || '').split(/\r?\n/).forEach(function(line, index) {
@@ -31,6 +32,7 @@ define([
         var unsupported = unsupportedValue || knownKinds.indexOf(parameter.kind) === -1;
         var disabled = !editable || parameter.editable === false || unsupported;
         var input;
+        var inputElement = null;
         var renderedValue = parameter.value === null || parameter.value === undefined
             ? (unsupportedDefault ? null : parameter.default_value)
             : parameter.value;
@@ -48,10 +50,28 @@ define([
                 )
             });
         } else if (parameter.kind === 'boolean') {
-            input = createElement('input', {
-                attrs: { type: 'checkbox', disabled: disabled ? 'disabled' : null }
+            var checkboxId = 'gpo-editor-parameter-' + nextParameterControlId++;
+            var checkbox = createElement('input', {
+                attrs: {
+                    id: checkboxId,
+                    type: 'checkbox',
+                    disabled: disabled ? 'disabled' : null
+                }
             });
-            input.getElement().checked = Boolean(inputValue(renderedValue));
+            inputElement = checkbox.getElement();
+            inputElement.checked = Boolean(inputValue(renderedValue));
+            input = createElement('span', {
+                className: 'gpo-editor-boolean',
+                children: [
+                    checkbox,
+                    createElement('label', {
+                        attrs: {
+                            for: checkboxId,
+                            'aria-label': parameter.label || parameter.id
+                        }
+                    })
+                ]
+            });
         } else if (parameter.kind === 'enum') {
             input = createElement('select', {
                 attrs: { disabled: disabled ? 'disabled' : null },
@@ -93,21 +113,17 @@ define([
             });
         }
 
-        var inputElement = input.getElement();
-        var clear = !parameter.required && !unsupported ? createElement('label', {
-            className: 'gpo-editor-field__clear',
-            children: [
-                createElement('input', {
-                    attrs: { type: 'checkbox', disabled: disabled ? 'disabled' : null }
-                }),
-                createElement('span', { text: 'Очистить значение' })
-            ]
-        }) : null;
-        var clearInput = clear ? clear.getElement().querySelector('input') : null;
+        if (!inputElement) inputElement = input.getElement();
+        var stateDisabled = false;
+
+        function syncControlState() {
+            var unavailable = disabled || unsupported || stateDisabled;
+            inputElement.disabled = unavailable;
+        }
+        syncControlState();
 
         function read() {
             if (unsupported) return dto.clone(parameter.value);
-            if (clearInput && clearInput.checked) return null;
             if (parameter.kind === 'enum') {
                 return dto.policyChoiceValue(choices, inputElement.value);
             }
@@ -129,7 +145,6 @@ define([
                 attrs: { 'data-field-id': parameter.id },
                 children: [
                     input,
-                    clear,
                     unsupportedDefault ? createElement('span', {
                         className: 'gpo-editor-field__diagnostic',
                         text: 'Значение по умолчанию шаблона не поддерживается; выберите значение явно.'
@@ -138,10 +153,9 @@ define([
             }),
             read: read,
             input: inputElement,
-            clear: clearInput,
             setDisabled: function(shouldDisable) {
-                inputElement.disabled = disabled || unsupported || Boolean(shouldDisable);
-                if (clearInput) clearInput.disabled = disabled || unsupported || Boolean(shouldDisable);
+                stateDisabled = Boolean(shouldDisable);
+                syncControlState();
             }
         };
     }

@@ -852,11 +852,13 @@
 .gpo-editor-field--readonly {
   color: #777;
 }
-.gpo-editor-field__clear {
-  display: flex;
-  gap: 5px;
-  margin-top: 5px;
-  font-size: 11px;
+.gpo-editor-boolean {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+}
+.gpo-editor-boolean input[type="checkbox"] + label {
+  cursor: pointer;
 }
 .gpo-editor-unsupported {
   max-width: 360px;

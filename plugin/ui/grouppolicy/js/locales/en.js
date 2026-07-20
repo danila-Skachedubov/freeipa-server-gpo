@@ -57,6 +57,7 @@ define([], function() {
         readonly: 'Read-only',
         specified: 'Specified',
         unspecified: 'Not specified',
+        userContext: "Run in logged-on user's security context (user policy option)",
         filtersHeading: 'Item-level targeting',
         selectFilter: 'Select a filter to view its fields.',
         filterType: 'Filter type',

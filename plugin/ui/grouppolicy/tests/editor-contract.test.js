@@ -744,6 +744,51 @@ test('unknown parameter kind with no value renders read-only without throwing', 
     assert.equal(control.input.disabled, true);
 });
 
+test('optional boolean policy parameter uses one checkbox without a clear action', () => {
+    const dto = loadAmd('js/util/editor-dto.js', {});
+    const template = loadAmd('js/components/templates/admx-template.js', {
+        '../../util/element-creator': { createElement: createTestElement },
+        '../../util/API': {},
+        '../../util/editor-dto': dto,
+        '../editor-status': {},
+        '../../locales/translations': { t: (key) => key }
+    });
+
+    const control = template._test.createParameterControl({
+        id: 'block', label: 'Block', kind: 'boolean',
+        value: { kind: 'boolean', value: false },
+        default_value: null, required: false, editable: true
+    }, true);
+    const root = control.element.getElement();
+
+    assert.equal(root.querySelectorAll('input[type="checkbox"]').length, 1);
+    assert.equal(root.querySelector('button.gpo-editor-field__clear'), null);
+    assert.equal(root.querySelectorAll('.gpo-editor-boolean label').length, 1);
+    assert.deepEqual(plain(control.read()), { kind: 'boolean', value: false });
+});
+
+test('required boolean policy parameter keeps one checkbox without a clear action', () => {
+    const dto = loadAmd('js/util/editor-dto.js', {});
+    const template = loadAmd('js/components/templates/admx-template.js', {
+        '../../util/element-creator': { createElement: createTestElement },
+        '../../util/API': {},
+        '../../util/editor-dto': dto,
+        '../editor-status': {},
+        '../../locales/translations': { t: (key) => key }
+    });
+
+    const control = template._test.createParameterControl({
+        id: 'required-block', label: 'Block', kind: 'boolean',
+        value: { kind: 'boolean', value: true },
+        default_value: null, required: true, editable: true
+    }, true);
+    const root = control.element.getElement();
+
+    assert.equal(root.querySelectorAll('input[type="checkbox"]').length, 1);
+    assert.equal(root.querySelector('button.gpo-editor-field__clear'), null);
+    assert.deepEqual(plain(control.read()), { kind: 'boolean', value: true });
+});
+
 test('one atomic policy request contains state, ordered sets, clears, and comment', () => {
     const dto = loadAmd('js/util/editor-dto.js', {});
     const policy = {
@@ -1223,6 +1268,181 @@ test('preference create form selects an opaque parent only when candidates are a
     assert.equal(root.querySelector('.gpo-editor-preference-parent'), null);
 });
 
+test('user INI create keeps optional text editable and renders booleans with descriptor defaults', async () => {
+    const creates = [];
+    const API = {
+        preferenceItems: async () => ({ items: [] }),
+        preferenceShow: async () => ({
+            item: null,
+            fields: [],
+            new_item_fields: [
+                {
+                    id: 'metadata.userContext', label: 'User context', required: false, editable: true,
+                    control: 'optional_toggle', value: { kind: 'optional_boolean', value: null }
+                },
+                {
+                    id: 'metadata.bypassErrors', label: 'Bypass errors', required: false, editable: true,
+                    control: 'optional_toggle', value: { kind: 'optional_boolean', value: null }
+                },
+                {
+                    id: 'metadata.removePolicy', label: 'Remove policy', required: false, editable: true,
+                    control: 'optional_toggle', value: { kind: 'optional_boolean', value: true }
+                },
+                {
+                    id: 'properties.path', label: 'Path', required: true, editable: true,
+                    value: { kind: 'text', value: '' }
+                },
+                {
+                    id: 'properties.section', label: 'Section', required: false, editable: true,
+                    value: { kind: 'optional_text', value: null }
+                },
+                {
+                    id: 'properties.property', label: 'Property', required: false, editable: true,
+                    value: { kind: 'optional_text', value: null }
+                },
+                {
+                    id: 'properties.value', label: 'Value', required: false, editable: true,
+                    value: { kind: 'optional_text', value: null }
+                },
+                {
+                    id: 'properties.disabled', label: 'Disabled', required: false, editable: true,
+                    control: 'optional_boolean_u8',
+                    value: { kind: 'optional_unsigned_byte', value: null }
+                }
+            ],
+            parent_candidates: [], filters: [], filter_fields: [], filter_kinds: []
+        }),
+        preferenceCreate: async (scope, kind, request) => {
+            creates.push({ scope, kind, request: plain(request) });
+            return {};
+        },
+        reconcile: async () => ({ recovery: { kind: 'clean' } })
+    };
+    const renderer = loadPreferenceRenderer(API);
+    const header = preferenceTestHeader();
+    const view = await renderer.renderPreferencesTemplate({
+        header,
+        item: {
+            scope: 'user', preferenceKind: 'ini_files',
+            document: { label: 'INI Files', editable: true }
+        },
+        isCurrent: () => true
+    });
+    const root = view.getElement();
+
+    header.getElement().querySelector('.preferences__btn-create').click();
+    await flushPreferenceRenderer();
+
+    const userContextField = root.querySelector('[data-field-id="metadata.userContext"]');
+    const userContext = userContextField.querySelector('input[type="checkbox"]');
+    assert.ok(userContextField.textContent.includes('preferences.editor.userContext'));
+    assert.equal(userContext.checked, false);
+    ['properties.section', 'properties.property', 'properties.value'].forEach((id) => {
+        const input = root.querySelector('[data-field-id="' + id + '"]').querySelector('input');
+        assert.equal(input.disabled, false);
+    });
+    assert.equal(root.querySelectorAll('.gpo-editor-field select').length, 0);
+    const bypass = root.querySelector('[data-field-id="metadata.bypassErrors"]')
+        .querySelector('input[type="checkbox"]');
+    const disabled = root.querySelector('[data-field-id="properties.disabled"]')
+        .querySelector('input[type="checkbox"]');
+    const removePolicy = root.querySelector('[data-field-id="metadata.removePolicy"]')
+        .querySelector('input[type="checkbox"]');
+    assert.equal(bypass.checked, false);
+    assert.equal(removePolicy.checked, true);
+    assert.equal(disabled.checked, false);
+
+    const values = {
+        'properties.path': '/etc/example.ini',
+        'properties.section': 'desktop',
+        'properties.property': 'cursor-size',
+        'properties.value': '48'
+    };
+    Object.entries(values).forEach(([id, value]) => {
+        const input = root.querySelector('[data-field-id="' + id + '"]').querySelector('input');
+        input.value = value;
+        input.dispatchEvent(new TestEvent('input'));
+    });
+    bypass.checked = true;
+    bypass.dispatchEvent(new TestEvent('change'));
+    root.querySelector('.btn-ok').click();
+    await flushPreferenceRenderer();
+
+    assert.deepEqual(creates, [{
+        scope: 'user',
+        kind: 'ini_files',
+        request: {
+            fields: [
+                { id: 'metadata.userContext', value: { kind: 'optional_boolean', value: false } },
+                { id: 'metadata.bypassErrors', value: { kind: 'optional_boolean', value: true } },
+                { id: 'metadata.removePolicy', value: { kind: 'optional_boolean', value: true } },
+                { id: 'properties.path', value: { kind: 'text', value: '/etc/example.ini' } },
+                { id: 'properties.section', value: { kind: 'optional_text', value: 'desktop' } },
+                { id: 'properties.property', value: { kind: 'optional_text', value: 'cursor-size' } },
+                { id: 'properties.value', value: { kind: 'optional_text', value: '48' } },
+                { id: 'properties.disabled', value: { kind: 'optional_unsigned_byte', value: 0 } }
+            ]
+        }
+    }]);
+});
+
+test('computer preference create hides and omits a legacy userContext descriptor', async () => {
+    const creates = [];
+    const API = {
+        preferenceItems: async () => ({ items: [] }),
+        preferenceShow: async () => ({
+            item: null,
+            fields: [],
+            new_item_fields: [
+                {
+                    id: 'metadata.userContext', label: 'User context', required: false, editable: true,
+                    control: 'optional_toggle', value: { kind: 'optional_boolean', value: true }
+                },
+                {
+                    id: 'properties.path', label: 'Path', required: true, editable: true,
+                    value: { kind: 'text', value: '' }
+                }
+            ],
+            parent_candidates: [], filters: [], filter_fields: [], filter_kinds: []
+        }),
+        preferenceCreate: async (scope, kind, request) => {
+            creates.push({ scope, kind, request: plain(request) });
+            return {};
+        },
+        reconcile: async () => ({ recovery: { kind: 'clean' } })
+    };
+    const renderer = loadPreferenceRenderer(API);
+    const header = preferenceTestHeader();
+    const view = await renderer.renderPreferencesTemplate({
+        header,
+        item: {
+            scope: 'computer', preferenceKind: 'ini_files',
+            document: { label: 'INI Files', editable: true }
+        },
+        isCurrent: () => true
+    });
+    const root = view.getElement();
+
+    header.getElement().querySelector('.preferences__btn-create').click();
+    await flushPreferenceRenderer();
+    assert.equal(root.querySelector('[data-field-id="metadata.userContext"]'), null);
+    const path = root.querySelector('[data-field-id="properties.path"]').querySelector('input');
+    path.value = '/etc/computer.ini';
+    path.dispatchEvent(new TestEvent('input'));
+    root.querySelector('.btn-ok').click();
+    await flushPreferenceRenderer();
+
+    assert.deepEqual(creates, [{
+        scope: 'computer',
+        kind: 'ini_files',
+        request: {
+            fields: [{
+                id: 'properties.path', value: { kind: 'text', value: '/etc/computer.ini' }
+            }]
+        }
+    }]);
+});
+
 test('pending preference form open blocks every competing item mutation', async () => {
     let resolveShow;
     let showCalls = 0;
@@ -1384,11 +1604,12 @@ test('editable preference update submits rename and one changed typed field exac
     root.querySelector('.gpo-editor-preference-table__actions').querySelector('button').click();
     await flushPreferenceRenderer();
     const nameInput = root.querySelector('[data-field-id="name"]').querySelector('input');
-    const disabledSelect = root.querySelector('[data-field-id="properties.disabled"]').querySelector('select');
+    const disabledCheckbox = root.querySelector('[data-field-id="properties.disabled"]')
+        .querySelector('input[type="checkbox"]');
     nameInput.value = 'Renamed item';
     nameInput.dispatchEvent(new TestEvent('input'));
-    disabledSelect.value = 'false';
-    disabledSelect.dispatchEvent(new TestEvent('change'));
+    assert.equal(disabledCheckbox.checked, false);
+    disabledCheckbox.dispatchEvent(new TestEvent('change'));
 
     assert.equal(view.hasUnsavedChanges(), true);
     root.querySelector('.btn-ok').click();
@@ -1896,6 +2117,100 @@ test('tree navigation loads returned category ids lazily and uses server documen
     const userPreferences = roots[0].children[1].children[1].children;
     assert.equal(computerPreferences[0].preferenceKind, 'ini_files');
     assert.equal(userPreferences[0].readOnly, true);
+});
+
+test('left tree renders folders only while keeping leaf documents navigable from folder views', async () => {
+    const treeList = loadAmd('js/components/tree-view/tree-view-list.js', {
+        '../../util/element-creator': { createElement: createTestElement }
+    }, { document: new TestDocument(), Element: TestElement });
+    const policy = {
+        title: 'Cursor Size',
+        type: 'file',
+        icon: 'ico-file',
+        template: 'admx'
+    };
+    const nestedCategory = {
+        title: 'Vision',
+        type: 'folder',
+        icon: 'ico-folder',
+        opened: false,
+        children: [policy]
+    };
+    const preference = {
+        title: 'INI Files',
+        type: 'file',
+        icon: 'ico-file',
+        template: 'preferences'
+    };
+    const preferencesCategory = {
+        title: 'Preferences',
+        type: 'folder',
+        icon: 'ico-folder',
+        opened: false,
+        children: [preference]
+    };
+    const parents = new Map();
+    const state = {
+        setWorkspace() {},
+        setTreeData() {},
+        registerTreeNode(item, options) {
+            if (options.parentItem) parents.set(item, options.parentItem);
+        },
+        navigateToNode() {}
+    };
+
+    const rendered = treeList.renderTreeViewList(
+        [nestedCategory, preferencesCategory],
+        {},
+        state
+    ).getElement();
+    const titles = rendered.querySelectorAll('.tree-item__title')
+        .map((element) => element.textContent);
+
+    assert.deepEqual(titles, ['Vision', 'Preferences']);
+    assert.equal(rendered.querySelectorAll('li.file').length, 0);
+    assert.equal(parents.get(policy), nestedCategory);
+    assert.equal(parents.get(preference), preferencesCategory);
+});
+
+test('lazy tree loading adds only returned categories to the left tree', async () => {
+    const treeList = loadAmd('js/components/tree-view/tree-view-list.js', {
+        '../../util/element-creator': { createElement: createTestElement }
+    }, { document: new TestDocument(), Element: TestElement });
+    const policy = { title: 'Policy setting', type: 'file', icon: 'ico-file' };
+    const category = {
+        title: 'Child category', type: 'folder', icon: 'ico-folder', opened: false, children: []
+    };
+    const lazyFolder = {
+        title: 'Administrative Templates',
+        type: 'folder',
+        icon: 'ico-folder',
+        opened: false,
+        lazy: true,
+        loaded: false,
+        children: [],
+        loadChildren() { return Promise.resolve([category, policy]); }
+    };
+    const parents = new Map();
+    const state = {
+        setWorkspace() {},
+        setTreeData() {},
+        registerTreeNode(item, options) {
+            if (options.parentItem) parents.set(item, options.parentItem);
+        },
+        navigateToNode() {}
+    };
+    const rendered = treeList.renderTreeViewList([lazyFolder], {}, state).getElement();
+    const lazyListItem = rendered.querySelector('li.folder');
+
+    const loaded = await treeList.ensureLazyChildren(lazyFolder, lazyListItem, state);
+    const titles = rendered.querySelectorAll('.tree-item__title')
+        .map((element) => element.textContent);
+
+    assert.deepEqual(plain(loaded), [category, policy]);
+    assert.deepEqual(titles, ['Administrative Templates', 'Child category']);
+    assert.equal(rendered.querySelectorAll('li.file').length, 0);
+    assert.equal(parents.get(policy), lazyFolder);
 });
 
 test('right-pane navigation loads a lazy folder before replacing the workspace view', async () => {

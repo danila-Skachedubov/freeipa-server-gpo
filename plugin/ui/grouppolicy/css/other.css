@@ -25,11 +25,6 @@
     position: static;
 }
 
-.gp__admx-options input[type="checkbox"]{
-    opacity: unset;
-    position: static;
-}
-
 .gp__admx-state-policy label{
     font-weight: 400;
         margin: 0;
