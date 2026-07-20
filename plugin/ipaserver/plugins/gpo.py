@@ -82,7 +82,7 @@ def verify_gpo_schema(ldap, api):
 # The editor is an independently versioned binding contract.  Keep the entire
 # compatibility boundary in one place instead of using the RPM version as a
 # proxy for API compatibility.
-ADMIX_BINDING_API_VERSION = 3
+ADMIX_BINDING_API_VERSION = 1
 ADMIX_REQUIRED_CAPABILITIES = frozenset({
     'typed-policy-values',
     'atomic-policy-updates',

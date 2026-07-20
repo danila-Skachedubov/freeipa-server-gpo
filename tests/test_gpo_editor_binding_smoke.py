@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from admix import HighLevelApi, TemplateCatalog
+from admix import AdmixError, HighLevelApi, TemplateCatalog
 
 
 REQUIRED_CAPABILITIES = {
@@ -40,6 +40,9 @@ POLICY_DEFINITIONS = Path("/usr/share/PolicyDefinitions")
 FIXTURES = Path(__file__).resolve().parents[1] / "PoliciesData"
 FIXED_ELEMENT_POLICY_ID = "BaseALTKDE:kde-filesearch"
 FIXED_ELEMENT_PARAMETER_ID = "kde-basicsettings_setter"
+CURSOR_SIZE_POLICY_ID = "BaseALTGnome:OrgGnomeDesktopInterfaceCursorSizeMachine"
+CURSOR_SIZE_PARAMETER_ID = "gnome-cursor-size_setter"
+CURSOR_BLOCK_PARAMETER_ID = "gnome-cursor-size_blocker"
 
 
 @pytest.fixture(scope="module")
@@ -60,7 +63,7 @@ def _kde_fixture_root():
 
 
 def test_installed_binding_has_complete_editor_contract():
-    assert HighLevelApi.binding_api_version() == 3
+    assert HighLevelApi.binding_api_version() == 1
     assert REQUIRED_CAPABILITIES <= set(HighLevelApi.binding_capabilities())
 
 
@@ -204,6 +207,62 @@ def test_real_workspace_exposes_authoritative_preference_inventory(catalog):
         for document in documents
     )
     assert {document["scope"] for document in documents} == {"computer", "user"}
+
+
+def test_real_catalog_omits_recursively_empty_categories(catalog):
+    api = HighLevelApi(
+        str(_kde_fixture_root()),
+        template_catalog=catalog,
+        locales=["en-US"],
+        load_preferences=True,
+    )
+
+    machine_root = api.list_policies("computer", None, ["en-US"])
+    assert "BaseALT:LinuxComponents" not in {
+        item["id"] for item in machine_root
+    }
+
+    user_alt_system = api.list_policies(
+        "user", "BaseALT:ALT_System", ["en-US"]
+    )
+    assert "BaseALT:ALT_CD_DVD" not in {
+        item["id"] for item in user_alt_system
+    }
+
+
+def test_real_new_preference_fields_have_scope_and_checkbox_defaults(catalog):
+    api = HighLevelApi(
+        str(_kde_fixture_root()),
+        template_catalog=catalog,
+        locales=["en-US"],
+        load_preferences=True,
+    )
+
+    computer = api.get_new_preference_item_fields("computer", "ini_files")
+    user = api.get_new_preference_item_fields("user", "ini_files")
+
+    assert "metadata.userContext" not in {field["id"] for field in computer}
+    user_context = next(
+        field for field in user if field["id"] == "metadata.userContext"
+    )
+    assert user_context["editable"] is True
+    assert user_context["value"] == {
+        "kind": "optional_boolean",
+        "value": False,
+    }
+
+    by_id = {field["id"]: field for field in user}
+    for field_id in (
+        "properties.section",
+        "properties.property",
+        "properties.value",
+    ):
+        assert by_id[field_id]["editable"] is True
+    assert by_id["properties.disabled"]["control"] == "optional_boolean_u8"
+    assert by_id["properties.disabled"]["value"] == {
+        "kind": "optional_unsigned_byte",
+        "value": 0,
+    }
 
 
 def test_real_external_publication_round_trip(catalog, tmp_path):
@@ -384,3 +443,72 @@ def test_real_fixed_element_policy_state_round_trip(catalog, tmp_path):
 
     api = open_workspace()
     assert policy(api)["state"] == "not_configured"
+
+
+def test_real_optional_block_clear_preserves_enabled_policy(catalog, tmp_path):
+    gpo_root = tmp_path / "gpo"
+    shutil.copytree(_kde_fixture_root(), gpo_root)
+
+    def open_workspace():
+        return HighLevelApi(
+            str(gpo_root),
+            template_catalog=catalog,
+            locales=["en-US"],
+            load_preferences=False,
+            state_directory=str(tmp_path / "state"),
+            state_key="optional-block-clear-round-trip",
+        )
+
+    api = open_workspace()
+    policy = api.get_policy("computer", CURSOR_SIZE_POLICY_ID, ["en-US"])
+    parameters = {item["id"]: item for item in policy["parameters"]}
+    enabled = api.update_policy(
+        "computer",
+        CURSOR_SIZE_POLICY_ID,
+        state="enabled",
+        set_parameters=[
+            {
+                "parameter_id": CURSOR_SIZE_PARAMETER_ID,
+                "value": parameters[CURSOR_SIZE_PARAMETER_ID]["default_value"],
+            },
+            {
+                "parameter_id": CURSOR_BLOCK_PARAMETER_ID,
+                "value": {"kind": "boolean", "value": True},
+            },
+        ],
+        locales=["en-US"],
+    )
+    assert enabled["state"] == "enabled"
+
+    cleared = api.update_policy(
+        "computer",
+        CURSOR_SIZE_POLICY_ID,
+        clear_parameters=[CURSOR_BLOCK_PARAMETER_ID],
+        locales=["en-US"],
+    )
+    assert cleared["state"] == "enabled"
+    blocker = next(
+        item
+        for item in cleared["parameters"]
+        if item["id"] == CURSOR_BLOCK_PARAMETER_ID
+    )
+    assert blocker["value"] is None
+    api.commit_offline()
+
+    reopened = open_workspace().get_policy(
+        "computer", CURSOR_SIZE_POLICY_ID, ["en-US"]
+    )
+    assert reopened["state"] == "enabled"
+
+    before_required_clear = reopened
+    with pytest.raises(AdmixError) as error:
+        open_workspace().update_policy(
+            "computer",
+            CURSOR_SIZE_POLICY_ID,
+            clear_parameters=[CURSOR_SIZE_PARAMETER_ID],
+            locales=["en-US"],
+        )
+    assert error.value.code == "validation"
+    assert open_workspace().get_policy(
+        "computer", CURSOR_SIZE_POLICY_ID, ["en-US"]
+    ) == before_required_clear

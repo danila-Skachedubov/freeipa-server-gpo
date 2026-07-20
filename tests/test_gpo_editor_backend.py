@@ -114,22 +114,22 @@ def resolve_context(tmp_path, monkeypatch, ldap_backend=None, write=False):
 def test_binding_contract_is_centralized_and_rejects_mismatches():
     assert "preference-parent-candidates" in GPO.ADMIX_REQUIRED_CAPABILITIES
     compatible = SimpleNamespace(HighLevelApi=SimpleNamespace(
-        binding_api_version=lambda: 3,
+        binding_api_version=lambda: 1,
         binding_capabilities=lambda: list(GPO.ADMIX_REQUIRED_CAPABILITIES),
     ))
-    assert GPO._binding_info(compatible)["api_version"] == 3
+    assert GPO._binding_info(compatible)["api_version"] == 1
 
     old = SimpleNamespace(HighLevelApi=SimpleNamespace(
-        binding_api_version=lambda: 2,
+        binding_api_version=lambda: 0,
         binding_capabilities=lambda: list(GPO.ADMIX_REQUIRED_CAPABILITIES),
     ))
     with pytest.raises(GPO.EditorFailure) as failure:
         GPO._binding_info(old)
     assert failure.value.category == "operational"
-    assert failure.value.details["installed_api_version"] == 2
+    assert failure.value.details["installed_api_version"] == 0
 
     missing = SimpleNamespace(HighLevelApi=SimpleNamespace(
-        binding_api_version=lambda: 3,
+        binding_api_version=lambda: 1,
         binding_capabilities=lambda: list(
             GPO.ADMIX_REQUIRED_CAPABILITIES - {"preference-field-controls"}
         ),
@@ -141,7 +141,7 @@ def test_binding_contract_is_centralized_and_rejects_mismatches():
     ]
 
     missing_parent_candidates = SimpleNamespace(HighLevelApi=SimpleNamespace(
-        binding_api_version=lambda: 3,
+        binding_api_version=lambda: 1,
         binding_capabilities=lambda: list(
             GPO.ADMIX_REQUIRED_CAPABILITIES
             - {"preference-parent-candidates"}
@@ -193,7 +193,7 @@ def test_lazy_catalog_refresh_is_throttled_and_retains_healthy_generation():
     module = SimpleNamespace(
         TemplateCatalog=Catalog,
         HighLevelApi=SimpleNamespace(
-            binding_api_version=lambda: 3,
+            binding_api_version=lambda: 1,
             binding_capabilities=lambda: list(GPO.ADMIX_REQUIRED_CAPABILITIES),
         ),
     )
@@ -348,7 +348,7 @@ def test_separate_workspace_opens_never_reuse_mutable_high_level_api(
 
         @staticmethod
         def binding_api_version():
-            return 3
+            return 1
 
         @staticmethod
         def binding_capabilities():
@@ -396,7 +396,7 @@ def test_scope_specific_comments_and_preference_loading_are_explicit(
 
         @staticmethod
         def binding_api_version():
-            return 3
+            return 1
 
         @staticmethod
         def binding_capabilities():
@@ -993,7 +993,7 @@ class PolicyReadWorkspace(PolicyWorkspace):
 
 def runtime():
     return {
-        "binding": {"api_version": 3, "capabilities": []},
+        "binding": {"api_version": 1, "capabilities": []},
         "catalog": None,
         "locales": ["en-US"],
     }

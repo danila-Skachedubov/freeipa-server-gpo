@@ -1305,7 +1305,7 @@ def test_installed_high_level_command_flow_is_path_free(
         displayname, locales=["zz-ZZ"]
     )["result"]
     assert opened["locales"] == ["en-US"]
-    assert opened["binding"]["api_version"] == 3
+    assert opened["binding"]["api_version"] == 1
     assert opened["pending_publication"] is None
 
     policy = api.Command.gpo_editor_policy_show(
