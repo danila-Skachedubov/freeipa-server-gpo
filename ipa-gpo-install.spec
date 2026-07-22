@@ -17,7 +17,8 @@ Requires: freeipa-server-core
 Requires: freeipa-server-trust-ad
 Requires: samba-common-tools
 Requires: admx-basealt
-Requires: python3-module-admix
+Requires: python3-module-admix >= 0.1.0
+Requires: python3-module-admix < 0.2.0
 Requires: acl
 Requires: coreutils
 Requires: libgio
@@ -25,9 +26,6 @@ Requires: oddjob
 Requires: systemd
 Requires: util-linux
 Source0: %name-%version.tar
-
-%define legacy_editor_retirement_marker /var/lib/freeipa/.gpo-editor-libadmix-migration-v1
-%define legacy_editor_schema_marker /var/lib/freeipa/.gpo-editor-libadmix-schema-dirty-v1
 
 %description
 A utility for preparing FreeIPA for Group Policy Management.
@@ -43,39 +41,6 @@ and creates the necessary directory structure.
 %install
 make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitelibdir
 %find_lang ipa-gpo-install
-
-%pre
-if [ "$1" -gt 1 ] && [ ! -e %legacy_editor_retirement_marker ]; then
-    if [ -e %_datadir/glib-2.0/schemas/org.altlinux.gpuiservice.gschema.xml ]; then
-        if [ ! -x /usr/bin/glib-compile-schemas ]; then
-            echo "freeipa-server-gpo: glib-compile-schemas is required to retire the installed gpuiservice schema" >&2
-            exit 1
-        fi
-        install -D -m 600 /dev/null %legacy_editor_schema_marker || exit 1
-    fi
-    if command -v systemctl >/dev/null 2>&1; then
-        systemctl stop gpuiservice.service >/dev/null 2>&1 || :
-        systemctl disable gpuiservice.service >/dev/null 2>&1 || :
-    fi
-fi
-
-%post
-if [ "$1" -gt 1 ] && [ ! -e %legacy_editor_retirement_marker ]; then
-    if [ -e %legacy_editor_schema_marker ]; then
-        /usr/bin/python3 -c 'from ipa_gpo_install.filesystem import retire_legacy_editor_runtime; retire_legacy_editor_runtime(manage_services=False, rebuild_schema_cache=True, manage_retirement_marker=False)' || exit 1
-    else
-        /usr/bin/python3 -c 'from ipa_gpo_install.filesystem import retire_legacy_editor_runtime; retire_legacy_editor_runtime(manage_services=False, manage_retirement_marker=False)' || exit 1
-    fi
-    if command -v systemctl >/dev/null 2>&1; then
-        systemctl daemon-reload >/dev/null 2>&1 || exit 1
-        if systemctl is-active --quiet gpuiservice.service; then
-            echo "freeipa-server-gpo: legacy gpuiservice is still active after upgrade" >&2
-            exit 1
-        fi
-    fi
-    rm -f %legacy_editor_schema_marker || exit 1
-    install -D -m 600 /dev/null %legacy_editor_retirement_marker || exit 1
-fi
 
 %files -f ipa-gpo-install.lang
 %doc README.md

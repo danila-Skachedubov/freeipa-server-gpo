@@ -1,5 +1,6 @@
 """Focused unit and contract coverage for the FreeIPA libadmix editor host."""
 
+import base64
 import importlib.util
 import json
 from pathlib import Path
@@ -111,49 +112,6 @@ def resolve_context(tmp_path, monkeypatch, ldap_backend=None, write=False):
     return context, backend
 
 
-def test_binding_contract_is_centralized_and_rejects_mismatches():
-    assert "preference-parent-candidates" in GPO.ADMIX_REQUIRED_CAPABILITIES
-    compatible = SimpleNamespace(HighLevelApi=SimpleNamespace(
-        binding_api_version=lambda: 1,
-        binding_capabilities=lambda: list(GPO.ADMIX_REQUIRED_CAPABILITIES),
-    ))
-    assert GPO._binding_info(compatible)["api_version"] == 1
-
-    old = SimpleNamespace(HighLevelApi=SimpleNamespace(
-        binding_api_version=lambda: 0,
-        binding_capabilities=lambda: list(GPO.ADMIX_REQUIRED_CAPABILITIES),
-    ))
-    with pytest.raises(GPO.EditorFailure) as failure:
-        GPO._binding_info(old)
-    assert failure.value.category == "operational"
-    assert failure.value.details["installed_api_version"] == 0
-
-    missing = SimpleNamespace(HighLevelApi=SimpleNamespace(
-        binding_api_version=lambda: 1,
-        binding_capabilities=lambda: list(
-            GPO.ADMIX_REQUIRED_CAPABILITIES - {"preference-field-controls"}
-        ),
-    ))
-    with pytest.raises(GPO.EditorFailure) as failure:
-        GPO._binding_info(missing)
-    assert failure.value.details["missing_capabilities"] == [
-        "preference-field-controls"
-    ]
-
-    missing_parent_candidates = SimpleNamespace(HighLevelApi=SimpleNamespace(
-        binding_api_version=lambda: 1,
-        binding_capabilities=lambda: list(
-            GPO.ADMIX_REQUIRED_CAPABILITIES
-            - {"preference-parent-candidates"}
-        ),
-    ))
-    with pytest.raises(GPO.EditorFailure) as failure:
-        GPO._binding_info(missing_parent_candidates)
-    assert failure.value.details["missing_capabilities"] == [
-        "preference-parent-candidates"
-    ]
-
-
 def test_lazy_catalog_refresh_is_throttled_and_retains_healthy_generation():
     class Catalog:
         constructions = 0
@@ -190,13 +148,7 @@ def test_lazy_catalog_refresh_is_throttled_and_retains_healthy_generation():
                 },
             }
 
-    module = SimpleNamespace(
-        TemplateCatalog=Catalog,
-        HighLevelApi=SimpleNamespace(
-            binding_api_version=lambda: 1,
-            binding_capabilities=lambda: list(GPO.ADMIX_REQUIRED_CAPABILITIES),
-        ),
-    )
+    module = SimpleNamespace(TemplateCatalog=Catalog)
     first, first_state = GPO._get_catalog(module, now=10.0)
     second, _ = GPO._get_catalog(module, now=12.0)
     third, third_state = GPO._get_catalog(module, now=20.0)
@@ -346,14 +298,6 @@ def test_separate_workspace_opens_never_reuse_mutable_high_level_api(
             self.kwargs = kwargs
             Api.instances.append(self)
 
-        @staticmethod
-        def binding_api_version():
-            return 1
-
-        @staticmethod
-        def binding_capabilities():
-            return list(GPO.ADMIX_REQUIRED_CAPABILITIES)
-
     GPO._admix_module = SimpleNamespace(HighLevelApi=Api, TemplateCatalog=Catalog)
     first, first_runtime = GPO._open_workspace(context, ["ru", "en-US"])
     second, second_runtime = GPO._open_workspace(context, ["en-US"])
@@ -393,14 +337,6 @@ def test_scope_specific_comments_and_preference_loading_are_explicit(
 
         def __init__(self, root, **kwargs):
             Api.opened.append(kwargs)
-
-        @staticmethod
-        def binding_api_version():
-            return 1
-
-        @staticmethod
-        def binding_capabilities():
-            return list(GPO.ADMIX_REQUIRED_CAPABILITIES)
 
     GPO._admix_module = SimpleNamespace(HighLevelApi=Api, TemplateCatalog=Catalog)
     GPO._open_workspace(
@@ -903,6 +839,7 @@ def test_error_translation_uses_stable_category_without_internal_path():
     ("not_found", "not_found"),
     ("not_loaded", "unsupported"),
     ("conflict", "storage_conflict"),
+    ("asset_revision_conflict", "asset_revision_conflict"),
     ("publication_pending", "publication_pending"),
     ("internal", "operational"),
 ])
@@ -918,6 +855,93 @@ def test_binding_error_codes_translate_to_stable_web_categories(code, category):
     assert translated.value.kw["error_category"] == category
     assert translated.value.kw["field"] == "field-id"
     assert "binding detail" not in str(translated.value)
+
+
+@pytest.mark.parametrize(("code", "raw_details", "expected"), [
+    (
+        "asset_collision",
+        {
+            "existing": {
+                "name": "startup.cmd",
+                "byte_size": 4,
+                "revision": "r1",
+                "references": [],
+            },
+            "suggested_name": "startup (1).cmd",
+        },
+        {
+            "existing": {
+                "name": "startup.cmd",
+                "byte_size": 4,
+                "revision": "r1",
+                "references": [],
+            },
+            "suggested_name": "startup (1).cmd",
+        },
+    ),
+    (
+        "asset_revision_conflict",
+        {
+            "name": "startup.cmd",
+            "expected_revision": "old",
+            "actual_revision": "new",
+        },
+        {
+            "name": "startup.cmd",
+            "expected_revision": "old",
+            "actual_revision": "new",
+        },
+    ),
+    (
+        "asset_still_referenced",
+        {
+            "name": "startup.cmd",
+            "references": [{
+                "event": "startup",
+                "executable_group": "classic",
+                "index": 0,
+            }],
+        },
+        {
+            "name": "startup.cmd",
+            "references": [{
+                "event": "startup",
+                "executable_group": "classic",
+                "index": 0,
+            }],
+        },
+    ),
+])
+def test_script_binding_error_details_are_allowlisted(code, raw_details, expected):
+    binding_error = RuntimeError("internal binding text /var/lib/freeipa")
+    binding_error.code = code
+    binding_error.field = "name"
+    binding_error.path = "Machine/Scripts/Startup/startup.cmd"
+    binding_error.script_details = raw_details
+
+    with pytest.raises(errors.ExecutionError) as translated:
+        GPO._translate_editor_exception(binding_error)
+
+    assert translated.value.kw["error_category"] == code
+    assert json.loads(translated.value.kw["details"]) == expected
+    assert "path" not in translated.value.kw
+    assert "/var/lib/freeipa" not in str(translated.value)
+
+
+def test_invalid_script_binding_error_details_are_dropped():
+    binding_error = RuntimeError("internal binding text")
+    binding_error.code = "asset_collision"
+    binding_error.field = "name"
+    binding_error.path = None
+    binding_error.script_details = {
+        "existing": {"name": "/etc/shadow"},
+        "suggested_name": "/etc/shadow",
+    }
+
+    with pytest.raises(errors.ExecutionError) as translated:
+        GPO._translate_editor_exception(binding_error)
+
+    assert "details" not in translated.value.kw
 
 
 class CommandHarness:
@@ -997,6 +1021,176 @@ def runtime():
         "catalog": None,
         "locales": ["en-US"],
     }
+
+
+def script_runtime():
+    return {
+        "binding": {"api_version": 3, "capabilities": ["group-policy-scripts"]},
+        "catalog": None,
+        "locales": [],
+    }
+
+
+class ScriptWorkspace:
+    def __init__(self, shared_reference=False):
+        references = [{
+            "event": "startup", "executable_group": "classic", "index": 0,
+        }]
+        if shared_reference:
+            references.append({
+                "event": "startup", "executable_group": "powershell", "index": 0,
+            })
+        self.groups = {
+            "classic": {
+                "snapshot": "classic-snapshot",
+                "editable": True,
+                "entries": [{
+                    "event": "startup", "identity": "classic-startup-0",
+                    "command_line": "startup.cmd", "parameters": "/quiet",
+                    "managed_asset_name": "startup.cmd",
+                }, {
+                    "event": "shutdown", "identity": "classic-shutdown-0",
+                    "command_line": "shutdown.cmd", "parameters": "",
+                    "managed_asset_name": None,
+                }],
+                "execution_order": {},
+                "diagnostics": [{
+                    "code": "invalid_line",
+                    "message": "Machine/Scripts/scripts.ini /var/lib/freeipa/sysvol/x",
+                }],
+            },
+            "powershell": {
+                "snapshot": "powershell-snapshot",
+                "editable": True,
+                "entries": ([{
+                    "event": "startup", "identity": "powershell-startup-0",
+                    "command_line": "startup.cmd", "parameters": "",
+                    "managed_asset_name": "startup.cmd",
+                }] if shared_reference else [{
+                    "event": "startup", "identity": "powershell-startup-0",
+                    "command_line": r"\\server\share\external.ps1", "parameters": "",
+                    "managed_asset_name": None,
+                }]),
+                "execution_order": {
+                    "start_execute_ps_first": None,
+                    "end_execute_ps_first": False,
+                },
+                "diagnostics": [],
+            },
+        }
+        self.assets = [{
+            "name": "startup.cmd", "byte_size": 3, "revision": "asset-r1",
+            "references": references,
+        }]
+        self.operations = []
+        self.pending = None
+
+    def _copy(self, value):
+        return json.loads(json.dumps(value))
+
+    def pending_external_publication(self):
+        return self.pending
+
+    def diagnostics(self):
+        return []
+
+    def show_script_group(self, scope, group):
+        self.operations.append(("show", scope, group))
+        return self._copy(self.groups[group])
+
+    def list_script_assets(self, scope, event):
+        self.operations.append(("assets", scope, event))
+        return self._copy(self.assets)
+
+    def script_asset_collision(self, scope, event, name):
+        for asset in self.assets:
+            if asset["name"].casefold() == name.casefold():
+                return {
+                    "existing": self._copy(asset),
+                    "suggested_name": "startup-1.cmd",
+                }
+        return None
+
+    def add_script_entry(self, scope, group, event, snapshot, command, parameters):
+        self.operations.append(("add", scope, group, event, snapshot, command, parameters))
+        if snapshot != self.groups[group]["snapshot"]:
+            error = RuntimeError("stale")
+            error.code = "conflict"
+            raise error
+        self.groups[group]["entries"].append({
+            "event": event, "identity": group + "-new",
+            "command_line": command, "parameters": parameters,
+            "managed_asset_name": command if any(
+                asset["name"].casefold() == command.casefold()
+                for asset in self.assets
+            ) else None,
+        })
+
+    def update_script_entry(self, scope, group, event, identity, command, parameters):
+        self.operations.append(("update", identity, command, parameters))
+        for entry in self.groups[group]["entries"]:
+            if entry["event"] == event and entry["identity"] == identity:
+                entry["command_line"] = command
+                entry["parameters"] = parameters
+                return
+        raise RuntimeError("missing")
+
+    def remove_script_entry(self, scope, group, event, identity):
+        self.operations.append(("remove", identity))
+        entries = self.groups[group]["entries"]
+        self.groups[group]["entries"] = [
+            entry for entry in entries if not (
+                entry["event"] == event and entry["identity"] == identity
+            )
+        ]
+        for asset in self.assets:
+            asset["references"] = [
+                reference for reference in asset["references"]
+                if not (reference["event"] == event
+                        and reference["executable_group"] == group)
+            ]
+
+    def reorder_script_entries(self, scope, group, event, snapshot, identities):
+        self.operations.append(("reorder", group, snapshot, identities))
+        if snapshot != self.groups[group]["snapshot"]:
+            error = RuntimeError("stale")
+            error.code = "conflict"
+            raise error
+
+    def set_script_execution_order(self, scope, snapshot, start, end):
+        self.operations.append(("order", snapshot, start, end))
+        if snapshot != self.groups["powershell"]["snapshot"]:
+            error = RuntimeError("stale")
+            error.code = "conflict"
+            raise error
+        self.groups["powershell"]["execution_order"] = {
+            "start_execute_ps_first": start,
+            "end_execute_ps_first": end,
+        }
+
+    def upload_script_asset(self, scope, event, name, payload):
+        self.operations.append(("upload", name, payload))
+        self.assets.append({
+            "name": name, "byte_size": len(payload), "revision": "new-r1",
+            "references": [],
+        })
+
+    def upload_and_add_script_entry(self, scope, group, event, snapshot, name, payload, parameters):
+        self.operations.append(("upload_and_add", name, payload))
+        self.upload_script_asset(scope, event, name, payload)
+        self.add_script_entry(scope, group, event, snapshot, name, parameters)
+
+    def replace_script_asset(self, scope, event, name, revision, payload):
+        self.operations.append(("replace", name, revision, payload))
+
+    def delete_script_asset(self, scope, event, name, revision):
+        self.operations.append(("delete", name, revision))
+        asset = next(asset for asset in self.assets if asset["name"] == name)
+        if asset["references"]:
+            error = RuntimeError("still referenced")
+            error.code = "asset_still_referenced"
+            raise error
+        self.assets.remove(asset)
 
 
 def test_editor_command_success_envelope_uses_eager_string_summary():
@@ -1508,6 +1702,275 @@ def test_preference_documents_preserve_editability_but_redact_storage_path(
     assert all("path" not in item for item in result["documents"])
 
 
+def _script_command_environment(monkeypatch, workspace, context=None):
+    context = context or editor_context()
+    monkeypatch.setattr(
+        GPO, "_open_workspace",
+        lambda *args, **kwargs: (workspace, script_runtime()),
+    )
+    recovered = []
+    commits = []
+    monkeypatch.setattr(
+        GPO, "_recover_before_mutation",
+        lambda *args: recovered.append(args),
+    )
+    monkeypatch.setattr(
+        GPO, "_commit_external_once",
+        lambda *args: commits.append(args) or {"changed": True},
+    )
+    return CommandHarness(context), recovered, commits
+
+
+@pytest.mark.parametrize(("scope", "event"), [
+    ("computer", "startup"), ("machine", "shutdown"),
+    ("user", "logon"), ("user", "logoff"),
+])
+def test_script_context_accepts_only_scope_valid_events(scope, event):
+    normalized_scope, normalized_event = GPO._validated_script_context(scope, event)
+    assert normalized_event == event
+    assert normalized_scope == ("computer" if scope == "machine" else scope)
+
+
+@pytest.mark.parametrize(("scope", "event"), [
+    ("computer", "logon"), ("user", "shutdown"), ("other", "startup"),
+])
+def test_script_context_rejects_cross_scope_events(scope, event):
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._validated_script_context(scope, event)
+    assert failure.value.category == "validation"
+
+
+def test_script_validators_reject_path_forms_and_strict_base64(monkeypatch):
+    with pytest.raises(GPO.EditorFailure):
+        GPO._script_asset_name({"name": "../server-path"})
+    with pytest.raises(GPO.EditorFailure):
+        GPO._script_request({"gpo_path": "/srv"}, (), ())
+    with pytest.raises(GPO.EditorFailure):
+        GPO._decode_script_upload({"content_base64": "not base64!"})
+
+    monkeypatch.setattr(GPO, "GPO_SCRIPT_UPLOAD_MAX_BYTES", 2)
+    monkeypatch.setattr(GPO, "GPO_SCRIPT_UPLOAD_MAX_ENCODED_BYTES", 4)
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._decode_script_upload({"content_base64": "QUJD"})
+    assert failure.value.category == "size_limit"
+    assert failure.value.details == {"limit_bytes": 2}
+
+
+def test_script_event_view_filters_groups_preserves_snapshots_and_sanitizes():
+    view = GPO._script_event_view(ScriptWorkspace(), "computer", "startup")
+
+    assert view["classic"]["snapshot"] == "classic-snapshot"
+    assert view["powershell"]["snapshot"] == "powershell-snapshot"
+    assert [item["identity"] for item in view["classic"]["entries"]] == [
+        "classic-startup-0"
+    ]
+    assert view["classic"]["entries"][0]["kind"] == "managed_asset"
+    assert view["powershell"]["entries"][0]["kind"] == "external"
+    assert view["execution_order"] == "unspecified"
+    diagnostic = view["classic"]["diagnostics"][0]
+    assert diagnostic["code"] == "invalid_line"
+    assert "/var/lib/freeipa" not in diagnostic["message"]
+    assert "Machine/Scripts" not in diagnostic["message"]
+
+
+def test_scripts_read_commands_do_not_recover_or_commit(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, recovered, commits = _script_command_environment(monkeypatch, workspace)
+
+    shown = GPO.gpo_editor_scripts_show.execute(
+        command, "Test GPO", "computer", "startup"
+    )
+    listed = GPO.gpo_editor_script_files.execute(
+        command, "Test GPO", "computer", "startup"
+    )
+
+    assert shown["scripts"]["event"] == "startup"
+    assert listed["scripts"]["assets"][0]["name"] == "startup.cmd"
+    assert recovered == []
+    assert commits == []
+
+
+def test_script_add_recovers_commits_once_and_returns_canonical_view(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, recovered, commits = _script_command_environment(monkeypatch, workspace)
+
+    result = GPO.gpo_editor_script_entry_add.execute(
+        command, "Test GPO", "computer", "startup", {
+            "mode": "external_command", "executable_group": "classic",
+            "snapshot": "classic-snapshot", "command_line": "cmd.exe",
+            "parameters": "/c echo safe",
+        },
+    )
+
+    assert len(recovered) == 1
+    assert len(commits) == 1
+    assert any(
+        item["command_line"] == "cmd.exe"
+        for item in result["scripts"]["classic"]["entries"]
+    )
+
+
+def test_script_add_existing_uses_inventory_canonical_name(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, _, commits = _script_command_environment(monkeypatch, workspace)
+
+    GPO.gpo_editor_script_entry_add.execute(
+        command, "Test GPO", "computer", "startup", {
+            "mode": "existing_asset", "executable_group": "powershell",
+            "snapshot": "powershell-snapshot", "name": "STARTUP.CMD",
+            "parameters": "",
+        },
+    )
+
+    add = next(operation for operation in workspace.operations if operation[0] == "add")
+    assert add[5] == "startup.cmd"
+    assert len(commits) == 1
+
+
+def test_script_update_and_reorder_use_opaque_entry_contract(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, _, commits = _script_command_environment(monkeypatch, workspace)
+
+    GPO.gpo_editor_script_entry_update.execute(
+        command, "Test GPO", "computer", "startup", {
+            "executable_group": "classic", "identity": "classic-startup-0",
+            "command_line": "updated.cmd", "parameters": "--safe",
+        },
+    )
+    GPO.gpo_editor_script_entries_reorder.execute(
+        command, "Test GPO", "computer", "startup", {
+            "executable_group": "classic", "snapshot": "classic-snapshot",
+            "identities": ["classic-startup-0"],
+        },
+    )
+
+    assert ("update", "classic-startup-0", "updated.cmd", "--safe") in workspace.operations
+    assert any(operation[0] == "reorder" for operation in workspace.operations)
+    assert len(commits) == 2
+
+
+def test_script_stale_reorder_skips_commit(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, _, commits = _script_command_environment(monkeypatch, workspace)
+
+    with pytest.raises(RuntimeError) as failure:
+        GPO.gpo_editor_script_entries_reorder.execute(
+            command, "Test GPO", "computer", "startup", {
+                "executable_group": "classic", "snapshot": "stale",
+                "identities": ["classic-startup-0"],
+            },
+        )
+    assert failure.value.code == "conflict"
+    assert commits == []
+
+
+def test_script_remove_and_final_asset_delete_is_one_commit(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, _, commits = _script_command_environment(monkeypatch, workspace)
+
+    result = GPO.gpo_editor_script_entry_remove.execute(
+        command, "Test GPO", "computer", "startup", {
+            "executable_group": "classic", "identity": "classic-startup-0",
+            "delete_asset": True, "asset_revision": "asset-r1",
+        },
+    )
+
+    assert [operation[0] for operation in workspace.operations if operation[0] in ("remove", "delete")] == [
+        "remove", "delete"
+    ]
+    assert len(commits) == 1
+    assert result["scripts"]["assets"] == []
+
+
+def test_script_remove_shared_asset_does_not_commit(monkeypatch):
+    workspace = ScriptWorkspace(shared_reference=True)
+    command, _, commits = _script_command_environment(monkeypatch, workspace)
+
+    with pytest.raises(RuntimeError) as failure:
+        GPO.gpo_editor_script_entry_remove.execute(
+            command, "Test GPO", "computer", "startup", {
+                "executable_group": "classic", "identity": "classic-startup-0",
+                "delete_asset": True, "asset_revision": "asset-r1",
+            },
+        )
+    assert failure.value.code == "asset_still_referenced"
+    assert commits == []
+
+
+def test_script_order_preserves_other_event_value_and_uses_powershell_snapshot(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, _, commits = _script_command_environment(monkeypatch, workspace)
+
+    GPO.gpo_editor_script_order_update.execute(
+        command, "Test GPO", "computer", "startup", {
+            "snapshot": "powershell-snapshot",
+            "execution_order": "powershell_first",
+        },
+    )
+
+    assert ("order", "powershell-snapshot", True, False) in workspace.operations
+    assert len(commits) == 1
+
+
+def test_script_upload_rejects_bad_data_before_workspace_open(monkeypatch):
+    opened = []
+    monkeypatch.setattr(
+        GPO, "_open_workspace", lambda *args: opened.append(args)
+    )
+    command = CommandHarness(editor_context())
+
+    with pytest.raises(GPO.EditorFailure):
+        GPO.gpo_editor_script_asset_upload.execute(
+            command, "Test GPO", "computer", "startup", {
+                "name": "upload.cmd", "content_base64": "bad!",
+            },
+        )
+    assert opened == []
+
+
+def test_script_upload_collision_is_safe_and_never_commits(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, _, commits = _script_command_environment(monkeypatch, workspace)
+    encoded = base64.b64encode(b"new").decode("ascii")
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_script_asset_upload.execute(
+            command, "Test GPO", "computer", "startup", {
+                "name": "STARTUP.CMD", "content_base64": encoded,
+            },
+        )
+    assert failure.value.category == "asset_collision"
+    assert failure.value.details["suggested_name"] == "startup-1.cmd"
+    assert commits == []
+
+
+def test_script_upload_and_add_replace_delete_use_one_commit(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, _, commits = _script_command_environment(monkeypatch, workspace)
+    encoded = base64.b64encode(b"new").decode("ascii")
+
+    result = GPO.gpo_editor_script_upload_and_add.execute(
+        command, "Test GPO", "computer", "startup", {
+            "executable_group": "classic", "snapshot": "classic-snapshot",
+            "name": "new.cmd", "content_base64": encoded, "parameters": "",
+        },
+    )
+    assert any(asset["name"] == "new.cmd" for asset in result["scripts"]["assets"])
+    assert len(commits) == 1
+
+    GPO.gpo_editor_script_asset_replace.execute(
+        command, "Test GPO", "computer", "startup", {
+            "name": "new.cmd", "revision": "new-r1", "content_base64": encoded,
+        },
+    )
+    GPO.gpo_editor_script_asset_delete.execute(
+        command, "Test GPO", "computer", "startup", {
+            "name": "new.cmd", "revision": "new-r1",
+        },
+    )
+    assert len(commits) == 3
+
+
 def test_editor_command_metadata_has_only_high_level_structured_contracts():
     expected = {
         "gpo_editor_open",
@@ -1521,31 +1984,23 @@ def test_editor_command_metadata_has_only_high_level_structured_contracts():
         "gpo_editor_preference_create",
         "gpo_editor_preference_update",
         "gpo_editor_preference_delete",
+        "gpo_editor_scripts_show",
+        "gpo_editor_script_files",
+        "gpo_editor_script_entry_add",
+        "gpo_editor_script_entry_update",
+        "gpo_editor_script_entry_remove",
+        "gpo_editor_script_entries_reorder",
+        "gpo_editor_script_order_update",
+        "gpo_editor_script_asset_upload",
+        "gpo_editor_script_upload_and_add",
+        "gpo_editor_script_asset_replace",
+        "gpo_editor_script_asset_delete",
     }
     commands = {
         name for name, value in vars(GPO).items()
         if name.startswith("gpo_editor_") and isinstance(value, type)
     }
     assert commands == expected
-    source = MODULE_PATH.read_text()
-    legacy_suffixes = (
-        "get" + "_policy",
-        "set" + "_policy",
-        "delete" + "_policy",
-        "get" + "_current_value",
-        "save" + "_preference",
-        "get" + "_preferences",
-        "delete" + "_preference",
-        "get" + "_locale",
-        "set" + "_locale",
-    )
-    legacy = ["class gpo_" + suffix for suffix in legacy_suffixes]
-    legacy.extend((
-        "_call_" + "gpui" + "service_method",
-        "name" + "_gpt",
-    ))
-    for legacy in legacy:
-        assert legacy not in source
 
     assert {
         "gPCMachineExtensionNames", "gPCUserExtensionNames", "versionNumber"

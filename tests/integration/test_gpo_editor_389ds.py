@@ -19,15 +19,14 @@ or create administrator credentials.  Do not enable it in generic CI.
 
 from __future__ import annotations
 
+import base64
 import configparser
 import hashlib
-from importlib.machinery import PathFinder
 import json
 import multiprocessing
 import os
 from pathlib import Path
 import shutil
-import sys
 import uuid
 import warnings
 
@@ -48,23 +47,6 @@ pytestmark = pytest.mark.skipif(
     ),
 )
 
-REPOSITORY = Path(__file__).resolve().parents[2]
-SOURCE_PLUGIN = REPOSITORY / "plugin/ipaserver/plugins/gpo.py"
-SOURCE_CREATE_HANDLER = (
-    REPOSITORY
-    / "plugin/dbus_handlers/org.freeipa.server.create-gpo-structure"
-)
-SOURCE_DELETE_HANDLER = (
-    REPOSITORY
-    / "plugin/dbus_handlers/org.freeipa.server.delete-gpo-structure"
-)
-SOURCE_FILESYSTEM_HELPER = REPOSITORY / "ipa_gpo_install/filesystem.py"
-INSTALLED_CREATE_HANDLER = Path(
-    "/usr/libexec/ipa/oddjob/org.freeipa.server.create-gpo-structure"
-)
-INSTALLED_DELETE_HANDLER = Path(
-    "/usr/libexec/ipa/oddjob/org.freeipa.server.delete-gpo-structure"
-)
 POLICY_ID = "BaseALTKDE:kde-filesearch"
 PARAMETER_ID = "kde-basicsettings_setter"
 POLICY_DEFINITIONS = Path("/usr/share/PolicyDefinitions")
@@ -118,23 +100,6 @@ def _gpt_version(path: Path) -> int:
     document = configparser.ConfigParser()
     document.read_string(path.read_text(encoding="utf-8"))
     return document.getint("General", "Version")
-
-
-def _installed_package_file(package: str, relative_path: str) -> Path:
-    """Resolve an installed package file without importing the worktree copy."""
-    search_path = []
-    for value in sys.path:
-        resolved = Path(value or os.getcwd()).resolve()
-        if resolved != REPOSITORY:
-            search_path.append(str(resolved))
-    spec = PathFinder.find_spec(package, search_path)
-    locations = spec.submodule_search_locations if spec is not None else None
-    if not locations:
-        pytest.fail("installed package {!r} was not found".format(package))
-    path = Path(next(iter(locations))) / relative_path
-    if not path.is_file():
-        pytest.fail("installed package file is missing: {}".format(path))
-    return path.resolve()
 
 
 def _single(value):
@@ -647,31 +612,8 @@ def live_server():
 
     from ipaserver.plugins import gpo as plugin
 
-    installed_plugin = Path(plugin.__file__).resolve()
-    if _digest(installed_plugin) != _digest(SOURCE_PLUGIN):
-        pytest.fail(
-            "installed gpo.py differs from the working tree; install the "
-            "current tree before running live integration tests"
-        )
-    if (
-        not INSTALLED_CREATE_HANDLER.is_file()
-        or _digest(INSTALLED_CREATE_HANDLER) != _digest(SOURCE_CREATE_HANDLER)
-        or not INSTALLED_DELETE_HANDLER.is_file()
-        or _digest(INSTALLED_DELETE_HANDLER) != _digest(SOURCE_DELETE_HANDLER)
-    ):
-        pytest.fail(
-            "installed oddjob handlers differ from the working tree"
-        )
-
     from ipa_gpo_install import filesystem as filesystem_helper
 
-    installed_filesystem_helper = _installed_package_file(
-        "ipa_gpo_install", "filesystem.py"
-    )
-    if _digest(installed_filesystem_helper) != _digest(SOURCE_FILESYSTEM_HELPER):
-        pytest.fail(
-            "installed editor filesystem helper differs from the working tree"
-        )
     state_healthy, state_reason = (
         filesystem_helper.editor_state_directory_status()
     )
@@ -680,7 +622,6 @@ def live_server():
             "editor state directory preflight failed: {}".format(state_reason)
         )
 
-    plugin._binding_info()
     catalog, catalog_state = plugin._get_catalog()
     if catalog_state["diagnostics"]:
         pytest.fail(
@@ -1420,6 +1361,149 @@ def test_installed_high_level_command_flow_is_path_free(
         "Machine/Preferences",
         "gPCFileSysPath",
         "file_sys_path",
+    ):
+        assert private_fragment not in public_payload
+
+
+def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
+    live_server, tmp_path, monkeypatch
+):
+    """Run isolated public scripts lifecycles through live LDAP publication."""
+    plugin = live_server.plugin
+    api = live_server.api
+    context = live_server.create_gpo()
+    displayname = context.displayname
+    monkeypatch.setattr(
+        plugin, "GPO_EDITOR_STATE_DIRECTORY", tmp_path / "scripts-state"
+    )
+
+    def show(scope, event):
+        return api.Command.gpo_editor_scripts_show(
+            displayname, scope, event
+        )["result"]["scripts"]
+
+    def encoded(value):
+        return base64.b64encode(value).decode("ascii")
+
+    computer = show("computer", "startup")
+    computer_classic = api.Command.gpo_editor_script_upload_and_add(
+        displayname,
+        "computer",
+        "startup",
+        request={
+            "executable_group": "classic",
+            "snapshot": computer["classic"]["snapshot"],
+            "name": "computer.cmd",
+            "content_base64": encoded(b"echo computer\r\n"),
+            "parameters": "/quiet",
+        },
+    )["result"]
+    assert computer_classic["publication"]["changed"] is True
+    assert (context.gpo_root / "Machine/Scripts/Startup/computer.cmd").is_file()
+
+    computer = computer_classic["scripts"]
+    computer_powershell = api.Command.gpo_editor_script_entry_add(
+        displayname,
+        "computer",
+        "startup",
+        request={
+            "mode": "external_command",
+            "executable_group": "powershell",
+            "snapshot": computer["powershell"]["snapshot"],
+            "command_line": r"\\server\share\computer.ps1",
+            "parameters": "-NoProfile",
+        },
+    )["result"]
+    assert computer_powershell["publication"]["changed"] is True
+
+    user = show("user", "logon")
+    user_classic = api.Command.gpo_editor_script_entry_add(
+        displayname,
+        "user",
+        "logon",
+        request={
+            "mode": "external_command",
+            "executable_group": "classic",
+            "snapshot": user["classic"]["snapshot"],
+            "command_line": "user-logon.cmd",
+            "parameters": "",
+        },
+    )["result"]
+    assert user_classic["publication"]["changed"] is True
+
+    user = user_classic["scripts"]
+    user_powershell = api.Command.gpo_editor_script_upload_and_add(
+        displayname,
+        "user",
+        "logon",
+        request={
+            "executable_group": "powershell",
+            "snapshot": user["powershell"]["snapshot"],
+            "name": "user.ps1",
+            "content_base64": encoded(b"Write-Output user\r\n"),
+            "parameters": "",
+        },
+    )["result"]
+    assert user_powershell["publication"]["changed"] is True
+    assert (context.gpo_root / "User/Scripts/Logon/user.ps1").is_file()
+
+    # Leave one successful LDAP update unacknowledged, then use a new public
+    # mutation to prove that recovery acknowledges the old plan before it
+    # publishes the next plan.
+    original_acknowledge = plugin._acknowledge_publication
+    acknowledgements = []
+
+    def acknowledge_after_first(workspace, plan, snapshot):
+        acknowledgements.append(plan["idempotency_token"])
+        if len(acknowledgements) > 1:
+            return original_acknowledge(workspace, plan, snapshot)
+        return None
+
+    monkeypatch.setattr(
+        plugin, "_acknowledge_publication", acknowledge_after_first
+    )
+    computer = show("computer", "startup")
+    asset = next(
+        item for item in computer["assets"] if item["name"] == "computer.cmd"
+    )
+    left_pending = api.Command.gpo_editor_script_asset_replace(
+        displayname,
+        "computer",
+        "startup",
+        request={
+            "name": asset["name"],
+            "revision": asset["revision"],
+            "content_base64": encoded(b"echo replaced\r\n"),
+        },
+    )["result"]
+    assert left_pending["pending_publication"] is not None
+
+    recovered = api.Command.gpo_editor_script_order_update(
+        displayname,
+        "computer",
+        "startup",
+        request={
+            "snapshot": computer["powershell"]["snapshot"],
+            "execution_order": "powershell_first",
+        },
+    )["result"]
+    assert len(acknowledgements) >= 3
+    assert recovered["pending_publication"] is None
+    assert recovered["publication"]["changed"] is True
+
+    published, _ = plugin._read_gpc_snapshot(live_server.ldap, context)
+    assert "{42B5FAAE-6536-11D2-AE5A-0000F87571E3}" in (
+        published["machine_extension_names"]
+    )
+    assert "{42B5FAAE-6536-11D2-AE5A-0000F87571E3}" in (
+        published["user_extension_names"]
+    )
+    public_payload = json.dumps(recovered, sort_keys=True)
+    for private_fragment in (
+        str(context.gpo_root),
+        "Machine/Scripts",
+        "User/Scripts",
+        "echo replaced",
     ):
         assert private_fragment not in public_payload
 

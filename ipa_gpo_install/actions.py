@@ -16,8 +16,7 @@ from .config import (
 )
 from .filesystem import (
     ensure_editor_state_directory,
-    migrate_policies_acls,
-    retire_legacy_editor_runtime as cleanup_legacy_editor_runtime,
+    ensure_policies_root_acl,
 )
 
 try:
@@ -126,40 +125,21 @@ class IPAActions:
         return True
 
     def configure_editor_filesystem(self):
-        """Provision private editor state and migrate the complete GPO tree."""
+        """Provision private editor state and the fresh Policies root."""
         try:
             policies_path = Path(get_policies_path(self.api.env.domain))
             self.logger.info(_("Configuring private GPO editor state"))
             ensure_editor_state_directory()
 
             self.logger.info(
-                _("Migrating GPO editor ACLs on {}").format(policies_path)
+                _("Configuring GPO editor ACLs on {}").format(policies_path)
             )
-            migrate_policies_acls(policies_path)
+            ensure_policies_root_acl(policies_path)
             self.logger.info(_("GPO editor filesystem configured successfully"))
             return True
         except Exception as exc:
             self.logger.error(
                 _("Error configuring GPO editor filesystem: {}").format(exc)
-            )
-            return False
-
-    def retire_legacy_editor_runtime(self):
-        """Perform the one-time cleanup required when upgrading old installs."""
-        try:
-            removed = cleanup_legacy_editor_runtime()
-            if removed:
-                self.logger.info(
-                    _("Removed {} legacy editor runtime artifacts").format(
-                        len(removed)
-                    )
-                )
-            else:
-                self.logger.info(_("Legacy editor runtime is already absent"))
-            return True
-        except Exception as exc:
-            self.logger.error(
-                _("Error retiring legacy editor runtime: {}").format(exc)
             )
             return False
 

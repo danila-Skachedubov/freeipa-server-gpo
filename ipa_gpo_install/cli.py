@@ -165,14 +165,6 @@ def execute_required_actions(
             return False
 
     if not run_task(
-            _("Retire legacy GPO editor runtime"),
-            actions.retire_legacy_editor_runtime):
-        return False
-
-    # Run on every install and upgrade. The migration is idempotent and checking
-    # a single representative GPO cannot prove that every existing payload has
-    # already been migrated.
-    if not run_task(
             _("Configure GPO editor filesystem"),
             actions.configure_editor_filesystem):
         return False

@@ -1,10 +1,9 @@
-"""Installer and oddjob coverage for GPO editor filesystem provisioning."""
+"""Installer and oddjob coverage for fresh GPO editor provisioning."""
 
 import grp
 import importlib.util
 import os
 import pwd
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -12,14 +11,12 @@ from pathlib import Path
 import pytest
 
 from ipa_gpo_install import checks as checks_module
-from ipa_gpo_install import filesystem as filesystem_module
 from ipa_gpo_install.checks import IPAChecker
 from ipa_gpo_install.cli import execute_required_actions
 from ipa_gpo_install.filesystem import (
-    LEGACY_EDITOR_RETIREMENT_MARKER,
+    FilesystemConfigurationError,
     ensure_editor_state_directory,
-    migrate_policies_acls,
-    retire_legacy_editor_runtime,
+    ensure_new_gpo_acls,
 )
 
 
@@ -29,20 +26,6 @@ CREATE_HANDLER = (
     / "plugin/dbus_handlers/org.freeipa.server.create-gpo-structure"
 )
 GUID = "{11111111-2222-3333-4444-555555555555}"
-
-
-def _acl_entries(path):
-    result = subprocess.run(
-        ["getfacl", "-cp", str(path)],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return {
-        line.partition("#")[0].strip()
-        for line in result.stdout.splitlines()
-        if line and not line.startswith("#")
-    }
 
 
 def test_state_directory_is_private_and_preserves_pending_records(tmp_path):
@@ -63,41 +46,55 @@ def test_state_directory_is_private_and_preserves_pending_records(tmp_path):
     assert pending.read_text(encoding="utf-8") == '{"token": "preserve-me"}'
 
 
-@pytest.mark.skipif(
-    shutil.which("setfacl") is None or shutil.which("getfacl") is None,
-    reason="POSIX ACL tools are not installed",
-)
-def test_existing_policy_acl_migration_is_recursive_and_idempotent(tmp_path):
+def test_new_gpo_acl_provisioning_is_bounded_to_the_fresh_tree(tmp_path):
     username = pwd.getpwuid(os.getuid()).pw_name
     policies = tmp_path / "Policies"
     machine = policies / GUID / "Machine"
     machine.mkdir(parents=True)
-    payload = machine / "Registry.pol"
-    payload.write_bytes(b"policy")
-    payload.chmod(0o600)
+    user = policies / GUID / "User"
+    user.mkdir()
+    existing = machine / "pre-existing"
+    existing.mkdir()
+    calls = []
 
-    migrate_policies_acls(policies, username)
-    migrate_policies_acls(policies, username)
+    def runner(command, **_kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, "", "")
 
-    policies_entries = _acl_entries(policies)
-    assert "user:{}:r-x".format(username) in policies_entries
-    assert "user:{}:rwx".format(username) not in policies_entries
-    assert "default:user:{}:rwx".format(username) in policies_entries
+    ensure_new_gpo_acls(policies, policies / GUID, username, runner)
 
-    for directory in (policies / GUID, machine):
-        entries = _acl_entries(directory)
-        assert "user:{}:rwx".format(username) in entries
-        assert "default:user:{}:rwx".format(username) in entries
-        assert all(
-            "w" not in entry
-            for entry in entries
-            if entry.startswith("other::")
+    targets = [
+        path for command in calls for path in command
+        if str(path).startswith(str(policies))
+    ]
+    assert str(policies) in targets
+    assert str(policies / GUID) in targets
+    assert str(machine) in targets
+    assert str(user) in targets
+    assert str(existing) not in targets
+    assert any(
+        "u:{}:r-x,d:u:{}:rwx".format(username, username) in command
+        for command in calls
+    )
+    assert any(
+        "u:{}:rwx,d:u:{}:rwx".format(username, username) in command
+        for command in calls
+    )
+
+
+def test_new_gpo_acl_provisioning_rejects_symlink_child(tmp_path):
+    policies = tmp_path / "Policies"
+    machine = policies / GUID / "Machine"
+    machine.mkdir(parents=True)
+    (policies / GUID / "User").symlink_to(machine, target_is_directory=True)
+
+    with pytest.raises(FilesystemConfigurationError, match="not a real directory"):
+        ensure_new_gpo_acls(
+            policies,
+            policies / GUID,
+            pwd.getpwuid(os.getuid()).pw_name,
+            runner=lambda *_args, **_kwargs: subprocess.CompletedProcess([], 0),
         )
-
-    payload_entries = _acl_entries(payload)
-    assert "user:{}:rw-".format(username) in payload_entries
-    assert "other::---" in payload_entries
-    assert "user:{}:rwx".format(username) not in payload_entries
 
 
 def _load_create_handler():
@@ -105,7 +102,6 @@ def _load_create_handler():
         "create_gpo_structure_test", CREATE_HANDLER
     )
     if spec is None or spec.loader is None:
-        # Extension-less executable paths need an explicit source loader.
         from importlib.machinery import SourceFileLoader
         loader = SourceFileLoader("create_gpo_structure_test", str(CREATE_HANDLER))
         spec = importlib.util.spec_from_loader(loader.name, loader)
@@ -114,8 +110,7 @@ def _load_create_handler():
     return module
 
 
-def test_new_gpo_handler_applies_editor_acls_after_creation(
-        tmp_path, monkeypatch):
+def test_new_gpo_handler_applies_editor_acls_after_creation(tmp_path, monkeypatch):
     handler = _load_create_handler()
     policies = tmp_path / "Policies"
     policy = policies / GUID
@@ -153,7 +148,8 @@ def test_new_gpo_handler_applies_editor_acls_after_creation(
 
 
 def test_health_check_samples_existing_gpo_as_editor_identity(
-        tmp_path, monkeypatch):
+    tmp_path, monkeypatch
+):
     policies = tmp_path / "Policies"
     policy = policies / GUID
     policy.mkdir(parents=True)
@@ -203,9 +199,7 @@ def test_health_check_rejects_writable_policies_root(tmp_path, monkeypatch):
     monkeypatch.setattr(
         checker,
         "_acl_entries",
-        lambda _path: {
-            "user:ipaapi:r-x", "default:user:ipaapi:rwx"
-        },
+        lambda _path: {"user:ipaapi:r-x", "default:user:ipaapi:rwx"},
     )
     monkeypatch.setattr(
         checker, "_identity_can_access", lambda _path, _permissions: True
@@ -219,295 +213,12 @@ def test_health_check_rejects_writable_policies_root(tmp_path, monkeypatch):
     ) is False
 
 
-def test_legacy_cleanup_is_idempotent_and_preserves_editor_state(
-        tmp_path, monkeypatch):
-    prefix = tmp_path / "usr"
-    etc_root = tmp_path / "etc"
-    var_root = tmp_path / "var"
-    python_sitelib = prefix / "lib/python/site-packages"
-    state = tmp_path / "var/lib/freeipa/gpo-editor-state"
-    state.mkdir(parents=True)
-    pending = state / "pending.json"
-    pending.write_text("keep", encoding="utf-8")
-
-    legacy_paths = [
-        python_sitelib / "gpui_service/service.py",
-        python_sitelib / "ipaclient/plugins/gpo_client.py",
-        python_sitelib / "ipaclient/plugins/__pycache__/gpo_client.old.pyc",
-        prefix / "sbin/gpuiservice",
-        prefix / "bin/ipa-gpo-update-paths",
-        prefix / "lib/systemd/system/gpuiservice.service",
-        etc_root / "systemd/system/gpuiservice.service.d/override.conf",
-        etc_root / "systemd/system/multi-user.target.wants/gpuiservice.service",
-        etc_root / "dbus-1/system.d/org.altlinux.gpuiservice.conf",
-        etc_root / "gpuiservice/legacy.conf",
-        var_root / "lib/gpuiservice/legacy.state",
-        prefix / "share/dbus-1/system-services/org.altlinux.gpuiservice.service",
-        prefix / "share/glib-2.0/schemas/org.altlinux.gpuiservice.gschema.xml",
-    ]
-    for path in legacy_paths:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("legacy", encoding="utf-8")
-
-    calls = []
-
-    def runner(command, **_kwargs):
-        calls.append(command)
-        return subprocess.CompletedProcess(command, 0, "", "")
-
-    monkeypatch.setattr(
-        filesystem_module.shutil,
-        "which",
-        lambda command: "/usr/bin/{}".format(command),
-    )
-
-    removed = retire_legacy_editor_runtime(
-        prefix=prefix,
-        etc_root=etc_root,
-        var_root=var_root,
-        python_sitelib=python_sitelib,
-        runner=runner,
-        manage_services=False,
-    )
-    removed_again = retire_legacy_editor_runtime(
-        prefix=prefix,
-        etc_root=etc_root,
-        var_root=var_root,
-        python_sitelib=python_sitelib,
-        runner=runner,
-        manage_services=False,
-    )
-
-    assert removed
-    assert removed_again == []
-    assert all(not path.exists() for path in legacy_paths)
-    assert pending.read_text(encoding="utf-8") == "keep"
-    assert any("glib-compile-schemas" in command[0] for command in calls)
-
-
-def test_legacy_cleanup_stops_service_and_verifies_it_is_inactive(
-        tmp_path, monkeypatch):
-    calls = []
-    legacy_unit = tmp_path / "usr/lib/systemd/system/gpuiservice.service"
-    legacy_unit.parent.mkdir(parents=True)
-    legacy_unit.write_text("legacy", encoding="utf-8")
-
-    def runner(command, **_kwargs):
-        calls.append(command)
-        returncode = 3 if "is-active" in command else 0
-        return subprocess.CompletedProcess(command, returncode, "", "")
-
-    monkeypatch.setattr(
-        filesystem_module.shutil,
-        "which",
-        lambda command: "/usr/bin/systemctl" if command == "systemctl" else None,
-    )
-
-    retire_legacy_editor_runtime(
-        prefix=tmp_path / "usr",
-        etc_root=tmp_path / "etc",
-        var_root=tmp_path / "var",
-        python_sitelib=tmp_path / "site-packages",
-        runner=runner,
-    )
-
-    assert any(command[1:] == ["stop", "gpuiservice.service"]
-               for command in calls)
-    assert any(command[1:] == ["disable", "gpuiservice.service"]
-               for command in calls)
-    assert any(command[1:] == ["daemon-reload"] for command in calls)
-    assert any(command[1:] == ["is-active", "gpuiservice.service"]
-               for command in calls)
-
-
-def test_completed_retirement_marker_skips_all_service_work(
-        tmp_path, monkeypatch):
-    calls = []
-    marker = (
-        tmp_path / "var/lib/freeipa" / LEGACY_EDITOR_RETIREMENT_MARKER
-    )
-    marker.parent.mkdir(parents=True)
-    marker.write_text("", encoding="utf-8")
-
-    def runner(command, **_kwargs):
-        calls.append(command)
-        raise AssertionError("runner must not be called after retirement")
-
-    monkeypatch.setattr(
-        filesystem_module.shutil,
-        "which",
-        lambda _command: pytest.fail(
-            "service discovery must not run after retirement"
-        ),
-    )
-
-    assert retire_legacy_editor_runtime(
-        prefix=tmp_path / "usr",
-        etc_root=tmp_path / "etc",
-        var_root=tmp_path / "var",
-        python_sitelib=tmp_path / "site-packages",
-        runner=runner,
-    ) == []
-    assert calls == []
-
-
-def test_cleanup_stops_loaded_service_even_when_files_are_already_absent(
-        tmp_path, monkeypatch):
-    calls = []
-    active_checks = 0
-
-    def runner(command, **_kwargs):
-        nonlocal active_checks
-        calls.append(command)
-        if "is-active" in command:
-            active_checks += 1
-            returncode = 0 if active_checks == 1 else 3
-        else:
-            returncode = 0
-        return subprocess.CompletedProcess(command, returncode, "", "")
-
-    monkeypatch.setattr(
-        filesystem_module.shutil,
-        "which",
-        lambda command: "/usr/bin/systemctl" if command == "systemctl" else None,
-    )
-
-    arguments = {
-        "prefix": tmp_path / "usr",
-        "etc_root": tmp_path / "etc",
-        "var_root": tmp_path / "var",
-        "python_sitelib": tmp_path / "site-packages",
-        "runner": runner,
-    }
-
-    assert retire_legacy_editor_runtime(
-        **arguments,
-    ) == []
-    marker = (
-        tmp_path / "var/lib/freeipa" / LEGACY_EDITOR_RETIREMENT_MARKER
-    )
-    assert marker.is_file()
-    assert marker.stat().st_mode & 0o777 == 0o600
-    calls_after_first_migration = list(calls)
-
-    assert retire_legacy_editor_runtime(
-        **arguments,
-    ) == []
-    assert calls == calls_after_first_migration
-    assert any(command[1:] == ["stop", "gpuiservice.service"]
-               for command in calls)
-    assert any(command[1:] == ["disable", "gpuiservice.service"]
-               for command in calls)
-    assert any(command[1:] == ["daemon-reload"] for command in calls)
-    assert active_checks == 2
-
-
-def test_failed_service_retirement_does_not_write_completion_marker(
-        tmp_path, monkeypatch):
-    calls = []
-
-    def runner(command, **_kwargs):
-        calls.append(command)
-        returncode = 0
-        return subprocess.CompletedProcess(command, returncode, "", "")
-
-    monkeypatch.setattr(
-        filesystem_module.shutil,
-        "which",
-        lambda command: "/usr/bin/systemctl" if command == "systemctl" else None,
-    )
-
-    with pytest.raises(
-            filesystem_module.FilesystemConfigurationError,
-            match="still active"):
-        retire_legacy_editor_runtime(
-            prefix=tmp_path / "usr",
-            etc_root=tmp_path / "etc",
-            var_root=tmp_path / "var",
-            python_sitelib=tmp_path / "site-packages",
-            runner=runner,
-        )
-
-    marker = (
-        tmp_path / "var/lib/freeipa" / LEGACY_EDITOR_RETIREMENT_MARKER
-    )
-    assert not marker.exists()
-    assert any(command[1:] == ["stop", "gpuiservice.service"]
-               for command in calls)
-
-
-def test_schema_cleanup_requires_compiler_before_removing_xml(
-        tmp_path, monkeypatch):
-    schema = (
-        tmp_path
-        / "usr/share/glib-2.0/schemas/org.altlinux.gpuiservice.gschema.xml"
-    )
-    schema.parent.mkdir(parents=True)
-    schema.write_text("legacy", encoding="utf-8")
-    monkeypatch.setattr(filesystem_module.shutil, "which", lambda _command: None)
-
-    with pytest.raises(
-            filesystem_module.FilesystemConfigurationError,
-            match="GLib schema cache"):
-        retire_legacy_editor_runtime(
-            prefix=tmp_path / "usr",
-            etc_root=tmp_path / "etc",
-            var_root=tmp_path / "var",
-            python_sitelib=tmp_path / "site-packages",
-        )
-
-    assert schema.exists()
-
-
-def test_schema_cache_marker_rebuilds_after_rpm_removed_legacy_xml(
-        tmp_path, monkeypatch):
-    schema_directory = tmp_path / "usr/share/glib-2.0/schemas"
-    schema_directory.mkdir(parents=True)
-    calls = []
-
-    def runner(command, **_kwargs):
-        calls.append(command)
-        return subprocess.CompletedProcess(command, 0, "", "")
-
-    monkeypatch.setattr(
-        filesystem_module.shutil,
-        "which",
-        lambda command: (
-            "/usr/bin/glib-compile-schemas"
-            if command == "glib-compile-schemas"
-            else None
-        ),
-    )
-
-    assert retire_legacy_editor_runtime(
-        prefix=tmp_path / "usr",
-        etc_root=tmp_path / "etc",
-        var_root=tmp_path / "var",
-        python_sitelib=tmp_path / "site-packages",
-        runner=runner,
-        manage_services=False,
-        rebuild_schema_cache=True,
-        manage_retirement_marker=False,
-    ) == []
-    assert calls == [[
-        "/usr/bin/glib-compile-schemas", str(schema_directory)
-    ]]
-    marker = (
-        tmp_path / "var/lib/freeipa" / LEGACY_EDITOR_RETIREMENT_MARKER
-    )
-    assert not marker.exists()
-
-
-def test_install_and_upgrade_always_cleanup_migrate_and_health_check():
+def test_install_configures_fresh_filesystem_and_health_check():
     calls = []
 
     class Actions:
-        def retire_legacy_editor_runtime(self):
-            calls.append("cleanup")
-            return True
-
         def configure_editor_filesystem(self):
-            calls.append("migrate")
+            calls.append("filesystem")
             return True
 
         def are_plugins_activated(self):
@@ -532,4 +243,4 @@ def test_install_and_upgrade_always_cleanup_migrate_and_health_check():
     }
 
     assert execute_required_actions(Actions(), checks, Checker()) is True
-    assert calls == ["cleanup", "migrate", "health", "plugins", "oddjob"]
+    assert calls == ["filesystem", "health", "plugins", "oddjob"]

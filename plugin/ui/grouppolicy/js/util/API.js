@@ -150,10 +150,11 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
     }
 
     function rememberEnvelope(result) {
-        if (!editorOpenResult || !result || typeof result !== "object") return result;
+        var cached = editorOpenResult;
+        if (!cached || !result || typeof result !== "object") return result;
         ["gpo", "template", "diagnostics", "pending_publication"].forEach(function(key) {
             if (Object.prototype.hasOwnProperty.call(result, key)) {
-                editorOpenResult[key] = clone(result[key]);
+                cached[key] = clone(result[key]);
             }
         });
         return result;
@@ -231,6 +232,68 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
         }).then(rememberEnvelope);
     }
 
+    function scriptsShow(scope, event) {
+        return execute("editor_scripts_show", [scope, event], {});
+    }
+
+    function scriptFiles(scope, event) {
+        return execute("editor_script_files", [scope, event], {});
+    }
+
+    function scriptEntryAdd(scope, event, request) {
+        return execute("editor_script_entry_add", [scope, event], {
+            request: clone(request || {})
+        }).then(rememberEnvelope);
+    }
+
+    function scriptEntryUpdate(scope, event, request) {
+        return execute("editor_script_entry_update", [scope, event], {
+            request: clone(request || {})
+        }).then(rememberEnvelope);
+    }
+
+    function scriptEntryRemove(scope, event, request) {
+        return execute("editor_script_entry_remove", [scope, event], {
+            request: clone(request || {})
+        }).then(rememberEnvelope);
+    }
+
+    function scriptEntriesReorder(scope, event, request) {
+        return execute("editor_script_entries_reorder", [scope, event], {
+            request: clone(request || {})
+        }).then(rememberEnvelope);
+    }
+
+    function scriptOrderUpdate(scope, event, request) {
+        return execute("editor_script_order_update", [scope, event], {
+            request: clone(request || {})
+        }).then(rememberEnvelope);
+    }
+
+    function scriptAssetUpload(scope, event, request) {
+        return execute("editor_script_asset_upload", [scope, event], {
+            request: clone(request || {})
+        }).then(rememberEnvelope);
+    }
+
+    function scriptUploadAndAdd(scope, event, request) {
+        return execute("editor_script_upload_and_add", [scope, event], {
+            request: clone(request || {})
+        }).then(rememberEnvelope);
+    }
+
+    function scriptAssetReplace(scope, event, request) {
+        return execute("editor_script_asset_replace", [scope, event], {
+            request: clone(request || {})
+        }).then(rememberEnvelope);
+    }
+
+    function scriptAssetDelete(scope, event, request) {
+        return execute("editor_script_asset_delete", [scope, event], {
+            request: clone(request || {})
+        }).then(rememberEnvelope);
+    }
+
     function reconcile() {
         return execute("editor_reconcile", [], {}).then(rememberEnvelope);
     }
@@ -248,6 +311,17 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
         preferenceCreate: preferenceCreate,
         preferenceUpdate: preferenceUpdate,
         preferenceDelete: preferenceDelete,
+        scriptsShow: scriptsShow,
+        scriptFiles: scriptFiles,
+        scriptEntryAdd: scriptEntryAdd,
+        scriptEntryUpdate: scriptEntryUpdate,
+        scriptEntryRemove: scriptEntryRemove,
+        scriptEntriesReorder: scriptEntriesReorder,
+        scriptOrderUpdate: scriptOrderUpdate,
+        scriptAssetUpload: scriptAssetUpload,
+        scriptUploadAndAdd: scriptUploadAndAdd,
+        scriptAssetReplace: scriptAssetReplace,
+        scriptAssetDelete: scriptAssetDelete,
         reconcile: reconcile,
         getDisplayName: function() { return selectedDisplayName; },
         getOpenResult: function() { return editorOpenResult; },

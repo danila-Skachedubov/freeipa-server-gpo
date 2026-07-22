@@ -1,3 +1,5 @@
+import base64
+import binascii
 import json
 import logging
 import os
@@ -79,33 +81,23 @@ def verify_gpo_schema(ldap, api):
         logger.debug("GPO schema check error: %s", str(e))
 
 
-# The editor is an independently versioned binding contract.  Keep the entire
-# compatibility boundary in one place instead of using the RPM version as a
-# proxy for API compatibility.
-ADMIX_BINDING_API_VERSION = 1
-ADMIX_REQUIRED_CAPABILITIES = frozenset({
-    'typed-policy-values',
-    'atomic-policy-updates',
-    'policy-capabilities',
-    'element-policy-state-actions',
-    'raw-policy-diagnostics',
-    'preference-item-lifecycle',
-    'preference-filter-lifecycle',
-    'preference-field-controls',
-    'preference-parent-candidates',
-    'policy-comments',
-    'external-publication-recovery',
-    'snapshot-verified-publication',
-    'reusable-template-catalog',
-    'external-file-publication-resume',
-    'external-no-publication-required',
-    'planner-owned-extension-values',
-})
-
 GPO_TEMPLATE_ROOT = Path('/usr/share/PolicyDefinitions')
 GPO_SYSVOL_ROOT = Path('/var/lib/freeipa/sysvol')
 GPO_EDITOR_STATE_DIRECTORY = Path('/var/lib/freeipa/gpo-editor-state')
 GPO_CATALOG_REFRESH_INTERVAL = 5.0
+GPO_SCRIPT_UPLOAD_MAX_BYTES = 16 * 1024 * 1024
+GPO_SCRIPT_UPLOAD_MAX_ENCODED_BYTES = (
+    4 * ((GPO_SCRIPT_UPLOAD_MAX_BYTES + 2) // 3)
+)
+
+_SCRIPT_EVENTS = {
+    'computer': frozenset(('startup', 'shutdown')),
+    'user': frozenset(('logon', 'logoff')),
+}
+_SCRIPT_EXECUTABLE_GROUPS = frozenset(('classic', 'powershell'))
+_SCRIPT_EXECUTION_ORDERS = frozenset((
+    'unspecified', 'classic_first', 'powershell_first',
+))
 
 GPC_SNAPSHOT_ATTRIBUTES = (
     'cn',
@@ -195,34 +187,6 @@ def _load_admix():
         _admix_module = admix
     return _admix_module
 
-
-def _binding_info(module=None):
-    module = module or _load_admix()
-    try:
-        version = int(module.HighLevelApi.binding_api_version())
-        capabilities = frozenset(module.HighLevelApi.binding_capabilities())
-    except Exception as exc:
-        raise EditorFailure(
-            'operational',
-            'The Group Policy editor binding cannot report its compatibility.',
-        ) from exc
-
-    missing = sorted(ADMIX_REQUIRED_CAPABILITIES - capabilities)
-    if version != ADMIX_BINDING_API_VERSION or missing:
-        details = {
-            'required_api_version': ADMIX_BINDING_API_VERSION,
-            'installed_api_version': version,
-            'missing_capabilities': missing,
-        }
-        raise EditorFailure(
-            'operational',
-            'The installed Group Policy editor binding is incompatible.',
-            details=details,
-        )
-    return {
-        'api_version': version,
-        'capabilities': sorted(capabilities),
-    }
 
 
 def _entry_values(entry, attribute):
@@ -533,7 +497,6 @@ def _get_catalog(module=None, now=None):
     """Return the worker-local healthy catalog, refreshing it at most once per interval."""
     global _catalog, _catalog_last_refresh, _catalog_refresh_result
     module = module or _load_admix()
-    _binding_info(module)
     now = time.monotonic() if now is None else now
     with _catalog_lock:
         if _catalog is None:
@@ -621,7 +584,6 @@ def _open_workspace(
     comment_scope=None, with_catalog=True,
 ):
     module = _load_admix()
-    binding = _binding_info(module)
     kwargs = {
         'load_preferences': bool(load_preferences),
         'state_directory': str(GPO_EDITOR_STATE_DIRECTORY),
@@ -643,7 +605,6 @@ def _open_workspace(
     except Exception:
         raise
     return workspace, {
-        'binding': binding,
         'catalog': catalog_state,
         'locales': locales,
     }
@@ -935,7 +896,6 @@ def _editor_envelope(context, runtime, workspace=None):
     if catalog:
         diagnostics = catalog.get('diagnostics', []) + diagnostics
     return {
-        'binding': runtime['binding'],
         'gpo': {
             'displayname': context.displayname,
             'guid': context.guid,
@@ -947,6 +907,99 @@ def _editor_envelope(context, runtime, workspace=None):
         'diagnostics': diagnostics,
         'pending_publication': _public_pending(pending),
     }
+
+
+def _script_assets_public(assets):
+    result = []
+    for asset in assets or ():
+        item = dict(asset)
+        references = []
+        for reference in item.get('references') or ():
+            references.append({
+                'event': str(reference.get('event') or ''),
+                'executable_group': str(
+                    reference.get('executable_group') or ''
+                ),
+                'index': int(reference.get('index', 0)),
+            })
+        result.append({
+            'name': str(item.get('name') or ''),
+            'byte_size': int(item.get('byte_size', 0)),
+            'revision': str(item.get('revision') or ''),
+            'references': references,
+        })
+    return result
+
+
+def _script_group_public(group, event, assets):
+    asset_names = {
+        item['name'].casefold(): item['name'] for item in assets
+    }
+    entries = []
+    for entry in dict(group).get('entries') or ():
+        if entry.get('event') != event:
+            continue
+        candidate = entry.get('managed_asset_name')
+        managed_name = None
+        if isinstance(candidate, str):
+            managed_name = asset_names.get(candidate.casefold())
+        entries.append({
+            'identity': str(entry.get('identity') or ''),
+            'command_line': str(entry.get('command_line') or ''),
+            'parameters': str(entry.get('parameters') or ''),
+            'managed_asset_name': managed_name,
+            'kind': 'managed_asset' if managed_name else 'external',
+        })
+    source_diagnostics = list(group.get('diagnostics') or ())
+    diagnostics = _sanitize_diagnostics(source_diagnostics)
+    for source, public in zip(source_diagnostics, diagnostics):
+        if isinstance(source, dict) and isinstance(source.get('code'), str):
+            public['code'] = source['code']
+    return {
+        'snapshot': str(group.get('snapshot') or ''),
+        'editable': bool(group.get('editable')),
+        'entries': entries,
+        'diagnostics': diagnostics,
+    }
+
+
+def _script_order_value(event, execution_order):
+    field = (
+        'start_execute_ps_first'
+        if event in ('startup', 'logon')
+        else 'end_execute_ps_first'
+    )
+    value = dict(execution_order or {}).get(field)
+    if value is None:
+        return 'unspecified'
+    return 'powershell_first' if value else 'classic_first'
+
+
+def _script_event_view(workspace, scope, event):
+    assets = _script_assets_public(workspace.list_script_assets(scope, event))
+    classic = workspace.show_script_group(scope, 'classic')
+    powershell = workspace.show_script_group(scope, 'powershell')
+    return {
+        'scope': scope,
+        'event': event,
+        'classic': _script_group_public(classic, event, assets),
+        'powershell': _script_group_public(powershell, event, assets),
+        'execution_order': _script_order_value(
+            event, powershell.get('execution_order')
+        ),
+        'assets': assets,
+        'upload_limit_bytes': GPO_SCRIPT_UPLOAD_MAX_BYTES,
+    }
+
+
+def _scripts_response(
+    context, runtime, workspace, scope, event, publication=None,
+):
+    result = _editor_envelope(context, runtime, workspace)
+    result['scripts'] = _script_event_view(workspace, scope, event)
+    if publication is not None:
+        result['publication'] = publication
+    return result
 
 
 def _acknowledge_publication(workspace, plan, resulting_snapshot):
@@ -1275,12 +1328,18 @@ def _translate_editor_exception(exc):
         )
     else:
         code = getattr(exc, 'code', None)
+        script_details = _public_script_error_details(code, exc)
         mapping = {
             'invalid_argument': ('validation', 'The editor request is invalid.'),
             'validation': ('validation', 'The editor request is invalid.'),
             'not_found': ('not_found', 'The requested editor object was not found.'),
             'not_loaded': ('unsupported', 'The requested editor feature is unavailable.'),
             'conflict': ('storage_conflict', 'The GPO changed while it was being edited.'),
+            'asset_collision': ('asset_collision', 'The script asset name is already in use.'),
+            'asset_revision_conflict': ('asset_revision_conflict', 'The script asset changed while it was being edited.'),
+            'asset_still_referenced': ('asset_still_referenced', 'The script asset is still referenced.'),
+            'size_limit': ('size_limit', 'The script upload exceeds the allowed size.'),
+            'malformed_source': ('malformed_source', 'The script source cannot be edited safely.'),
             'recoverable': ('publication_pending', 'The GPO has recoverable pending state.'),
             'publication_pending': ('publication_pending', 'The GPO has a pending publication.'),
             'durable_state_required': ('operational', 'The editor state directory is unavailable.'),
@@ -1295,6 +1354,7 @@ def _translate_editor_exception(exc):
                 message,
                 field=getattr(exc, 'field', None),
                 path=getattr(exc, 'path', None),
+                details=script_details,
             )
         else:
             logger.exception('Unexpected GPO editor failure')
@@ -1312,6 +1372,61 @@ def _translate_editor_exception(exc):
             failure.details, ensure_ascii=False, sort_keys=True
         )
     raise errors.ExecutionError(message=_(failure.message), **data)
+
+
+def _public_script_error_details(code, exc):
+    """Allowlist owned script error details from the v3 binding."""
+    raw = getattr(exc, 'script_details', None)
+    if not isinstance(raw, dict):
+        return None
+
+    def safe_name(value):
+        if not isinstance(value, str) or not value or len(value) > 255:
+            return None
+        if '\x00' in value or '/' in value or '\\' in value or value in ('.', '..'):
+            return None
+        return value
+
+    if code == 'asset_collision':
+        existing = _script_assets_public([raw.get('existing')])
+        suggested_name = safe_name(raw.get('suggested_name'))
+        if not existing or suggested_name is None:
+            return None
+        return {'existing': existing[0], 'suggested_name': suggested_name}
+    if code == 'asset_revision_conflict':
+        name = safe_name(raw.get('name'))
+        expected = raw.get('expected_revision')
+        actual = raw.get('actual_revision')
+        if (name is None or not isinstance(expected, str)
+                or not isinstance(actual, str)):
+            return None
+        return {
+            'name': name,
+            'expected_revision': expected,
+            'actual_revision': actual,
+        }
+    if code == 'asset_still_referenced':
+        name = safe_name(raw.get('name'))
+        if name is None:
+            return None
+        references = []
+        for reference in raw.get('references') or ():
+            if not isinstance(reference, dict):
+                return None
+            event = reference.get('event')
+            group = reference.get('executable_group')
+            index = reference.get('index')
+            if (event not in ('startup', 'shutdown', 'logon', 'logoff')
+                    or group not in _SCRIPT_EXECUTABLE_GROUPS
+                    or not isinstance(index, int) or index < 0):
+                return None
+            references.append({
+                'event': event,
+                'executable_group': group,
+                'index': index,
+            })
+        return {'name': name, 'references': references}
+    return None
 
 @register()
 class gpo(LDAPObject):
@@ -1658,6 +1773,146 @@ def _validated_scope(scope):
             field='scope',
         )
     return normalized
+
+
+def _validated_script_context(scope, event):
+    normalized_scope = _validated_scope(scope)
+    normalized_event = str(event or '').lower()
+    if normalized_event not in _SCRIPT_EVENTS[normalized_scope]:
+        raise EditorFailure(
+            'validation',
+            'The script event is not valid for this scope.',
+            field='event',
+        )
+    return normalized_scope, normalized_event
+
+
+def _script_request(request, allowed, required=()):
+    if not isinstance(request, dict):
+        raise EditorFailure(
+            'validation', 'A structured scripts request is required.',
+            field='request',
+        )
+    unknown = sorted(set(request) - set(allowed))
+    if unknown:
+        raise EditorFailure(
+            'validation', 'The scripts request contains an unknown field.',
+            field='request', details={'unknown_fields': unknown},
+        )
+    missing = [name for name in required if name not in request]
+    if missing:
+        raise EditorFailure(
+            'validation', 'The scripts request is missing a required field.',
+            field='request', details={'missing_fields': missing},
+        )
+    return request
+
+
+def _script_text(request, field, allow_empty=False, maximum=32768):
+    value = request.get(field)
+    if not isinstance(value, str) or '\x00' in value:
+        raise EditorFailure(
+            'validation', 'The scripts request field is invalid.', field=field
+        )
+    if (not allow_empty and not value) or len(value) > maximum:
+        raise EditorFailure(
+            'validation', 'The scripts request field is invalid.', field=field
+        )
+    return value
+
+
+def _script_group(request):
+    group = _script_text(request, 'executable_group', maximum=32).lower()
+    if group not in _SCRIPT_EXECUTABLE_GROUPS:
+        raise EditorFailure(
+            'validation', 'The script executable group is invalid.',
+            field='executable_group',
+        )
+    return group
+
+
+def _script_asset_name(request, field='name'):
+    name = _script_text(request, field, maximum=255)
+    if (
+        name in ('.', '..')
+        or '/' in name
+        or '\\' in name
+        or name.strip() != name
+    ):
+        raise EditorFailure(
+            'validation', 'The script asset name is invalid.', field=field
+        )
+    return name
+
+
+def _script_order(request):
+    value = _script_text(request, 'execution_order', maximum=32).lower()
+    if value not in _SCRIPT_EXECUTION_ORDERS:
+        raise EditorFailure(
+            'validation', 'The script execution order is invalid.',
+            field='execution_order',
+        )
+    return value
+
+
+def _script_identity(request, field='identity'):
+    return _script_text(request, field, maximum=4096)
+
+
+def _decode_script_upload(request):
+    value = request.get('content_base64')
+    if not isinstance(value, str):
+        raise EditorFailure(
+            'validation', 'The script upload content is invalid.',
+            field='content_base64',
+        )
+    if len(value) > GPO_SCRIPT_UPLOAD_MAX_ENCODED_BYTES:
+        raise EditorFailure(
+            'size_limit', 'The script upload exceeds the allowed size.',
+            field='content_base64',
+            details={'limit_bytes': GPO_SCRIPT_UPLOAD_MAX_BYTES},
+        )
+    try:
+        payload = base64.b64decode(value.encode('ascii'), validate=True)
+    except (UnicodeEncodeError, binascii.Error) as exc:
+        raise EditorFailure(
+            'validation', 'The script upload content is invalid.',
+            field='content_base64',
+        ) from exc
+    if len(payload) > GPO_SCRIPT_UPLOAD_MAX_BYTES:
+        raise EditorFailure(
+            'size_limit', 'The script upload exceeds the allowed size.',
+            field='content_base64',
+            details={'limit_bytes': GPO_SCRIPT_UPLOAD_MAX_BYTES},
+        )
+    return payload
+
+
+def _run_scripts_mutation(command, displayname, scope, event, operation):
+    """Run one trusted scripts transaction and publish it once."""
+    context = command._context(displayname, write=True)
+    ldap_backend = command.api.Backend.ldap2
+    workspace, runtime = _open_workspace(context, with_catalog=False)
+    _recover_before_mutation(workspace, ldap_backend, context)
+    operation(workspace)
+    publication = _commit_external_once(workspace, ldap_backend, context)
+    return _scripts_response(
+        context, runtime, workspace, scope, event, publication=publication
+    )
+
+
+def _script_asset_collision(workspace, scope, event, name):
+    collision = workspace.script_asset_collision(scope, event, name)
+    if collision is None:
+        return
+    existing = _script_assets_public([collision.get('existing')])
+    raise EditorFailure(
+        'asset_collision', 'The script asset name is already in use.',
+        field='name', details={
+            'existing': existing[0] if existing else {},
+            'suggested_name': str(collision.get('suggested_name') or ''),
+        },
+    )
 
 
 class _GpoEditorCommand(Command):
@@ -2141,4 +2396,493 @@ class gpo_editor_preference_delete(_GpoEditorCommand):
             result['deleted_identity'] = identity
             result['publication'] = publication
             return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_scripts_show(_GpoEditorCommand):
+    __doc__ = _('Display one high-level Group Policy Scripts event.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+
+    def execute(self, displayname, scope, event, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(context, with_catalog=False)
+            return _scripts_response(
+                context, runtime, workspace, normalized_scope, normalized_event
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_files(_GpoEditorCommand):
+    __doc__ = _('List managed files for one Group Policy Scripts event.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+
+    def execute(self, displayname, scope, event, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(context, with_catalog=False)
+            return _scripts_response(
+                context, runtime, workspace, normalized_scope, normalized_event
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_entry_add(_GpoEditorCommand):
+    __doc__ = _('Atomically add a Group Policy Scripts entry.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script entry request')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request,
+                ('mode', 'executable_group', 'snapshot', 'name',
+                 'command_line', 'parameters'),
+                ('mode', 'executable_group', 'snapshot', 'parameters'),
+            )
+            group = _script_group(request_data)
+            snapshot = _script_identity(request_data, 'snapshot')
+            parameters = _script_text(
+                request_data, 'parameters', allow_empty=True
+            )
+            mode = _script_text(request_data, 'mode', maximum=32)
+            if mode == 'existing_asset':
+                name = _script_asset_name(request_data)
+                command_line = name
+            elif mode == 'external_command':
+                command_line = _script_text(request_data, 'command_line')
+            else:
+                raise EditorFailure(
+                    'validation', 'The script entry mode is invalid.',
+                    field='mode',
+                )
+
+            def mutate(workspace):
+                if mode == 'existing_asset':
+                    assets = _script_assets_public(
+                        workspace.list_script_assets(
+                            normalized_scope, normalized_event
+                        )
+                    )
+                    matches = [
+                        asset['name'] for asset in assets
+                        if asset['name'].casefold() == name.casefold()
+                    ]
+                    if not matches:
+                        raise EditorFailure(
+                            'not_found', 'The managed script asset was not found.',
+                            field='name',
+                        )
+                    command = matches[0]
+                else:
+                    command = command_line
+                workspace.add_script_entry(
+                    normalized_scope, group, normalized_event, snapshot,
+                    command, parameters,
+                )
+
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event, mutate
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_entry_update(_GpoEditorCommand):
+    __doc__ = _('Atomically update a Group Policy Scripts entry.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script entry update')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request,
+                ('executable_group', 'identity', 'command_line', 'parameters'),
+                ('executable_group', 'identity', 'command_line', 'parameters'),
+            )
+            group = _script_group(request_data)
+            identity = _script_identity(request_data)
+            command_line = _script_text(request_data, 'command_line')
+            parameters = _script_text(
+                request_data, 'parameters', allow_empty=True
+            )
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event,
+                lambda workspace: workspace.update_script_entry(
+                    normalized_scope, group, normalized_event, identity,
+                    command_line, parameters,
+                ),
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_entry_remove(_GpoEditorCommand):
+    __doc__ = _('Atomically remove a Group Policy Scripts entry.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script entry removal')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request,
+                ('executable_group', 'identity', 'delete_asset',
+                 'asset_revision'),
+                ('executable_group', 'identity'),
+            )
+            group = _script_group(request_data)
+            identity = _script_identity(request_data)
+            delete_asset = request_data.get('delete_asset', False)
+            if not isinstance(delete_asset, bool):
+                raise EditorFailure(
+                    'validation', 'The script asset deletion mode is invalid.',
+                    field='delete_asset',
+                )
+            revision = None
+            if delete_asset:
+                revision = _script_identity(request_data, 'asset_revision')
+
+            def mutate(workspace):
+                asset_name = None
+                if delete_asset:
+                    document = workspace.show_script_group(normalized_scope, group)
+                    selected = next(
+                        (
+                            entry for entry in document.get('entries') or ()
+                            if entry.get('event') == normalized_event
+                            and entry.get('identity') == identity
+                        ),
+                        None,
+                    )
+                    candidate = selected and selected.get('managed_asset_name')
+                    if not isinstance(candidate, str):
+                        raise EditorFailure(
+                            'validation',
+                            'Only a managed script entry can delete an asset.',
+                            field='delete_asset',
+                        )
+                    assets = _script_assets_public(
+                        workspace.list_script_assets(
+                            normalized_scope, normalized_event
+                        )
+                    )
+                    asset_name = next(
+                        (
+                            asset['name'] for asset in assets
+                            if asset['name'].casefold() == candidate.casefold()
+                        ),
+                        None,
+                    )
+                    if asset_name is None:
+                        raise EditorFailure(
+                            'not_found', 'The managed script asset was not found.',
+                            field='identity',
+                        )
+                workspace.remove_script_entry(
+                    normalized_scope, group, normalized_event, identity
+                )
+                if asset_name is not None:
+                    workspace.delete_script_asset(
+                        normalized_scope, normalized_event, asset_name, revision
+                    )
+
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event, mutate
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_entries_reorder(_GpoEditorCommand):
+    __doc__ = _('Atomically reorder a Group Policy Scripts event list.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script reorder request')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request, ('executable_group', 'snapshot', 'identities'),
+                ('executable_group', 'snapshot', 'identities'),
+            )
+            group = _script_group(request_data)
+            snapshot = _script_identity(request_data, 'snapshot')
+            identities = request_data.get('identities')
+            if not isinstance(identities, list) or not all(
+                isinstance(identity, str) and identity and '\x00' not in identity
+                for identity in identities
+            ):
+                raise EditorFailure(
+                    'validation', 'The script entry order is invalid.',
+                    field='identities',
+                )
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event,
+                lambda workspace: workspace.reorder_script_entries(
+                    normalized_scope, group, normalized_event, snapshot,
+                    identities,
+                ),
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_order_update(_GpoEditorCommand):
+    __doc__ = _('Atomically set Group Policy Scripts execution order.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script order request')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request, ('snapshot', 'execution_order'),
+                ('snapshot', 'execution_order'),
+            )
+            snapshot = _script_identity(request_data, 'snapshot')
+            order = _script_order(request_data)
+
+            def mutate(workspace):
+                powershell = workspace.show_script_group(
+                    normalized_scope, 'powershell'
+                )
+                current = dict(powershell.get('execution_order') or {})
+                value = {
+                    'unspecified': None,
+                    'classic_first': False,
+                    'powershell_first': True,
+                }[order]
+                start = current.get('start_execute_ps_first')
+                end = current.get('end_execute_ps_first')
+                if normalized_event in ('startup', 'logon'):
+                    start = value
+                else:
+                    end = value
+                workspace.set_script_execution_order(
+                    normalized_scope, snapshot, start, end
+                )
+
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event, mutate
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_asset_upload(_GpoEditorCommand):
+    __doc__ = _('Atomically upload an unreferenced Group Policy script asset.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script upload request')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request, ('name', 'content_base64'),
+                ('name', 'content_base64'),
+            )
+            name = _script_asset_name(request_data)
+            payload = _decode_script_upload(request_data)
+
+            def mutate(workspace):
+                _script_asset_collision(
+                    workspace, normalized_scope, normalized_event, name
+                )
+                workspace.upload_script_asset(
+                    normalized_scope, normalized_event, name, payload
+                )
+
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event, mutate
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_upload_and_add(_GpoEditorCommand):
+    __doc__ = _('Atomically upload and attach a Group Policy script asset.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script upload-and-add request')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request,
+                ('executable_group', 'snapshot', 'name', 'content_base64',
+                 'parameters'),
+                ('executable_group', 'snapshot', 'name', 'content_base64',
+                 'parameters'),
+            )
+            group = _script_group(request_data)
+            snapshot = _script_identity(request_data, 'snapshot')
+            name = _script_asset_name(request_data)
+            payload = _decode_script_upload(request_data)
+            parameters = _script_text(
+                request_data, 'parameters', allow_empty=True
+            )
+
+            def mutate(workspace):
+                _script_asset_collision(
+                    workspace, normalized_scope, normalized_event, name
+                )
+                workspace.upload_and_add_script_entry(
+                    normalized_scope, group, normalized_event, snapshot,
+                    name, payload, parameters,
+                )
+
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event, mutate
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_asset_replace(_GpoEditorCommand):
+    __doc__ = _('Atomically replace a managed Group Policy script asset.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script replacement request')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request, ('name', 'revision', 'content_base64'),
+                ('name', 'revision', 'content_base64'),
+            )
+            name = _script_asset_name(request_data)
+            revision = _script_identity(request_data, 'revision')
+            payload = _decode_script_upload(request_data)
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event,
+                lambda workspace: workspace.replace_script_asset(
+                    normalized_scope, normalized_event, name, revision, payload
+                ),
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_asset_delete(_GpoEditorCommand):
+    __doc__ = _('Atomically delete an unreferenced Group Policy script asset.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script asset deletion request')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request, ('name', 'revision'), ('name', 'revision')
+            )
+            name = _script_asset_name(request_data)
+            revision = _script_identity(request_data, 'revision')
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event,
+                lambda workspace: workspace.delete_script_asset(
+                    normalized_scope, normalized_event, name, revision
+                ),
+            )
         return self._run(operation)

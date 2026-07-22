@@ -180,7 +180,7 @@ policy-1 → policy-2 → policy-3 → policy-4
 ### Требования
 
 - FreeIPA сервер
-- `python3-module-admix` с binding API версии 1
+- `python3-module-admix` 0.1.x (не ниже 0.1.0 и ниже 0.2.0)
 - Административные шаблоны из пакета `admx-basealt`
 - Права администратора
 - Действующий Kerberos-билет

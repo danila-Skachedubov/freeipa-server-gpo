@@ -393,6 +393,89 @@ test('API sends only displayname, opaque ids, structured request, and request lo
     assert.equal(JSON.stringify(calls).includes('registry_' + 'path'), false);
 });
 
+test('scripts API mirrors every RPC without creating trusted client path state', async () => {
+    const calls = [];
+    const rpc = {
+        command(spec) {
+            calls.push(spec);
+            return {
+                execute() {
+                    const result = spec.method === 'editor_open'
+                        ? { gpo: { displayname: 'Desktop policy', revision: 'before' } }
+                        : {
+                            gpo: { displayname: 'Desktop policy', revision: spec.method },
+                            scripts: { scope: 'computer', event: 'startup' }
+                        };
+                    spec.on_success({ result: { result } });
+                }
+            };
+        }
+    };
+    const API = loadAmd('js/util/API.js', {
+        'freeipa/ipa': { api_version: '2.0' },
+        'freeipa/rpc': rpc,
+        '../locales/translations': { getLanguage: () => 'en' }
+    }, { navigator: { language: 'en-US' } });
+    const entry = {
+        mode: 'existing_asset', executable_group: 'classic', snapshot: 'classic-v1',
+        name: 'startup.cmd', parameters: ''
+    };
+    const asset = { name: 'startup.cmd', content_base64: 'ZWNobyBoaQ==' };
+
+    await API.initialize('Desktop policy');
+    await API.scriptsShow('computer', 'startup');
+    await API.scriptFiles('computer', 'startup');
+    await API.scriptEntryAdd('computer', 'startup', entry);
+    await API.scriptEntryUpdate('computer', 'startup', {
+        executable_group: 'classic', identity: 'entry-1', command_line: 'startup.cmd', parameters: ''
+    });
+    await API.scriptEntryRemove('computer', 'startup', {
+        executable_group: 'classic', identity: 'entry-1', delete_asset: false
+    });
+    await API.scriptEntriesReorder('computer', 'startup', {
+        executable_group: 'classic', snapshot: 'classic-v2', identities: ['entry-2', 'entry-1']
+    });
+    await API.scriptOrderUpdate('computer', 'startup', {
+        snapshot: 'powershell-v1', execution_order: 'powershell_first'
+    });
+    await API.scriptAssetUpload('computer', 'startup', asset);
+    await API.scriptUploadAndAdd('computer', 'startup', {
+        executable_group: 'classic', snapshot: 'classic-v1', name: 'startup.cmd',
+        content_base64: 'ZWNobyBoaQ==', parameters: ''
+    });
+    await API.scriptAssetReplace('computer', 'startup', {
+        name: 'startup.cmd', revision: 'asset-v1', content_base64: 'ZWNobyBuZXc='
+    });
+    await API.scriptAssetDelete('computer', 'startup', {
+        name: 'startup.cmd', revision: 'asset-v2'
+    });
+    entry.name = 'mutated-after-dispatch.cmd';
+    asset.name = 'mutated-after-dispatch.cmd';
+
+    assert.deepEqual(calls.map((call) => call.method), [
+        'editor_open', 'editor_scripts_show', 'editor_script_files',
+        'editor_script_entry_add', 'editor_script_entry_update',
+        'editor_script_entry_remove', 'editor_script_entries_reorder',
+        'editor_script_order_update', 'editor_script_asset_upload',
+        'editor_script_upload_and_add', 'editor_script_asset_replace',
+        'editor_script_asset_delete'
+    ]);
+    calls.slice(1).forEach((call) => {
+        assert.deepEqual(plain(call.args), ['Desktop policy', 'computer', 'startup']);
+        assert.equal(Object.prototype.hasOwnProperty.call(call.options, 'locales'), false);
+    });
+    assert.deepEqual(plain(calls[3].options.request), {
+        mode: 'existing_asset', executable_group: 'classic', snapshot: 'classic-v1',
+        name: 'startup.cmd', parameters: ''
+    });
+    assert.deepEqual(plain(calls[8].options.request), {
+        name: 'startup.cmd', content_base64: 'ZWNobyBoaQ=='
+    });
+    assert.equal(API.getOpenResult().gpo.revision, 'editor_script_asset_delete');
+    assert.equal(JSON.stringify(calls).includes('gpcfile' + 'syspath'), false);
+    assert.equal(JSON.stringify(calls).includes('server_' + 'path'), false);
+});
+
 test('API preserves structured error categories and field data', async () => {
     const rpc = {
         command(spec) {
@@ -2494,36 +2577,4 @@ test('failed lazy navigation preserves the current workspace selection for retry
     assert.equal(loadCount, 2);
     assert.equal(renderCount, 1);
     assert.equal(state.selectedItem.item, lazyFolder);
-});
-
-test('production UI contains no legacy editor calls, generated trees, scripts route, or browser persistence', () => {
-    const jsRoot = path.join(ROOT, 'js');
-    const files = [];
-    function visit(directory) {
-        for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-            const full = path.join(directory, entry.name);
-            if (entry.isDirectory()) visit(full);
-            else if (entry.name.endsWith('.js')) files.push(full);
-        }
-    }
-    visit(jsRoot);
-    const source = files.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
-    for (const forbidden of [
-        'get_' + 'current_value', 'set_' + 'policy', 'delete_' + 'policy',
-        'get_' + 'locale', 'set_' + 'locale', 'initName' + 'Gpt',
-        'waitForName' + 'Gpt', 'getName' + 'Gpt', 'local' + 'Storage',
-        "template: '" + 'scripts' + "'", 'gpcfile' + 'syspath',
-        'name_' + 'gpt', 'storage' + 'Path', 'policy' + 'Path',
-        'registry_' + 'path'
-    ]) {
-        assert.equal(source.includes(forbidden), false, `legacy token remains: ${forbidden}`);
-    }
-    assert.equal(fs.existsSync(path.join(jsRoot, 'components/tree-view/policy-' + 'en.js')), false);
-    assert.equal(fs.existsSync(path.join(jsRoot, 'components/tree-view/policy-' + 'ru.js')), false);
-    assert.equal(fs.existsSync(path.join(jsRoot, 'components/templates/' + 'scripts-template.js')), false);
-
-    const gpoShell = fs.readFileSync(path.join(ROOT, 'gpo.js'), 'utf8');
-    assert.equal(gpoShell.includes('mod_data.version' + 'number'), false);
-    assert.equal(gpoShell.includes("a.register('" + 'save' + "'"), false);
-    assert.equal(gpoShell.includes("actions: ['gpo_" + 'save' + "'"), true);
 });

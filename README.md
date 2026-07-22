@@ -178,7 +178,7 @@ This approach provides predictable and controlled policy inheritance with flexib
 ### Requirements
 
 - FreeIPA server
-- `python3-module-admix` with binding API version 1
+- `python3-module-admix` 0.1.x (at least 0.1.0 and below 0.2.0)
 - Administrative Templates provided by `admx-basealt`
 - Administrator rights
 - Valid Kerberos ticket

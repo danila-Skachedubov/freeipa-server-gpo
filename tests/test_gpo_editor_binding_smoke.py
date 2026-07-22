@@ -13,23 +13,9 @@ import pytest
 from admix import AdmixError, HighLevelApi, TemplateCatalog
 
 
-REQUIRED_CAPABILITIES = {
-    "typed-policy-values",
-    "atomic-policy-updates",
-    "policy-capabilities",
-    "element-policy-state-actions",
-    "preference-item-lifecycle",
-    "preference-filter-lifecycle",
-    "preference-field-controls",
-    "preference-parent-candidates",
-    "policy-comments",
-    "external-publication-recovery",
-    "snapshot-verified-publication",
-    "reusable-template-catalog",
-    "external-file-publication-resume",
-    "external-no-publication-required",
-    "planner-owned-extension-values",
-}
+SCRIPTS_CSE_GUID = "{42B5FAAE-6536-11D2-AE5A-0000F87571E3}"
+COMPUTER_SCRIPTS_TOOL_GUID = "{40B6664F-4972-11D1-A7CA-0000F87571E3}"
+USER_SCRIPTS_TOOL_GUID = "{40B66650-4972-11D1-A7CA-0000F87571E3}"
 
 MACHINE_ADMINISTRATIVE_TEMPLATES_EXTENSION = (
     "[{35378EAC-683F-11D2-A89A-00C04FBBCFA2}"
@@ -62,9 +48,166 @@ def _kde_fixture_root():
     return matches[0]
 
 
-def test_installed_binding_has_complete_editor_contract():
-    assert HighLevelApi.binding_api_version() == 1
-    assert REQUIRED_CAPABILITIES <= set(HighLevelApi.binding_capabilities())
+def _script_publication_workspace(tmp_path, state_key):
+    """Return an empty, structurally valid GPO workspace for scripts tests."""
+    gpo_root = tmp_path / "gpo"
+    shutil.copytree(_kde_fixture_root(), gpo_root)
+    for event in ("Startup", "Shutdown"):
+        (gpo_root / "Machine" / "Scripts" / event).mkdir(parents=True)
+    for event in ("Logon", "Logoff"):
+        (gpo_root / "User" / "Scripts" / event).mkdir(parents=True)
+    api = HighLevelApi(
+        str(gpo_root),
+        load_preferences=False,
+        state_directory=str(tmp_path / "state"),
+        state_key=state_key,
+    )
+    identity = {
+        "guid": "{99999999-9999-9999-9999-999999999999}",
+        "distinguished_name": "CN=Scripts,DC=example,DC=test",
+        "file_sys_path": (
+            "\\\\example.test\\sysvol\\example.test\\Policies\\"
+            "{99999999-9999-9999-9999-999999999999}"
+        ),
+    }
+    return api, gpo_root, identity
+
+
+def _publication_snapshot(identity, version, machine="", user=""):
+    return {
+        "identity": identity,
+        "version_number": version,
+        "machine_extension_names": machine,
+        "user_extension_names": user,
+    }
+
+
+def _acknowledge_script_plan(api, plan):
+    api.acknowledge_external(
+        plan["idempotency_token"],
+        _publication_snapshot(
+            plan["identity"],
+            plan["target_version"],
+            plan["machine_extension_names"],
+            plan["user_extension_names"],
+        ),
+    )
+
+
+def test_installed_binding_exposes_scripts_dto(tmp_path):
+    """Exercise the public scripts DTO directly through the installed binding."""
+    gpo_root = tmp_path / "gpo"
+    shutil.copytree(_kde_fixture_root(), gpo_root)
+    (gpo_root / "Machine" / "Scripts" / "Startup").mkdir(parents=True)
+
+    api = HighLevelApi(str(gpo_root), load_preferences=False)
+    classic = api.show_script_group("computer", "classic")
+    powershell = api.show_script_group("computer", "powershell")
+    assets = api.list_script_assets("computer", "startup")
+
+    assert {"snapshot", "editable", "entries", "diagnostics"} <= classic.keys()
+    assert {"snapshot", "execution_order"} <= powershell.keys()
+    assert assets == []
+
+
+def test_scripts_publication_preserves_exact_versions_and_cse_ownership(
+    tmp_path,
+):
+    """Exercise the scripts publication plan across both scopes."""
+
+    api, gpo_root, identity = _script_publication_workspace(
+        tmp_path, "scripts-publication-contract"
+    )
+    current = _publication_snapshot(identity, 1)
+    computer_pair = SCRIPTS_CSE_GUID + COMPUTER_SCRIPTS_TOOL_GUID
+    user_pair = SCRIPTS_CSE_GUID + USER_SCRIPTS_TOOL_GUID
+
+    # An orphan asset changes the computer half of GPT.INI but does not claim
+    # Scripts CSE ownership.
+    api.upload_script_asset("computer", "startup", "orphan.cmd", b"echo")
+    asset_only = api.commit_external(current)["publication_plan"]
+    assert asset_only["target_version"] == 2
+    assert asset_only["affected_scopes"] == {"computer": True, "user": False}
+    assert asset_only["machine_extension_names"] == ""
+    _acknowledge_script_plan(api, asset_only)
+    current = _publication_snapshot(identity, 2)
+
+    classic = api.show_script_group("computer", "classic")
+    api.add_script_entry(
+        "computer", "classic", "startup", classic["snapshot"], "orphan.cmd", ""
+    )
+    first_computer = api.commit_external(current)["publication_plan"]
+    assert first_computer["target_version"] == 3
+    assert first_computer["machine_extension_names"] == "[{}]".format(
+        computer_pair
+    )
+    assert first_computer["user_extension_names"] == ""
+    _acknowledge_script_plan(api, first_computer)
+    current = _publication_snapshot(
+        identity, 3, first_computer["machine_extension_names"]
+    )
+
+    powershell = api.show_script_group("user", "powershell")
+    api.add_script_entry(
+        "user", "powershell", "logon", powershell["snapshot"], "logon.ps1", ""
+    )
+    first_user = api.commit_external(current)["publication_plan"]
+    assert first_user["target_version"] == 65539
+    assert first_user["machine_extension_names"] == "[{}]".format(
+        computer_pair
+    )
+    assert first_user["user_extension_names"] == "[{}]".format(user_pair)
+    _acknowledge_script_plan(api, first_user)
+    current = _publication_snapshot(
+        identity,
+        65539,
+        first_user["machine_extension_names"],
+        first_user["user_extension_names"],
+    )
+
+    classic = api.show_script_group("computer", "classic")
+    api.remove_script_entry(
+        "computer", "classic", "startup", classic["entries"][0]["identity"]
+    )
+    final_computer = api.commit_external(current)["publication_plan"]
+    assert final_computer["target_version"] == 65540
+    assert final_computer["machine_extension_names"] == ""
+    assert final_computer["user_extension_names"] == "[{}]".format(user_pair)
+    _acknowledge_script_plan(api, final_computer)
+    assert "Version=65540" in (gpo_root / "GPT.INI").read_text("utf-8")
+
+
+def test_scripts_publication_recovery_does_not_duplicate_a_mutation(tmp_path):
+    api, gpo_root, identity = _script_publication_workspace(
+        tmp_path, "scripts-publication-recovery"
+    )
+    before = _publication_snapshot(identity, 1)
+    classic = api.show_script_group("computer", "classic")
+    api.add_script_entry(
+        "computer", "classic", "startup", classic["snapshot"], "recover.cmd", ""
+    )
+    plan = api.commit_external(before)["publication_plan"]
+
+    # A fresh workspace first asks the host to apply the original plan.  Once
+    # the observed LDAP snapshot matches that plan it asks for acknowledgement,
+    # then permits a no-op commit instead of replaying the mutation.
+    reopened = HighLevelApi(
+        str(gpo_root),
+        load_preferences=False,
+        state_directory=str(tmp_path / "state"),
+        state_key="scripts-publication-recovery",
+    )
+    assert reopened.reconcile_external(before)["kind"] == "apply"
+    published = _publication_snapshot(
+        identity,
+        plan["target_version"],
+        plan["machine_extension_names"],
+        plan["user_extension_names"],
+    )
+    assert reopened.reconcile_external(published)["kind"] == "acknowledge"
+    _acknowledge_script_plan(reopened, plan)
+    assert reopened.pending_external_publication() is None
+    assert reopened.commit_external(published)["directory"] == "no_publication_required"
 
 
 def test_catalog_loads_supported_locales_without_diagnostics(catalog):
