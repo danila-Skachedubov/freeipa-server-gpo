@@ -17,7 +17,7 @@ register = Registry()
 
 PLUGIN_CONFIG = (
     ('container_system', DN(('cn', 'System'))),
-    ('container_grouppolicychain', DN(('cn', 'System'))),
+    ('container_grouppolicychain', DN(('cn', 'Chains'), ('cn', 'System'))),
 )
 
 OBJECT_TYPE_MAPPING = {
@@ -580,6 +580,9 @@ class chain_mod(LDAPUpdate):
                 continue
             gp_to_move = current_gplinks.pop(current_index)
             current_gplinks.insert(new_index, gp_to_move)
+
+        entry['gplink'] = []
+        ldap.update_entry(entry)
 
         entry = ldap.get_entry(dn)
         entry['gplink'] = current_gplinks
