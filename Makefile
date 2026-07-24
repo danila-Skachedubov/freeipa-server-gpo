@@ -34,9 +34,9 @@ install: build
 	# IPA UI plugins
 	install -D -m 644 plugin/ui/grouppolicy/chain.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/chain.js
 	install -D -m 644 plugin/ui/grouppolicy/gpo.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/gpo.js
-	cp -r plugin/ui/grouppolicy/css $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/css
-	cp -r plugin/ui/grouppolicy/img $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/img
-	cp -r plugin/ui/grouppolicy/js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/js
+	cp -r plugin/ui/grouppolicy/css/. $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/css
+	cp -r plugin/ui/grouppolicy/img/. $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/img
+	cp -r plugin/ui/grouppolicy/js/. $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/js
 
 	# IPA schemas and updates
 	@for schema in plugin/schema.d/*.ldif; do \
@@ -55,6 +55,7 @@ install: build
 	# GPUIService
 	install -D -m 644 gpui_service/gpuiservice.service $(DESTDIR)$(PREFIX)/lib/systemd/system/gpuiservice.service
 	install -D -m 644 gpui_service/org.altlinux.gpuiservice.conf $(DESTDIR)/etc/dbus-1/system.d/org.altlinux.gpuiservice.conf
+	install -D -m 644 gpui_service/org.altlinux.gpuiservice.service $(DESTDIR)$(PREFIX)/share/dbus-1/system-services/org.altlinux.gpuiservice.service
 	install -D -m 644 gpui_service/org.altlinux.gpuiservice.gschema.xml $(DESTDIR)$(PREFIX)/share/glib-2.0/schemas/org.altlinux.gpuiservice.gschema.xml
 	@mkdir -p $(DESTDIR)$(PYTHON_SITELIBDIR)/gpui_service
 	cp -r gpui_service/*.py $(DESTDIR)$(PYTHON_SITELIBDIR)/gpui_service/

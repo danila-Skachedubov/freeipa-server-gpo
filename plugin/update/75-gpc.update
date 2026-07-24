@@ -13,6 +13,14 @@ add: objectClass: top
 add: objectClass: nsContainer
 
 ###############################################################################
+# Create chains container
+###############################################################################
+dn: cn=Chains,cn=System,$SUFFIX
+default: objectClass: top
+default: objectClass: nsContainer
+default: cn: Chains
+
+###############################################################################
 # Add the default privileges and roles for Group Policy management
 ###############################################################################
 dn: cn=Group Policy Administrators,cn=roles,cn=accounts,$SUFFIX

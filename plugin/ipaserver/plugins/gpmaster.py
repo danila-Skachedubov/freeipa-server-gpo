@@ -108,9 +108,7 @@ class gpmaster(LDAPObject):
             return chain_name
 
         try:
-            chain_dn = DN(('cn', chain_name),
-                         ('cn', 'System'),
-                         api.env.basedn)
+            chain_dn = self.api.Object.chain.get_dn(chain_name)
 
             if strict:
                 ldap = self.api.Backend.ldap2
@@ -287,6 +285,9 @@ class gpmaster_mod(LDAPUpdate):
 
             chain_to_move = current_chains.pop(current_index)
             current_chains.insert(new_index, chain_to_move)
+
+        entry['chainlist'] = []
+        ldap.update_entry(entry)
 
         entry = ldap.get_entry(dn)
         entry['chainlist'] = current_chains
