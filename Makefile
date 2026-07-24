@@ -34,9 +34,9 @@ install: build
 	# IPA UI plugins
 	install -D -m 644 plugin/ui/grouppolicy/chain.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/chain.js
 	install -D -m 644 plugin/ui/grouppolicy/gpo.js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/gpo.js
-	cp -r plugin/ui/grouppolicy/css $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/css
-	cp -r plugin/ui/grouppolicy/img $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/img
-	cp -r plugin/ui/grouppolicy/js $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/js
+	cp -r plugin/ui/grouppolicy/css/. $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/css
+	cp -r plugin/ui/grouppolicy/img/. $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/img
+	cp -r plugin/ui/grouppolicy/js/. $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain/js
 
 	# IPA schemas and updates
 	@for schema in plugin/schema.d/*.ldif; do \
