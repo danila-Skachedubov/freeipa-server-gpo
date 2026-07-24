@@ -1,5 +1,5 @@
 Name:           freeipa-server-gpo
-Version:        0.0.8
+Version:        0.0.9
 Release:        alt1
 
 Summary:        Prepare FreeIPA for Group Policy Management
@@ -66,7 +66,16 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 %_mandir/man8/ipa-gpo-install.8*
 %_mandir/ru/man8/ipa-gpo-install.8*
 %_datadir/bash-completion/completions/ipa-gpo-install
+
 %changelog
+* Fri Jul 24 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.0.9-alt1
+- feat: migrate to libadmix editor API, remove gpuiservice (thx Korney Gedert)
+- feat: add structured GPUI editor UI and script editor API (thx Korney Gedert)
+- fix: move chains to dedicated cn=Chains,cn=System container
+- fix: restore two-step LDAP write for chain/gpo reorder
+- fix: add D-Bus activation file, copy UI assets on install (thx Korney Gedert)
+- fix: preserve ADMX value types in Registry.pol (thx Korney Gedert)
+
 * Mon Jun 15 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.0.8-alt1
 - feat: add unsaved changes confirmation modal on tree navigation (thx vladimirovicp)
 - feat(admx): implemented package management (thx vladimirovicp)
