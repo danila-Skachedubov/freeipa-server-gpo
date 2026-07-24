@@ -179,7 +179,13 @@ function setupAdmxTemplateController({
 
                 hasNonEmptyValue = true;
                 const setValue = buildAdmxSetValue(selectedState, controlValue);
-                await API.set(currentNameGpt, effectiveTarget, controlPath, setValue);
+                await API.set(
+                    currentNameGpt,
+                    effectiveTarget,
+                    controlPath,
+                    setValue,
+                    controlEntry.metadataPath || controlPath
+                );
             }));
 
             if (selectedState === ADMX_DEFAULT_STATE || (!hasNonEmptyValue && selectedState !== ADMX_DEFAULT_STATE)) {

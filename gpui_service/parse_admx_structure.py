@@ -408,19 +408,42 @@ class AdmxParser:
         return {"metadata": metadata, "data": AdmxParser.data_ref(heavykey)}
 
     @staticmethod
-    def _extract_value_from_value_node(value_node: ET.Element) -> str | None:
+    def _extract_value_from_value_node(value_node: ET.Element) -> dict | None:
         if value_node is None:
             return None
 
         for ch in value_node:
             local = AdmxParser.strip_ns(ch.tag)
             if local == "string":
-                return (ch.text or "").strip()
-            if local == "decimal":
+                return {"value": (ch.text or "").strip(), "valueKind": "string"}
+            if local in ("decimal", "longDecimal"):
                 v = ch.attrib.get("value")
-                return (v or "").strip() if v is not None else None
+                return {
+                    "value": (v or "").strip() if v is not None else None,
+                    "valueKind": local,
+                }
+            if local == "delete":
+                return {"value": None, "valueKind": "delete"}
 
         return None
+
+    @staticmethod
+    def _value_record_to_num_or_str(value_record: dict | None):
+        if not isinstance(value_record, dict):
+            return None
+
+        v = value_record.get("value")
+        if v is None:
+            return None
+
+        value_kind = value_record.get("valueKind")
+        if value_kind in ("decimal", "longDecimal"):
+            try:
+                return int(str(v).strip())
+            except ValueError:
+                return v
+
+        return v
 
     @staticmethod
     def _apply_presentation_defaults(md: dict, pres_info: dict | None) -> dict:
@@ -444,6 +467,7 @@ class AdmxParser:
         required = (el.attrib.get("required") or "").strip().lower() == "true"
 
         items = {}
+        item_value_kinds = {}
         for item in el:
             if self.strip_ns(item.tag) != "item":
                 continue
@@ -451,15 +475,21 @@ class AdmxParser:
             disp_raw = item.attrib.get("displayName")
             disp = self.resolve_string(disp_raw)
 
-            val = None
+            value_record = None
             for ch in item:
                 if self.strip_ns(ch.tag) == "value":
-                    val = self._extract_value_from_value_node(ch)
+                    value_record = self._extract_value_from_value_node(ch)
                     break
+            if value_record is None:
+                continue
+
+            val = value_record.get("value")
             if val is None:
                 continue
 
-            items[str(val)] = disp
+            val_key = str(val)
+            items[val_key] = disp
+            item_value_kinds[val_key] = value_record.get("valueKind")
 
         md = {
             "type": "enum",
@@ -467,6 +497,7 @@ class AdmxParser:
             "valueName": value_name,
             "required": required,
             "items": items,
+            "itemValueKinds": item_value_kinds,
         }
         return self._apply_presentation_defaults(md, pres_info)
 
@@ -476,38 +507,25 @@ class AdmxParser:
         key = el_key if el_key else base_key
         value_name = el.attrib.get("valueName")
 
-        true_v = None
-        false_v = None
+        true_record = None
+        false_record = None
 
         for ch in el:
             local = self.strip_ns(ch.tag)
             if local == "trueValue":
-                for x in ch:
-                    if self.strip_ns(x.tag) == "decimal":
-                        true_v = x.attrib.get("value")
+                true_record = self._extract_value_from_value_node(ch)
             elif local == "falseValue":
-                for x in ch:
-                    if self.strip_ns(x.tag) == "decimal":
-                        false_v = x.attrib.get("value")
-
-        def _to_num_or_str(v: str | None):
-            if v is None:
-                return None
-            v = v.strip()
-            if v.isdigit() or (v.startswith("-") and v[1:].isdigit()):
-                try:
-                    return int(v)
-                except ValueError:
-                    return v
-            return v
+                false_record = self._extract_value_from_value_node(ch)
 
         md = {
             "type": "boolean",
             "id": bool_id,
             "key": self.normalize_registry_key(key) if key else None,
             "valueName": value_name,
-            "trueValue": _to_num_or_str(true_v),
-            "falseValue": _to_num_or_str(false_v),
+            "trueValue": self._value_record_to_num_or_str(true_record),
+            "falseValue": self._value_record_to_num_or_str(false_record),
+            "trueValueKind": true_record.get("valueKind") if isinstance(true_record, dict) else None,
+            "falseValueKind": false_record.get("valueKind") if isinstance(false_record, dict) else None,
         }
         return self._apply_presentation_defaults(md, pres_info)
 
@@ -557,21 +575,24 @@ class AdmxParser:
         }
         return self._apply_presentation_defaults(md, pres_info)
 
+    def _parse_long_decimal_metadata(self, el: ET.Element, pres_info: dict | None) -> dict:
+        dec_id = el.attrib.get("id")
+        value_name = el.attrib.get("valueName")
+        required = (el.attrib.get("required") or "").strip().lower() == "true"
+
+        md = {
+            "type": "longDecimal",
+            "id": dec_id,
+            "valueName": value_name,
+            "required": required,
+        }
+        return self._apply_presentation_defaults(md, pres_info)
+
     def _parse_policy_value_enabled_disabled_metadata(self, pol: ET.Element) -> dict | None:
-        enabled_v = None
-        disabled_v = None
+        enabled_record = None
+        disabled_record = None
         enabled_list = []
         disabled_list = []
-
-        def _read_value(container: ET.Element) -> str | None:
-            for x in container:
-                local = self.strip_ns(x.tag)
-                if local == "decimal":
-                    v = x.attrib.get("value")
-                    return (v or "").strip() if v is not None else None
-                if local == "string":
-                    return (x.text or "").strip()
-            return None
 
         def _read_item_list(list_element: ET.Element) -> list[dict]:
             items = []
@@ -581,47 +602,52 @@ class AdmxParser:
                 value = None
                 value_name = None
                 key = None
+                value_kind = None
                 for child in item_el:
                     local = self.strip_ns(child.tag)
                     if local == "value":
-                        value = _read_value(child)
+                        value_record = self._extract_value_from_value_node(child)
+                        value = self._value_record_to_num_or_str(value_record)
+                        value_kind = (
+                            value_record.get("valueKind")
+                            if isinstance(value_record, dict)
+                            else None
+                        )
                     elif local == "valueName":
                         value_name = (child.text or "").strip()
                     elif local == "key":
                         key = self.normalize_registry_key(child.text or "")
-                items.append({"value": value, "valueName": value_name, "key": key})
+                items.append({
+                    "value": value,
+                    "valueKind": value_kind,
+                    "valueName": value_name,
+                    "key": key,
+                })
             return items
 
         for ch in pol:
             local = self.strip_ns(ch.tag)
             if local == "enabledValue":
-                enabled_v = _read_value(ch)
+                enabled_record = self._extract_value_from_value_node(ch)
             elif local == "disabledValue":
-                disabled_v = _read_value(ch)
+                disabled_record = self._extract_value_from_value_node(ch)
             elif local == "enabledList":
                 enabled_list = _read_item_list(ch)
             elif local == "disabledList":
                 disabled_list = _read_item_list(ch)
 
+        enabled_v = self._value_record_to_num_or_str(enabled_record)
+        disabled_v = self._value_record_to_num_or_str(disabled_record)
+
         if enabled_v is None and disabled_v is None and not enabled_list and not disabled_list:
             return None
-
-        def _to_num_or_str(v: str | None):
-            if v is None:
-                return None
-            v = v.strip()
-            if v.isdigit() or (v.startswith("-") and v[1:].isdigit()):
-                try:
-                    return int(v)
-                except ValueError:
-                    return v
-            return v
 
         def _normalize_item_values(items):
             result = []
             for item in items:
                 result.append({
-                    "value": _to_num_or_str(item["value"]),
+                    "value": item["value"],
+                    "valueKind": item.get("valueKind"),
                     "valueName": item["valueName"],
                     "key": item["key"],
                 })
@@ -629,8 +655,18 @@ class AdmxParser:
 
         return {
             "type": "policyValue",
-            "enabledValue": _to_num_or_str(enabled_v),
-            "disabledValue": _to_num_or_str(disabled_v),
+            "enabledValue": enabled_v,
+            "enabledValueKind": (
+                enabled_record.get("valueKind")
+                if isinstance(enabled_record, dict)
+                else None
+            ),
+            "disabledValue": disabled_v,
+            "disabledValueKind": (
+                disabled_record.get("valueKind")
+                if isinstance(disabled_record, dict)
+                else None
+            ),
             "enabledList": _normalize_item_values(enabled_list),
             "disabledList": _normalize_item_values(disabled_list),
         }
@@ -717,6 +753,12 @@ class AdmxParser:
 
             elif local == "decimal":
                 meta = self._parse_decimal_metadata(el, pres_info)
+                vn = (el.attrib.get("valueName") or "").strip()
+                heavykey = self.normalize_registry_key(f"{base_key}\\{vn}")
+                policy_obj[heavykey] = self.wrap_metadata_with_data(meta, heavykey)
+
+            elif local == "longDecimal":
+                meta = self._parse_long_decimal_metadata(el, pres_info)
                 vn = (el.attrib.get("valueName") or "").strip()
                 heavykey = self.normalize_registry_key(f"{base_key}\\{vn}")
                 policy_obj[heavykey] = self.wrap_metadata_with_data(meta, heavykey)

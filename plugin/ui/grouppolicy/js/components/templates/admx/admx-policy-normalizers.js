@@ -48,6 +48,7 @@ function normalizePolicyEntries(policyData = {}, policyHeader = {}) {
             metadata,
             policyPath: resolvedPolicyPath,
             storagePath: extractStoragePathFromData(entryValue?.data) || resolvedPolicyPath,
+            metadataPath: extractStoragePathFromData(entryValue?.data) || resolvedPolicyPath,
         };
 
         if (metadata.type === 'policyValue') {

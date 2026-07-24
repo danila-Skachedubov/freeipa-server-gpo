@@ -2,8 +2,10 @@ import logging
 
 try:
     from .parse_admx_structure import AdmxParser
+    from .admx_value_types import reg_type_for_metadata_value, reg_type_for_value_kind
 except ImportError:
     from parse_admx_structure import AdmxParser
+    from admx_value_types import reg_type_for_metadata_value, reg_type_for_value_kind
 
 logger = logging.getLogger('gpuiservice')
 
@@ -239,7 +241,10 @@ class PolicyStateManager:
                 item_key = item.get('key') or base_key
                 item_vn = item.get('valueName', '')
                 item_val = item.get('value')
-                item_type = self._infer_reg_type(item_val)
+                item_type = reg_type_for_value_kind(
+                    item.get('valueKind'),
+                    self._infer_reg_type(item_val)
+                )
                 self.gpt_worker.update_policy_value(
                     name_gpt, item_key, item_vn, item_val, item_type, policy_type
                 )
@@ -293,7 +298,10 @@ class PolicyStateManager:
                 item_key = item.get('key') or base_key
                 item_vn = item.get('valueName', '')
                 item_val = item.get('value')
-                item_type = self._infer_reg_type(item_val)
+                item_type = reg_type_for_value_kind(
+                    item.get('valueKind'),
+                    self._infer_reg_type(item_val)
+                )
                 self.gpt_worker.update_policy_value(
                     name_gpt, item_key, item_vn, item_val, item_type, policy_type
                 )
@@ -404,17 +412,7 @@ class PolicyStateManager:
 
     @staticmethod
     def _meta_type_to_reg_type(meta, value=None):
-        type_map = {
-            'text': 'REG_SZ',
-            'decimal': 'REG_DWORD',
-            'boolean': 'REG_DWORD',
-            'enum': 'REG_SZ',
-            'list': 'REG_MULTI_SZ',
-            'policyValue': 'REG_DWORD',
-            'longDecimal': 'REG_QWORD',
-            'multiText': 'REG_MULTI_SZ',
-        }
-        return type_map.get(meta.get('type', ''), 'REG_SZ')
+        return reg_type_for_metadata_value(meta, value, 'REG_SZ')
 
     @staticmethod
     def _get_element_default(meta):

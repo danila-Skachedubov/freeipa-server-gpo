@@ -4,8 +4,8 @@ define(function() {
     "baseDir": "/usr/share/PolicyDefinitions",
     "localeRequested": "ru-RU",
     "localeUsed": "ru-RU",
-    "Total categories": 58,
-    "Total policies": 658,
+    "Total categories": 60,
+    "Total policies": 667,
     "Duplicates removed": 0
   },
   "Machine": {
@@ -26,18 +26,18 @@ define(function() {
             "help": "Настройка параметров LAPS.",
             "policies": {
               "ALT_LAPS:LAPS_PostAuthenticationActions": {
-                "displayName": "Действия после проверки подлинности 888",
-                "help": "Политика позволяет настроить автоматические действия, выполняемые после входа в систему под учетной записью, управляемой LAPS.\n\nЛьготный период — время (в часах), в течение которого после входа в систему никакие действия не выполняются;\n\nЕсли значение больше 0, LAPS выполнит указанные действия по истечении этого времени;\n\nЕсли значение равно 0, действия не выполняются;\n\nЕсли политика не настроена, применяется значение по умолчанию – 24 часа.\n\n\n\nДействия после входа в систему:\n\nСбросить пароль — по окончании льготного периода LAPS меняет пароль учетной записи;\n\nСбросить пароль и выйти из системы (поведение по умолчанию, если политика не настроена) — LAPS меняет пароль и завершает все активные интерактивные сеансы пользователя (локальные и RDP);\n\nСбросить пароль и перезагрузить устройство — LAPS меняет пароль и выполняет немедленную перезагрузку компьютера.\n\n\nПримечания:\n\nПо умолчанию, если политика не настроена, выполняется «Сбросить пароль и выйти из системы» через 24 часа.",
+                "displayName": "Действия после проверки подлинности",
+                "help": "Политика позволяет настроить автоматические действия, выполняемые после входа в систему под учетной записью, управляемой LAPS.\n\nЛьготный период — время (в часах), в течение которого после входа в систему никакие действия не выполняются;\n\nЕсли значение больше 0, при запуске механизма LAPS выполняется проверка истечения заданного интервала; при его превышении применяются указанные действия;\n\nЕсли значение равно 0, действия не выполняются;\n\nЕсли политика не настроена, применяется значение по умолчанию – 24 часа.\n\n\n\nДействия после входа в систему:\n\nСбросить пароль — по окончании льготного периода LAPS меняет пароль учетной записи;\n\nСбросить пароль и выйти из системы (поведение по умолчанию, если политика не настроена) — LAPS меняет пароль и завершает все активные интерактивные сеансы пользователя (локальные и RDP);\n\nСбросить пароль и перезагрузить устройство — LAPS меняет пароль и выполняет немедленную перезагрузку компьютера.\n\n\nПримечания:\n\nПо умолчанию, если политика не настроена, выполняется «Сбросить пароль и выйти из системы» через 24 часа.",
                 "header": {
                   "class": "Machine",
                   "name": "LAPS_PostAuthenticationActions",
                   "displayName": "Действия после проверки подлинности",
-                  "explainText": "Политика позволяет настроить автоматические действия, выполняемые после входа в систему под учетной записью, управляемой LAPS.\n\nЛьготный период — время (в часах), в течение которого после входа в систему никакие действия не выполняются;\n\nЕсли значение больше 0, LAPS выполнит указанные действия по истечении этого времени;\n\nЕсли значение равно 0, действия не выполняются;\n\nЕсли политика не настроена, применяется значение по умолчанию – 24 часа.\n\n\n\nДействия после входа в систему:\n\nСбросить пароль — по окончании льготного периода LAPS меняет пароль учетной записи;\n\nСбросить пароль и выйти из системы (поведение по умолчанию, если политика не настроена) — LAPS меняет пароль и завершает все активные интерактивные сеансы пользователя (локальные и RDP);\n\nСбросить пароль и перезагрузить устройство — LAPS меняет пароль и выполняет немедленную перезагрузку компьютера.\n\n\nПримечания:\n\nПо умолчанию, если политика не настроена, выполняется «Сбросить пароль и выйти из системы» через 24 часа.",
+                  "explainText": "Политика позволяет настроить автоматические действия, выполняемые после входа в систему под учетной записью, управляемой LAPS.\n\nЛьготный период — время (в часах), в течение которого после входа в систему никакие действия не выполняются;\n\nЕсли значение больше 0, при запуске механизма LAPS выполняется проверка истечения заданного интервала; при его превышении применяются указанные действия;\n\nЕсли значение равно 0, действия не выполняются;\n\nЕсли политика не настроена, применяется значение по умолчанию – 24 часа.\n\n\n\nДействия после входа в систему:\n\nСбросить пароль — по окончании льготного периода LAPS меняет пароль учетной записи;\n\nСбросить пароль и выйти из системы (поведение по умолчанию, если политика не настроена) — LAPS меняет пароль и завершает все активные интерактивные сеансы пользователя (локальные и RDP);\n\nСбросить пароль и перезагрузить устройство — LAPS меняет пароль и выполняет немедленную перезагрузку компьютера.\n\n\nПримечания:\n\nПо умолчанию, если политика не настроена, выполняется «Сбросить пароль и выйти из системы» через 24 часа.",
                   "key": "Software\\BaseALT\\Policies\\Laps",
                   "valueName": null,
                   "presentation": "$(presentation.LAPS_PostAuthenticationActions)",
-                  "parentCategory": "ALT_LAPS",
-                  "supportedOn": "10 Платформа ALT как минимум"
+                  "parentCategory": "system:ALT_LAPS",
+                  "supportedOn": "11 Платформа ALT как минимум"
                 },
                 "Software\\BaseALT\\Policies\\Laps\\PostAuthenticationResetDelay": {
                   "metadata": {
@@ -64,6 +64,12 @@ define(function() {
                       "3": "Сброс пароля и выход из управляемой учетной записи",
                       "5": "Сброс пароля и перезагрузка устройства"
                     },
+                    "itemValueKinds": {
+                      "0": "decimal",
+                      "1": "decimal",
+                      "3": "decimal",
+                      "5": "decimal"
+                    },
                     "label": "Действие:",
                     "defaultItem": "2"
                   },
@@ -82,8 +88,8 @@ define(function() {
                   "key": "Software\\BaseALT\\Policies\\Laps",
                   "valueName": null,
                   "presentation": "$(presentation.LAPS_AdminName)",
-                  "parentCategory": "ALT_LAPS",
-                  "supportedOn": "10 Платформа ALT как минимум"
+                  "parentCategory": "system:ALT_LAPS",
+                  "supportedOn": "11 Платформа ALT как минимум"
                 },
                 "Software\\BaseALT\\Policies\\Laps\\AdministratorAccountName": {
                   "metadata": {
@@ -99,23 +105,27 @@ define(function() {
               },
               "ALT_LAPS:LAPS_DontAllowPwdExpirationBehindPolicy": {
                 "displayName": "Истечение срока действия пароля",
-                "help": "Политика позволяет настроить изменение пароля, если его срок действия превысил значение, заданное политикой «Параметры паролей».\n\nЕсли политика включена или не настроена, не допускается превышение срока действия пароля, настроенного политикой «Параметры паролей». При обнаружении истечения срока действия пароль немедленно изменяется, а срок действия пароля устанавливается в соответствии с политикой. \n\nЕсли политика отключена, срок действия пароля может быть больше, чем заданный политикой «Параметры паролей».",
+                "help": "Политика позволяет активировать использование срока действия пароля, заданного групповой политикой \"Параметры паролей\".\n\nЕсли политика включена или не настроена, не допускается превышение срока действия пароля, настроенного политикой «Параметры паролей». При обнаружении истечения срока действия пароль немедленно изменяется, а срок действия пароля устанавливается в соответствии с политикой. \n\nЕсли политика отключена, срок действия пароля может быть больше, чем заданный политикой «Параметры паролей».",
                 "header": {
                   "class": "Machine",
                   "name": "LAPS_DontAllowPwdExpirationBehindPolicy",
                   "displayName": "Истечение срока действия пароля",
-                  "explainText": "Политика позволяет настроить изменение пароля, если его срок действия превысил значение, заданное политикой «Параметры паролей».\n\nЕсли политика включена или не настроена, не допускается превышение срока действия пароля, настроенного политикой «Параметры паролей». При обнаружении истечения срока действия пароль немедленно изменяется, а срок действия пароля устанавливается в соответствии с политикой. \n\nЕсли политика отключена, срок действия пароля может быть больше, чем заданный политикой «Параметры паролей».",
+                  "explainText": "Политика позволяет активировать использование срока действия пароля, заданного групповой политикой \"Параметры паролей\".\n\nЕсли политика включена или не настроена, не допускается превышение срока действия пароля, настроенного политикой «Параметры паролей». При обнаружении истечения срока действия пароль немедленно изменяется, а срок действия пароля устанавливается в соответствии с политикой. \n\nЕсли политика отключена, срок действия пароля может быть больше, чем заданный политикой «Параметры паролей».",
                   "key": "Software\\BaseALT\\Policies\\Laps",
                   "valueName": "PasswordExpirationProtectionEnabled",
                   "presentation": null,
-                  "parentCategory": "ALT_LAPS",
-                  "supportedOn": "10 Платформа ALT как минимум"
+                  "parentCategory": "system:ALT_LAPS",
+                  "supportedOn": "11 Платформа ALT как минимум"
                 },
                 "Software\\BaseALT\\Policies\\Laps\\PasswordExpirationProtectionEnabled": {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Laps\\PasswordExpirationProtectionEnabled')"
                 },
@@ -132,8 +142,8 @@ define(function() {
                   "key": "Software\\BaseALT\\Policies\\Laps",
                   "valueName": null,
                   "presentation": "$(presentation.LAPS_BackupDirectory)",
-                  "parentCategory": "ALT_LAPS",
-                  "supportedOn": "10 Платформа ALT как минимум"
+                  "parentCategory": "system:ALT_LAPS",
+                  "supportedOn": "11 Платформа ALT как минимум"
                 },
                 "Software\\BaseALT\\Policies\\Laps\\BackupDirectory": {
                   "metadata": {
@@ -144,6 +154,10 @@ define(function() {
                     "items": {
                       "0": "Отключено",
                       "2": "Active Directory"
+                    },
+                    "itemValueKinds": {
+                      "0": "decimal",
+                      "2": "decimal"
                     },
                     "label": "Резервное копирование:",
                     "defaultItem": "0"
@@ -163,8 +177,8 @@ define(function() {
                   "key": "Software\\BaseALT\\Policies\\Laps",
                   "valueName": null,
                   "presentation": "$(presentation.LAPS_PasswordSettings)",
-                  "parentCategory": "ALT_LAPS",
-                  "supportedOn": "10 Платформа ALT как минимум"
+                  "parentCategory": "system:ALT_LAPS",
+                  "supportedOn": "11 Платформа ALT как минимум"
                 },
                 "Software\\BaseALT\\Policies\\Laps\\PasswordComplexity": {
                   "metadata": {
@@ -177,6 +191,12 @@ define(function() {
                       "2": "Заглавные и строчные буквы",
                       "3": "Заглавные буквы, строчные буквы, цифры",
                       "4": "Заглавные буквы, строчные буквы, цифры, специальные символы"
+                    },
+                    "itemValueKinds": {
+                      "1": "decimal",
+                      "2": "decimal",
+                      "3": "decimal",
+                      "4": "decimal"
                     },
                     "label": "Сложность пароля:",
                     "defaultItem": "3"
@@ -222,8 +242,8 @@ define(function() {
                   "key": "Software\\BaseALT\\Policies\\Laps",
                   "valueName": null,
                   "presentation": "$(presentation.LAPS_ADEncryptedPasswordHistorySize)",
-                  "parentCategory": "ALT_LAPS",
-                  "supportedOn": "10 Платформа ALT как минимум"
+                  "parentCategory": "system:ALT_LAPS",
+                  "supportedOn": "11 Платформа ALT как минимум"
                 },
                 "Software\\BaseALT\\Policies\\Laps\\ADEncryptedPasswordHistorySize": {
                   "metadata": {
@@ -242,17 +262,17 @@ define(function() {
               },
               "ALT_LAPS:LAPS_ADPasswordEncryptionPrincipal": {
                 "displayName": "Расшифрование паролей",
-                "help": "Политика позволяет задать пользователя или группу, пользователям которой разрешено расшифровывать зашифрованные пароли.\n\nНастройка политики не действует, если не включено шифрование паролей.\n\nЕсли политика включена, зашифрованные пароли могут быть расшифрованы пользователями указанной группы или конкретным пользователем.\n\nЕсли политика отключена или не настроена, зашифрованные пароли могут быть расшифрованы только пользователями, входящими в группу «Администраторы домена».\n\nПримечание:\n\nСтрока, хранящаяся в параметре, представляет собой идентификатор безопасности в строковой форме или полное имя пользователя или группы.\n\nПримеры:\n\n- S-1-5-21-2127521184-1604012920-1887927527-35197\n- contoso\\LAPSAdmins\n- lapsadmins@contoso.com",
+                "help": "Политика позволяет задать пользователя или группу, пользователям которой разрешено расшифровывать зашифрованные пароли.\n\nНастройка политики не действует, если не включено шифрование паролей.\n\nПримечание 1:\n\nВ случае шифрования для группы или пользователя, не обладающими правами администратора, необходимо включить свойство безопасности  «Все расширенные права».\n\nНастройка подразделения с целевыми компьютерами:\nADMC -> Подразделение -> Свойства -> Безопасность -> Добавить -> Целевая группа/пользователь;\nADMC -> Подразделение -> Свойства -> Безопасность -> Целевая группа/пользователь -> Дочерние объекты: Компьютер -> Чекбокс «Все расширенные права»;\n\nИли настройка компьютера:\nADMC -> Объект «Комьютер» -> Свойства -> Безопасность -> SELF -> «Этот объект» -> Чекбокс «Все расширенные права»;\n\nЕсли политика включена, зашифрованные пароли могут быть расшифрованы пользователями указанной группы или конкретным пользователем.\n\nЕсли политика отключена или не настроена, зашифрованные пароли могут быть расшифрованы только пользователями, входящими в группу «Администраторы домена».\n\nПримечание 2:\n\nСтрока, хранящаяся в параметре, представляет собой идентификатор безопасности в строковой форме или полное имя пользователя или группы.\n\nПримеры:\n\n- S-1-5-21-2127521184-1604012920-1887927527-35197\n- LAPSAdmins\n- lapsuser",
                 "header": {
                   "class": "Machine",
                   "name": "LAPS_ADPasswordEncryptionPrincipal",
                   "displayName": "Расшифрование паролей",
-                  "explainText": "Политика позволяет задать пользователя или группу, пользователям которой разрешено расшифровывать зашифрованные пароли.\n\nНастройка политики не действует, если не включено шифрование паролей.\n\nЕсли политика включена, зашифрованные пароли могут быть расшифрованы пользователями указанной группы или конкретным пользователем.\n\nЕсли политика отключена или не настроена, зашифрованные пароли могут быть расшифрованы только пользователями, входящими в группу «Администраторы домена».\n\nПримечание:\n\nСтрока, хранящаяся в параметре, представляет собой идентификатор безопасности в строковой форме или полное имя пользователя или группы.\n\nПримеры:\n\n- S-1-5-21-2127521184-1604012920-1887927527-35197\n- contoso\\LAPSAdmins\n- lapsadmins@contoso.com",
+                  "explainText": "Политика позволяет задать пользователя или группу, пользователям которой разрешено расшифровывать зашифрованные пароли.\n\nНастройка политики не действует, если не включено шифрование паролей.\n\nПримечание 1:\n\nВ случае шифрования для группы или пользователя, не обладающими правами администратора, необходимо включить свойство безопасности  «Все расширенные права».\n\nНастройка подразделения с целевыми компьютерами:\nADMC -> Подразделение -> Свойства -> Безопасность -> Добавить -> Целевая группа/пользователь;\nADMC -> Подразделение -> Свойства -> Безопасность -> Целевая группа/пользователь -> Дочерние объекты: Компьютер -> Чекбокс «Все расширенные права»;\n\nИли настройка компьютера:\nADMC -> Объект «Комьютер» -> Свойства -> Безопасность -> SELF -> «Этот объект» -> Чекбокс «Все расширенные права»;\n\nЕсли политика включена, зашифрованные пароли могут быть расшифрованы пользователями указанной группы или конкретным пользователем.\n\nЕсли политика отключена или не настроена, зашифрованные пароли могут быть расшифрованы только пользователями, входящими в группу «Администраторы домена».\n\nПримечание 2:\n\nСтрока, хранящаяся в параметре, представляет собой идентификатор безопасности в строковой форме или полное имя пользователя или группы.\n\nПримеры:\n\n- S-1-5-21-2127521184-1604012920-1887927527-35197\n- LAPSAdmins\n- lapsuser",
                   "key": "Software\\BaseALT\\Policies\\Laps",
                   "valueName": null,
                   "presentation": "$(presentation.LAPS_ADPasswordEncryptionPrincipal)",
-                  "parentCategory": "ALT_LAPS",
-                  "supportedOn": "10 Платформа ALT как минимум"
+                  "parentCategory": "system:ALT_LAPS",
+                  "supportedOn": "11 Платформа ALT как минимум"
                 },
                 "Software\\BaseALT\\Policies\\Laps\\ADPasswordEncryptionPrincipal": {
                   "metadata": {
@@ -277,14 +297,18 @@ define(function() {
                   "key": "Software\\BaseALT\\Policies\\Laps",
                   "valueName": "ADPasswordEncryptionEnabled",
                   "presentation": null,
-                  "parentCategory": "ALT_LAPS",
-                  "supportedOn": "10 Платформа ALT как минимум"
+                  "parentCategory": "system:ALT_LAPS",
+                  "supportedOn": "11 Платформа ALT как минимум"
                 },
                 "Software\\BaseALT\\Policies\\Laps\\ADPasswordEncryptionEnabled": {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Laps\\ADPasswordEncryptionEnabled')"
                 },
@@ -327,6 +351,10 @@ define(function() {
                       "public": "Любой пользователь",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "1"
                   },
@@ -357,6 +385,10 @@ define(function() {
                     "items": {
                       "public": "Любой пользователь",
                       "restricted": "Только root"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string"
                     },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "1"
@@ -390,6 +422,11 @@ define(function() {
                       "wheelonly": "Только wheel",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "wheelonly": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "2"
                   },
@@ -422,6 +459,11 @@ define(function() {
                       "wheelonly": "Только wheel",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "wheelonly": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "2"
                   },
@@ -453,6 +495,10 @@ define(function() {
                       "sss": "SSSD",
                       "winbind": "Winbind"
                     },
+                    "itemValueKinds": {
+                      "sss": "string",
+                      "winbind": "string"
+                    },
                     "label": "Выберите режим работы:",
                     "defaultItem": "0"
                   },
@@ -483,6 +529,10 @@ define(function() {
                     "items": {
                       "public": "Все пользователи",
                       "restricted": "Только root"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string"
                     },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "1"
@@ -516,6 +566,11 @@ define(function() {
                       "wheelonly": "Только wheel",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "wheelonly": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "1"
                   },
@@ -547,6 +602,11 @@ define(function() {
                       "public": "Любой пользователь",
                       "wheelonly": "Только wheel",
                       "restricted": "Только root"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "wheelonly": "string",
+                      "restricted": "string"
                     },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
@@ -581,6 +641,12 @@ define(function() {
                       "wheelonly": "Только wheel",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "wheel": "string",
+                      "wheelonly": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "2"
                   },
@@ -612,6 +678,11 @@ define(function() {
                       "public": "Любой пользователь",
                       "wheelonly": "Только wheel",
                       "restricted": "Только root"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "wheelonly": "string",
+                      "restricted": "string"
                     },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "2"
@@ -645,6 +716,11 @@ define(function() {
                       "wheelonly": "Только wheel",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "wheelonly": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "1"
                   },
@@ -677,6 +753,11 @@ define(function() {
                       "wheelonly": "Только wheel",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "wheelonly": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "1"
                   },
@@ -707,6 +788,10 @@ define(function() {
                     "items": {
                       "public": "Любой пользователь",
                       "restricted": "Только root"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string"
                     },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
@@ -740,6 +825,11 @@ define(function() {
                       "tcb": "Любой пользователь с включенным tcb",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "traditional": "string",
+                      "tcb": "string",
+                      "restricted": "string"
+                    },
                     "label": "Выберите режим работы:",
                     "defaultItem": "1"
                   },
@@ -765,7 +855,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": "enabled",
-                    "disabledValue": "disabled"
+                    "enabledValueKind": "string",
+                    "disabledValue": "disabled",
+                    "disabledValueKind": "string",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\sudowheel')"
                 },
@@ -795,6 +889,10 @@ define(function() {
                       "strict": "Строгий",
                       "relaxed": "Слабый"
                     },
+                    "itemValueKinds": {
+                      "strict": "string",
+                      "relaxed": "string"
+                    },
                     "label": "Выберите режим работы:",
                     "defaultItem": "0"
                   },
@@ -820,7 +918,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": "enabled",
-                    "disabledValue": "disabled"
+                    "enabledValueKind": "string",
+                    "disabledValue": "disabled",
+                    "disabledValueKind": "string",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\pam_mktemp')"
                 },
@@ -844,7 +946,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": "enabled",
-                    "disabledValue": "disabled"
+                    "enabledValueKind": "string",
+                    "disabledValue": "disabled",
+                    "disabledValueKind": "string",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\pam_canonicalize_user')"
                 },
@@ -874,6 +980,11 @@ define(function() {
                       "tcb": "TCB",
                       "traditional": "Традиционный (схема tcb отключена)",
                       "restricted": "Только root"
+                    },
+                    "itemValueKinds": {
+                      "tcb": "string",
+                      "traditional": "string",
+                      "restricted": "string"
                     },
                     "label": "Выберите режим работы:",
                     "defaultItem": "0"
@@ -905,6 +1016,10 @@ define(function() {
                     "items": {
                       "everyone": "Все",
                       "users": "Только для пользователей"
+                    },
+                    "itemValueKinds": {
+                      "everyone": "string",
+                      "users": "string"
                     },
                     "label": "Выберите режим работы:",
                     "defaultItem": "1"
@@ -945,6 +1060,11 @@ define(function() {
                       "vboxusers": "Группа vboxusers",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "vboxusers": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "1"
                   },
@@ -984,6 +1104,11 @@ define(function() {
                       "xgrp": "Группа xgrp",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "xgrp": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
                   },
@@ -1015,6 +1140,10 @@ define(function() {
                       "show": "Показать",
                       "hide": "Скрыть"
                     },
+                    "itemValueKinds": {
+                      "show": "string",
+                      "hide": "string"
+                    },
                     "label": "Выберите режим:",
                     "defaultItem": "0"
                   },
@@ -1040,19 +1169,85 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": "enabled",
-                    "disabledValue": "disabled"
+                    "enabledValueKind": "string",
+                    "disabledValue": "disabled",
+                    "disabledValueKind": "string",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\xdg-user-dirs')"
                 },
                 "id": "ALT_Graphics:xdg-user-dirs"
               }
             },
-            "inherited": []
+            "inherited": [
+              {
+                "category": "Настройки DisplayManager",
+                "help": "Настройка параметров DisplayManager.",
+                "policies": {
+                  "ALT_DisplayManager:DisplayManager_GreeterBackground": {
+                    "displayName": "Фон экрана приветствия (Greeter)",
+                    "help": "Политика позволяет установить фон экрана приветствия (Greeter), указав путь к изобажению.\n\nПримеры путей:\n\n/usr/share/wallpapers/image.png — локальный путь к изображению;\n\nsmb://computername/share/image.png — путь в формате Linux к изображению в общем каталоге на сервере;\n\n\\\\computername\\share\\image.png — путь в формате Windows к изображению в общем каталоге на сервере.\n\nВ LightDM изменение фона поддерживается для следующих экранов приветствия:\n\n— lightdm-gtk-greeter;\n— lightdm-kde-greeter;\n— slick-greeter.\n\nПримечание: Резервная копия конфигурации GDM создаётся автоматически. Восстановление происходит, если в поле пути указано backup.",
+                    "header": {
+                      "class": "Machine",
+                      "name": "DisplayManager_GreeterBackground",
+                      "displayName": "Фон экрана приветствия (Greeter)",
+                      "explainText": "Политика позволяет установить фон экрана приветствия (Greeter), указав путь к изобажению.\n\nПримеры путей:\n\n/usr/share/wallpapers/image.png — локальный путь к изображению;\n\nsmb://computername/share/image.png — путь в формате Linux к изображению в общем каталоге на сервере;\n\n\\\\computername\\share\\image.png — путь в формате Windows к изображению в общем каталоге на сервере.\n\nВ LightDM изменение фона поддерживается для следующих экранов приветствия:\n\n— lightdm-gtk-greeter;\n— lightdm-kde-greeter;\n— slick-greeter.\n\nПримечание: Резервная копия конфигурации GDM создаётся автоматически. Восстановление происходит, если в поле пути указано backup.",
+                      "key": "Software\\BaseALT\\Policies\\DisplayManager",
+                      "valueName": null,
+                      "presentation": "$(presentation.DisplayManager_GreeterBackground-pr)",
+                      "parentCategory": "system:ALT_DisplayManager",
+                      "supportedOn": "11 Платформа ALT как минимум"
+                    },
+                    "Software\\BaseALT\\Policies\\DisplayManager\\Greeter.Background": {
+                      "metadata": {
+                        "type": "text",
+                        "id": "DisplayManager_GreeterBackground_setter",
+                        "valueName": "Greeter.Background",
+                        "required": false,
+                        "label": "Путь к изображению:"
+                      },
+                      "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\DisplayManager\\Greeter.Background')"
+                    },
+                    "id": "ALT_DisplayManager:DisplayManager_GreeterBackground"
+                  }
+                },
+                "inherited": []
+              }
+            ]
           },
           {
             "category": "Групповые политики",
             "help": "Настройки групповых политик.",
             "policies": {
+              "ALT_GroupPolicies:Plugins": {
+                "displayName": "Включение плагинов GPUpdate",
+                "help": "Политика позволяет включить использование плагинов GPUpdate для применения групповых политик.",
+                "header": {
+                  "class": "Machine",
+                  "name": "Plugins",
+                  "displayName": "Включение плагинов GPUpdate",
+                  "explainText": "Политика позволяет включить использование плагинов GPUpdate для применения групповых политик.",
+                  "key": "Software\\BaseALT\\Policies\\GPUpdate",
+                  "valueName": "Plugins",
+                  "presentation": null,
+                  "parentCategory": "ALT_GroupPolicies",
+                  "supportedOn": "11 Платформа ALT как минимум"
+                },
+                "Software\\BaseALT\\Policies\\GPUpdate\\Plugins": {
+                  "metadata": {
+                    "type": "policyValue",
+                    "enabledValue": 1,
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
+                  },
+                  "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\Plugins')"
+                },
+                "id": "ALT_GroupPolicies:Plugins"
+              },
               "ALT_GroupPolicies:ShortcutsMerge": {
                 "displayName": "Использование ярлыков машинной политики для пользователя",
                 "help": "Включение данной политики позволяет использовать настройки ярлыков машинной политики для пользователя.\n\nВключено — ярлыки, настроенные в машинной групповой политике, отображаются у пользователей.\n\nОтключено/Не настроено — ярлыки, настроенные в машинной групповой политике, будут добавлены в каталог /etc/skel и применяться только для новых пользователей при их создании.",
@@ -1071,7 +1266,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\ShortcutsMerge')"
                 },
@@ -1137,12 +1336,44 @@ define(function() {
                       "1": "Слияние",
                       "2": "Замена"
                     },
+                    "itemValueKinds": {
+                      "1": "decimal",
+                      "2": "decimal"
+                    },
                     "label": "Режим:",
                     "defaultItem": "1"
                   },
                   "data": "Read_Path_GPT('SOFTWARE\\Policies\\Microsoft\\Windows\\System\\UserPolicyMode')"
                 },
                 "id": "ALT_GroupPolicies:UserPolicyMode"
+              },
+              "ALT_GroupPolicies:SecurePermissionsDisabled": {
+                "displayName": "Отключение принудительного назначения безопасных прав доступа и владельца для файлов",
+                "help": "Политика позволяет отключить принудительное назначение безопасных прав доступа (chmod) и владельца (chown) для файлов, развёртываемых через групповые политики.\n\nОтключено — при копировании файлов через редактор групповых политик автоматически назначаются строгие права доступа и владелец в соответствии со встроенным списком чувствительных путей.\n\nВключено  — Безопасные права доступа и владелец не назначаются; файлы получают стандартные права (0o644/0o755) и владельца по умолчанию.\n\nСписок ограничений при включённой политике:\n\nДля системных путей — владелец root:root (или специализированная группа, например ssl-cert для /etc/ssl/private, ldap для /etc/openldap/slapd.conf), права\n0o440–0o710 в зависимости от пути. Для пользовательских путей (~/.ssh/id_rsa, ~/.pgpass и др.) — владелец устанавливается в имя_пользователя:основная_группа,\nправа 0o400–0o600.\n\nПолный список включает: ключи SSH, сертификаты TLS/SSL, конфигурации sudoers, crontab, Kerberos, Samba, Kubernetes, VPN, облачные учётные данные и др.",
+                "header": {
+                  "class": "Machine",
+                  "name": "SecurePermissionsDisabled",
+                  "displayName": "Отключение принудительного назначения безопасных прав доступа и владельца для файлов",
+                  "explainText": "Политика позволяет отключить принудительное назначение безопасных прав доступа (chmod) и владельца (chown) для файлов, развёртываемых через групповые политики.\n\nОтключено — при копировании файлов через редактор групповых политик автоматически назначаются строгие права доступа и владелец в соответствии со встроенным списком чувствительных путей.\n\nВключено  — Безопасные права доступа и владелец не назначаются; файлы получают стандартные права (0o644/0o755) и владельца по умолчанию.\n\nСписок ограничений при включённой политике:\n\nДля системных путей — владелец root:root (или специализированная группа, например ssl-cert для /etc/ssl/private, ldap для /etc/openldap/slapd.conf), права\n0o440–0o710 в зависимости от пути. Для пользовательских путей (~/.ssh/id_rsa, ~/.pgpass и др.) — владелец устанавливается в имя_пользователя:основная_группа,\nправа 0o400–0o600.\n\nПолный список включает: ключи SSH, сертификаты TLS/SSL, конфигурации sudoers, crontab, Kerberos, Samba, Kubernetes, VPN, облачные учётные данные и др.",
+                  "key": "Software\\BaseALT\\Policies\\GroupPolicies\\Files",
+                  "valueName": "SecurePermissionsDisabled",
+                  "presentation": null,
+                  "parentCategory": "ALT_GroupPolicies",
+                  "supportedOn": "11 Платформа ALT как минимум"
+                },
+                "Software\\BaseALT\\Policies\\GroupPolicies\\Files\\SecurePermissionsDisabled": {
+                  "metadata": {
+                    "type": "policyValue",
+                    "enabledValue": 1,
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
+                  },
+                  "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GroupPolicies\\Files\\SecurePermissionsDisabled')"
+                },
+                "id": "ALT_GroupPolicies:SecurePermissionsDisabled"
               },
               "ALT_GroupPolicies:WindowsPoliciesMapping": {
                 "displayName": "Отображение Windows-ключей для групповых политик ALT",
@@ -1162,7 +1393,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\WindowsPoliciesMapping')"
                 },
@@ -1186,7 +1421,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\ScrollSysvolDC')"
                 },
@@ -1210,11 +1449,69 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\Force')"
                 },
                 "id": "ALT_GroupPolicies:ForceUpdate"
+              },
+              "ALT_GroupPolicies:AllowTrustUserPolicy": {
+                "displayName": "Разрешение применения пользовательских политик из доверенных доменов",
+                "help": "Политика позволяет включить применение пользовательской части политик для учётных записей из доверенных доменов.\n\nЕсли политика отключена или не настроена, применение пользовательской части политик учётных записей доверенного домена применяться не будут.",
+                "header": {
+                  "class": "Machine",
+                  "name": "AllowTrustUserPolicy",
+                  "displayName": "Разрешение применения пользовательских политик из доверенных доменов",
+                  "explainText": "Политика позволяет включить применение пользовательской части политик для учётных записей из доверенных доменов.\n\nЕсли политика отключена или не настроена, применение пользовательской части политик учётных записей доверенного домена применяться не будут.",
+                  "key": "Software\\BaseALT\\Policies\\GPUpdate",
+                  "valueName": "AllowTrustUserPolicy",
+                  "presentation": null,
+                  "parentCategory": "ALT_GroupPolicies",
+                  "supportedOn": "11 Платформа ALT как минимум"
+                },
+                "Software\\BaseALT\\Policies\\GPUpdate\\AllowTrustUserPolicy": {
+                  "metadata": {
+                    "type": "policyValue",
+                    "enabledValue": 1,
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
+                  },
+                  "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\AllowTrustUserPolicy')"
+                },
+                "id": "ALT_GroupPolicies:AllowTrustUserPolicy"
+              },
+              "ALT_GroupPolicies:PluginsList": {
+                "displayName": "Список плагинов GPUpdate",
+                "help": "Политика позволяет настроить список допустимых плагинов GPUpdate для применения машинных групповых политик.\n\nВключено — используются плагины, указанные в списке;\n\nОтключено/Не сконфигурировано — используются все плагины, находящиеся в каталогах /usr/lib/gpupdate/plugins/ и /gpoa/frontend_plugins/\n\nПример: DMApplier\n\nПримечание: данная настройка используется только при включённой политике «Включение плагинов GPUpdate».",
+                "header": {
+                  "class": "Machine",
+                  "name": "PluginsList",
+                  "displayName": "Список плагинов GPUpdate",
+                  "explainText": "Политика позволяет настроить список допустимых плагинов GPUpdate для применения машинных групповых политик.\n\nВключено — используются плагины, указанные в списке;\n\nОтключено/Не сконфигурировано — используются все плагины, находящиеся в каталогах /usr/lib/gpupdate/plugins/ и /gpoa/frontend_plugins/\n\nПример: DMApplier\n\nПримечание: данная настройка используется только при включённой политике «Включение плагинов GPUpdate».",
+                  "key": "Software\\BaseALT\\Policies\\GPUpdate",
+                  "valueName": null,
+                  "presentation": "$(presentation.PluginsList-pr)",
+                  "parentCategory": "ALT_GroupPolicies",
+                  "supportedOn": "11 Платформа ALT как минимум"
+                },
+                "Software\\BaseALT\\Policies\\GPUpdate\\PluginsList": {
+                  "metadata": {
+                    "type": "list",
+                    "id": "PluginsListSetter",
+                    "key": "Software\\BaseALT\\Policies\\GPUpdate\\PluginsList",
+                    "additive": true,
+                    "label": "Список плагинов:"
+                  },
+                  "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\PluginsList')"
+                },
+                "id": "ALT_GroupPolicies:PluginsList"
               },
               "ALT_GroupPolicies:GlobalExperimental": {
                 "displayName": "Экспериментальные групповые политики",
@@ -1234,7 +1531,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\GlobalExperimental')"
                 },
@@ -1264,7 +1565,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\gpupdate-localusers')"
                     },
@@ -1288,7 +1593,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\gpupdate-group-users')"
                     },
@@ -1312,7 +1621,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\gpupdate-system-uids')"
                     },
@@ -1343,7 +1656,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\ScriptsApplier')"
                     },
@@ -1367,7 +1684,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\ScriptsApplierUser')"
                     },
@@ -1391,7 +1712,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\LapsApplier')"
                     },
@@ -1415,7 +1740,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\PolkitApplier')"
                     },
@@ -1439,7 +1768,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\PolkitApplierUser')"
                     },
@@ -1463,7 +1796,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\YandexBrowserApplier')"
                     },
@@ -1487,7 +1824,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\ChromiumApplier')"
                     },
@@ -1511,7 +1852,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\FirefoxApplier')"
                     },
@@ -1535,7 +1880,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\EnvvarsApplier')"
                     },
@@ -1559,7 +1908,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\EnvvarsApplierUser')"
                     },
@@ -1583,7 +1936,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\ThunderbirdApplier')"
                     },
@@ -1607,7 +1964,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\CUPSApplier')"
                     },
@@ -1631,7 +1992,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\CUPSApplierUser')"
                     },
@@ -1655,7 +2020,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\KdeApplier')"
                     },
@@ -1679,7 +2048,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\KdeApplierUser')"
                     },
@@ -1703,7 +2076,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\GSettingsApplier')"
                     },
@@ -1727,7 +2104,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\GSettingsApplierUser')"
                     },
@@ -1751,7 +2132,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\NTPApplier')"
                     },
@@ -1775,7 +2160,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\FirewallApplier')"
                     },
@@ -1799,7 +2188,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\CIFSApplier')"
                     },
@@ -1823,7 +2216,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\CIFSApplierUser')"
                     },
@@ -1847,7 +2244,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\ControlApplier')"
                     },
@@ -1871,7 +2272,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\SystemdApplier')"
                     },
@@ -1895,7 +2300,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\NetworksharesApplier')"
                     },
@@ -1919,7 +2328,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\NetworksharesApplierUser')"
                     },
@@ -1943,7 +2356,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\FilesApplier')"
                     },
@@ -1967,7 +2384,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\FilesApplierUser')"
                     },
@@ -1991,7 +2412,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\FoldersApplier')"
                     },
@@ -2015,7 +2440,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\FoldersApplierUser')"
                     },
@@ -2039,7 +2468,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\InifilesApplier')"
                     },
@@ -2063,7 +2496,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\InifilesApplierUser')"
                     },
@@ -2087,7 +2524,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\ShortcutsApplier')"
                     },
@@ -2111,7 +2552,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\ShortcutsApplierUser')"
                     },
@@ -2135,7 +2580,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\PackagesApplier')"
                     },
@@ -2159,11 +2608,106 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\PackagesApplierUser')"
                     },
                     "id": "ALT_GPUpdateAppliers:PackagesApplierUser"
+                  }
+                },
+                "inherited": []
+              },
+              {
+                "category": "Обработка настройки Ini-файлов",
+                "help": "Раздел содержит параметры, определяющие обработку Ini-файлов, настраиваемых через редактор групповых политик.",
+                "policies": {
+                  "ALT_IniFiles:IniFilesAllowEmptySections": {
+                    "displayName": "Интерпретация пустых кавычек в названии секции (раздела) Ini-файла",
+                    "help": "Политика определяет интерпретацию пустых кавычек в названии секции (раздела) при обработке Ini-файлов, настраиваемых через редактор групповых политик.\n\nЕсли политика включена, пустые кавычки (одиночные или двойные) не являются названием секции и интерпретируются как отсутствие секции — значение обрабатывается как строка вне секции.\n\nЕсли политика отключена или не настроена, пустые кавычки интерпретируются как название секции.\n\nПримечание: пустым значением считается только пара кавычек без символов между ними (''). Если между кавычками присутствует хотя бы один символ (например, пробел: ' '), такое значение интерпретируется как имя секции.\n\nПримечание: при включении данной политики формат INI-файлов может не соответствовать стандартной спецификации. Это может привести к несовместимости с приложениями, использующими классические правила обработки INI-файлов, и вызвать непредсказуемое поведение.",
+                    "header": {
+                      "class": "Machine",
+                      "name": "IniFilesAllowEmptySections",
+                      "displayName": "Интерпретация пустых кавычек в названии секции (раздела) Ini-файла",
+                      "explainText": "Политика определяет интерпретацию пустых кавычек в названии секции (раздела) при обработке Ini-файлов, настраиваемых через редактор групповых политик.\n\nЕсли политика включена, пустые кавычки (одиночные или двойные) не являются названием секции и интерпретируются как отсутствие секции — значение обрабатывается как строка вне секции.\n\nЕсли политика отключена или не настроена, пустые кавычки интерпретируются как название секции.\n\nПримечание: пустым значением считается только пара кавычек без символов между ними (''). Если между кавычками присутствует хотя бы один символ (например, пробел: ' '), такое значение интерпретируется как имя секции.\n\nПримечание: при включении данной политики формат INI-файлов может не соответствовать стандартной спецификации. Это может привести к несовместимости с приложениями, использующими классические правила обработки INI-файлов, и вызвать непредсказуемое поведение.",
+                      "key": "Software\\BaseALT\\Policies\\GPUpdate",
+                      "valueName": "IniFilesAllowEmptySections",
+                      "presentation": null,
+                      "parentCategory": "ALT_IniFiles",
+                      "supportedOn": "11 Платформа ALT как минимум"
+                    },
+                    "Software\\BaseALT\\Policies\\GPUpdate\\IniFilesAllowEmptySections": {
+                      "metadata": {
+                        "type": "policyValue",
+                        "enabledValue": 1,
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
+                      },
+                      "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\IniFilesAllowEmptySections')"
+                    },
+                    "id": "ALT_IniFiles:IniFilesAllowEmptySections"
+                  },
+                  "ALT_IniFiles:IniFilesAllowUnquotedCommas": {
+                    "displayName": "Обработка значений с запятой в Ini-файлах",
+                    "help": "Политика определяет, требуется ли заключать в кавычки значения, содержащие запятую, при обработке INI-файлов, настраиваемых через редактор групповых политик.\n\nЕсли политика включена, значения, содержащие запятую, записываются без обрамления кавычками.\n\nЕсли политика отключена или не настроена, значения, содержащие запятую, автоматически заключаются в кавычки.\n\nПримечание: при включении данной политики формат INI-файлов может не соответствовать стандартной спецификации. Это может привести к несовместимости с приложениями, использующими классические правила обработки INI-файлов, и вызвать непредсказуемое поведение.",
+                    "header": {
+                      "class": "Machine",
+                      "name": "IniFilesAllowUnquotedCommas",
+                      "displayName": "Обработка значений с запятой в Ini-файлах",
+                      "explainText": "Политика определяет, требуется ли заключать в кавычки значения, содержащие запятую, при обработке INI-файлов, настраиваемых через редактор групповых политик.\n\nЕсли политика включена, значения, содержащие запятую, записываются без обрамления кавычками.\n\nЕсли политика отключена или не настроена, значения, содержащие запятую, автоматически заключаются в кавычки.\n\nПримечание: при включении данной политики формат INI-файлов может не соответствовать стандартной спецификации. Это может привести к несовместимости с приложениями, использующими классические правила обработки INI-файлов, и вызвать непредсказуемое поведение.",
+                      "key": "Software\\BaseALT\\Policies\\GPUpdate",
+                      "valueName": "IniFilesAllowUnquotedCommas",
+                      "presentation": null,
+                      "parentCategory": "ALT_IniFiles",
+                      "supportedOn": "11 Платформа ALT как минимум"
+                    },
+                    "Software\\BaseALT\\Policies\\GPUpdate\\IniFilesAllowUnquotedCommas": {
+                      "metadata": {
+                        "type": "policyValue",
+                        "enabledValue": 1,
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
+                      },
+                      "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\IniFilesAllowUnquotedCommas')"
+                    },
+                    "id": "ALT_IniFiles:IniFilesAllowUnquotedCommas"
+                  },
+                  "ALT_IniFiles:IniFilesAllowSpecialChars": {
+                    "displayName": "Обработка специальных символов в значениях Ini-файлов",
+                    "help": "Политика определяет, допускается ли использование специальных символов в значениях Ini-файлов без обрамления кавычками при применении настроек через редактор групповых политик.\n\nЕсли политика включена, значения, содержащие специальные символы, могут записываться без обрамления кавычками.\n\nЕсли политика отключена или не настроена, значения со специальными символами заключаются в кавычки.\n\nПоддерживаются следующие специальные символы:\n\n! @ $ % ^ & * ( ) _ + { } \" : ? < > № : * , / -\n\nСимволы «#» и «;» не поддерживаются, так как используются для обозначения комментариев в INI-файлах.\n\nПримечание: при включении данной политики формат INI-файлов может не соответствовать стандартной спецификации. Это может привести к несовместимости с приложениями, использующими классические правила обработки INI-файлов, и вызвать непредсказуемое поведение.",
+                    "header": {
+                      "class": "Machine",
+                      "name": "IniFilesAllowSpecialChars",
+                      "displayName": "Обработка специальных символов в значениях Ini-файлов",
+                      "explainText": "Политика определяет, допускается ли использование специальных символов в значениях Ini-файлов без обрамления кавычками при применении настроек через редактор групповых политик.\n\nЕсли политика включена, значения, содержащие специальные символы, могут записываться без обрамления кавычками.\n\nЕсли политика отключена или не настроена, значения со специальными символами заключаются в кавычки.\n\nПоддерживаются следующие специальные символы:\n\n! @ $ % ^ & * ( ) _ + { } \" : ? < > № : * , / -\n\nСимволы «#» и «;» не поддерживаются, так как используются для обозначения комментариев в INI-файлах.\n\nПримечание: при включении данной политики формат INI-файлов может не соответствовать стандартной спецификации. Это может привести к несовместимости с приложениями, использующими классические правила обработки INI-файлов, и вызвать непредсказуемое поведение.",
+                      "key": "Software\\BaseALT\\Policies\\GPUpdate",
+                      "valueName": "IniFilesAllowSpecialChars",
+                      "presentation": null,
+                      "parentCategory": "ALT_IniFiles",
+                      "supportedOn": "11 Платформа ALT как минимум"
+                    },
+                    "Software\\BaseALT\\Policies\\GPUpdate\\IniFilesAllowSpecialChars": {
+                      "metadata": {
+                        "type": "policyValue",
+                        "enabledValue": 1,
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
+                      },
+                      "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\IniFilesAllowSpecialChars')"
+                    },
+                    "id": "ALT_IniFiles:IniFilesAllowSpecialChars"
                   }
                 },
                 "inherited": []
@@ -2229,6 +2773,12 @@ define(function() {
                       "wheelonly": "Только wheel",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "fuseonly": "string",
+                      "wheelonly": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "1"
                   },
@@ -2280,7 +2830,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\CifsaclDisable')"
                 },
@@ -2309,6 +2863,10 @@ define(function() {
                     "items": {
                       "default": "По умолчанию",
                       "shared": "Общий"
+                    },
+                    "itemValueKinds": {
+                      "default": "string",
+                      "shared": "string"
                     },
                     "label": "Выберите режим работы:",
                     "defaultItem": "0"
@@ -2343,6 +2901,12 @@ define(function() {
                       "unprivileged": "Непривилегированный режим",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "wheelonly": "string",
+                      "unprivileged": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
                   },
@@ -2374,6 +2938,11 @@ define(function() {
                       "public": "Любой пользователь",
                       "wheelonly": "Только wheel",
                       "restricted": "Только root"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "wheelonly": "string",
+                      "restricted": "string"
                     },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "2"
@@ -2415,8 +2984,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.screensaver.lock-enabled",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Автоматическая блокировка экрана:",
                         "defaultItem": "0"
@@ -2431,6 +3004,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.screensaver.lock-enabled",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку автоматической блокировки"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.screensaver.lock-enabled')"
@@ -2451,6 +3026,16 @@ define(function() {
                           "1800": "30 Минут",
                           "3600": "1 Час"
                         },
+                        "itemValueKinds": {
+                          "0": "decimal",
+                          "30": "decimal",
+                          "60": "decimal",
+                          "120": "decimal",
+                          "180": "decimal",
+                          "300": "decimal",
+                          "1800": "decimal",
+                          "3600": "decimal"
+                        },
                         "label": "Задержка:",
                         "defaultItem": "0"
                       },
@@ -2464,6 +3049,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.screensaver.lock-delay",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку задержки"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.screensaver.lock-delay')"
@@ -2491,7 +3078,6 @@ define(function() {
                         "valueName": "org.gnome.desktop.session.idle-delay",
                         "required": true,
                         "items": {
-                          "0": "0 Минут",
                           "60": "1 Минута",
                           "120": "2 Минуты",
                           "180": "3 Минуты",
@@ -2500,7 +3086,20 @@ define(function() {
                           "480": "8 Минут",
                           "600": "10 Минут",
                           "720": "12 Минут",
-                          "900": "15 Минут"
+                          "900": "15 Минут",
+                          "0": "0 Минут"
+                        },
+                        "itemValueKinds": {
+                          "60": "decimal",
+                          "120": "decimal",
+                          "180": "decimal",
+                          "240": "decimal",
+                          "300": "decimal",
+                          "480": "decimal",
+                          "600": "decimal",
+                          "720": "decimal",
+                          "900": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Период бездействия:",
                         "defaultItem": "0"
@@ -2515,6 +3114,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.session.idle-delay",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.session.idle-delay')"
@@ -2542,8 +3143,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.notifications.show-in-lock-screen",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Уведомления на экране блокировки:",
                         "defaultItem": "0"
@@ -2558,6 +3163,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.notifications.show-in-lock-screen",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.notifications.show-in-lock-screen')"
@@ -2600,6 +3207,15 @@ define(function() {
                           "zoom": "Zoom",
                           "spanned": "Spanned"
                         },
+                        "itemValueKinds": {
+                          "none": "string",
+                          "wallpaper": "string",
+                          "centered": "string",
+                          "scaled": "string",
+                          "stretched": "string",
+                          "zoom": "string",
+                          "spanned": "string"
+                        },
                         "label": "Способ подгонки:",
                         "defaultItem": "0"
                       },
@@ -2613,6 +3229,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.background.picture-options",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.background.picture-options')"
@@ -2643,6 +3261,10 @@ define(function() {
                           "prefer-light": "Светлая тема",
                           "prefer-dark": "Тёмная тема"
                         },
+                        "itemValueKinds": {
+                          "prefer-light": "string",
+                          "prefer-dark": "string"
+                        },
                         "label": "Стиль оформления:",
                         "defaultItem": "0"
                       },
@@ -2656,6 +3278,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.color-scheme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.interface.color-scheme')"
@@ -2688,6 +3312,12 @@ define(function() {
                           "GNOME": "GNOME",
                           "Hicolor": "Hicolor"
                         },
+                        "itemValueKinds": {
+                          "Adwaita": "string",
+                          "HighContrast": "string",
+                          "GNOME": "string",
+                          "Hicolor": "string"
+                        },
                         "label": "Тема оформления значков:",
                         "defaultItem": "0"
                       },
@@ -2701,6 +3331,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.icon-theme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.interface.icon-theme')"
@@ -2709,12 +3341,12 @@ define(function() {
                   },
                   "ALT_Apperance_Gnome:OrgGnomeBackgroundPictureFilenameMachine": {
                     "displayName": "Фон рабочего стола",
-                    "help": "Политика позволяет выбрать фон рабочего стола в зависимости от темы оформления внешнего вида, указав путь до изображения в формате file:///home/user/Изображения/picture.jpg\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Политика позволяет выбрать фон рабочего стола в зависимости от темы оформления внешнего вида, указав путь к изображениюв формате file:///home/user/Изображения/picture.jpg\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgGnomeBackgroundPictureFilenameMachine",
                       "displayName": "Фон рабочего стола",
-                      "explainText": "Политика позволяет выбрать фон рабочего стола в зависимости от темы оформления внешнего вида, указав путь до изображения в формате file:///home/user/Изображения/picture.jpg\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Политика позволяет выбрать фон рабочего стола в зависимости от темы оформления внешнего вида, указав путь к изображениюв формате file:///home/user/Изображения/picture.jpg\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgGnomeBackgroundPictureFilenameMachine-pr)",
@@ -2727,7 +3359,7 @@ define(function() {
                         "id": "OrgGnomeBackgroundPictureFilename_light_setter",
                         "valueName": "org.gnome.desktop.background.picture-uri",
                         "required": false,
-                        "label": "Путь до изображения для светлой темы:"
+                        "label": "Путь к изображению для светлой темы:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.gnome.desktop.background.picture-uri')"
                     },
@@ -2737,7 +3369,7 @@ define(function() {
                         "id": "OrgGnomeBackgroundPictureFilename_dark_setter",
                         "valueName": "org.gnome.desktop.background.picture-uri-dark",
                         "required": false,
-                        "label": "Путь до изображения для тёмной темы:"
+                        "label": "Путь к изображению для тёмной темы:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.gnome.desktop.background.picture-uri-dark')"
                     },
@@ -2749,6 +3381,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.background.picture-uri",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку изображения для светлой темы"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.background.picture-uri')"
@@ -2761,6 +3395,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.background.picture-uri-dark",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку изображения для тёмной темы"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.background.picture-uri-dark')"
@@ -2795,8 +3431,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.enable-hot-corners",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Горячий угол:",
                         "defaultItem": "0"
@@ -2811,6 +3451,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.enable-hot-corners",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.interface.enable-hot-corners')"
@@ -2819,12 +3461,12 @@ define(function() {
                   },
                   "ALT_Multitasking_Gnome:gnome-desktops": {
                     "displayName": "Рабочие столы",
-                    "help": "Политика позволяет управлять количеством рабочих столов.\n\nДинамические рабочие столы — количество рабочих столов меняется в зависимости от количества открытых окон.\n\nФиксированные рабочие столы — количество рабочих столов остаётся постоянным, независимо от того, есть ли на них окна или нет.\n\nПримечание: параметр «Количество рабочих столов» имеет смысл только при фиксированном режиме.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Политика позволяет управлять количеством рабочих столов.\n\nДинамические рабочие столы — количество рабочих столов меняется в зависимости от количества открытых окон.\n\nФиксированные рабочие столы — количество рабочих столов остаётся постоянным, независимо от того, есть ли на них окна или нет.\n\nПримечание: параметр «Количество рабочих столов» используется только при фиксированном режиме.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "gnome-desktops",
                       "displayName": "Рабочие столы",
-                      "explainText": "Политика позволяет управлять количеством рабочих столов.\n\nДинамические рабочие столы — количество рабочих столов меняется в зависимости от количества открытых окон.\n\nФиксированные рабочие столы — количество рабочих столов остаётся постоянным, независимо от того, есть ли на них окна или нет.\n\nПримечание: параметр «Количество рабочих столов» имеет смысл только при фиксированном режиме.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Политика позволяет управлять количеством рабочих столов.\n\nДинамические рабочие столы — количество рабочих столов меняется в зависимости от количества открытых окон.\n\nФиксированные рабочие столы — количество рабочих столов остаётся постоянным, независимо от того, есть ли на них окна или нет.\n\nПримечание: параметр «Количество рабочих столов» используется только при фиксированном режиме.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.gnome-desktops-pr)",
@@ -2838,8 +3480,12 @@ define(function() {
                         "valueName": "org.gnome.mutter.dynamic-workspaces",
                         "required": true,
                         "items": {
-                          "0": "Фиксированные",
-                          "1": "Динамические"
+                          "1": "Динамические",
+                          "0": "Фиксированные"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Рабочие столы:",
                         "defaultItem": "0"
@@ -2854,6 +3500,8 @@ define(function() {
                         "valueName": "org.gnome.mutter.dynamic-workspaces",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку рабочих столов:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.mutter.dynamic-workspaces')"
@@ -2879,6 +3527,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.wm.preferences.num-workspaces",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку количества рабочих столов:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.wm.preferences.num-workspaces')"
@@ -2906,8 +3556,12 @@ define(function() {
                         "valueName": "org.gnome.mutter.workspaces-only-on-primary",
                         "required": true,
                         "items": {
-                          "0": "На всех дисплеях",
-                          "1": "На основном дисплее"
+                          "1": "На основном дисплее",
+                          "0": "На всех дисплеях"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Рабочие столы:",
                         "defaultItem": "0"
@@ -2922,6 +3576,8 @@ define(function() {
                         "valueName": "org.gnome.mutter.workspaces-only-on-primary",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.mutter.workspaces-only-on-primary')"
@@ -2956,8 +3612,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.clock-show-date",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Отображение даты:",
                         "defaultItem": "0"
@@ -2972,6 +3632,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.clock-show-date",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.interface.clock-show-date')"
@@ -2999,8 +3661,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.clock-show-weekday",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Отображение дня недели:",
                         "defaultItem": "0"
@@ -3015,6 +3681,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.clock-show-weekday",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.interface.clock-show-weekday')"
@@ -3042,8 +3710,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.show-battery-percentage",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Отображение процента заряда батареи:",
                         "defaultItem": "0"
@@ -3058,6 +3730,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.show-battery-percentage",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.interface.show-battery-percentage')"
@@ -3085,8 +3759,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.clock-show-seconds",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Отображение секунд:",
                         "defaultItem": "0"
@@ -3101,6 +3779,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.clock-show-seconds",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.interface.clock-show-seconds')"
@@ -3132,6 +3812,11 @@ define(function() {
                           "sloppy": "Срабатывает при наведении",
                           "mouse": "Фокус следует за мышью"
                         },
+                        "itemValueKinds": {
+                          "click": "string",
+                          "sloppy": "string",
+                          "mouse": "string"
+                        },
                         "label": "Фокус окна:",
                         "defaultItem": "0"
                       },
@@ -3144,8 +3829,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.wm.preferences.auto-raise",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Поднимать окно над другими при установке фокуса:",
                         "defaultItem": "0"
@@ -3160,6 +3849,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.wm.preferences.focus-mode",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку фокуса окна"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.wm.preferences.focus-mode')"
@@ -3172,6 +3863,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.wm.preferences.auto-raise",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку поднятия окна"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.wm.preferences.auto-raise')"
@@ -3199,8 +3892,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.enable-animations",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Эффекты анимации:",
                         "defaultItem": "0"
@@ -3215,6 +3912,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.enable-animations",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.interface.enable-animations')"
@@ -3249,8 +3948,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.a11y.always-show-universal-access-status",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Меню специальных возможностей:",
                         "defaultItem": "0"
@@ -3265,6 +3968,8 @@ define(function() {
                         "valueName": "org.gnome.desktop.a11y.always-show-universal-access-status",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.a11y.always-show-universal-access-status')"
@@ -3298,8 +4003,12 @@ define(function() {
                             "valueName": "org.gnome.desktop.a11y.interface.high-contrast",
                             "required": true,
                             "items": {
-                              "0": "Отключено",
-                              "1": "Включено"
+                              "1": "Включено",
+                              "0": "Отключено"
+                            },
+                            "itemValueKinds": {
+                              "1": "decimal",
+                              "0": "decimal"
                             },
                             "label": "Высокая контрастность:",
                             "defaultItem": "0"
@@ -3314,6 +4023,8 @@ define(function() {
                             "valueName": "org.gnome.desktop.a11y.interface.high-contrast",
                             "trueValue": 1,
                             "falseValue": 0,
+                            "trueValueKind": "decimal",
+                            "falseValueKind": "decimal",
                             "label": "Блокировать"
                           },
                           "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.a11y.interface.high-contrast')"
@@ -3347,6 +4058,13 @@ define(function() {
                               "64": "64px",
                               "96": "96px"
                             },
+                            "itemValueKinds": {
+                              "24": "decimal",
+                              "32": "decimal",
+                              "48": "decimal",
+                              "64": "decimal",
+                              "96": "decimal"
+                            },
                             "label": "Размер курсора:",
                             "defaultItem": "0"
                           },
@@ -3360,6 +4078,8 @@ define(function() {
                             "valueName": "org.gnome.desktop.interface.cursor-size",
                             "trueValue": 1,
                             "falseValue": 0,
+                            "trueValueKind": "decimal",
+                            "falseValueKind": "decimal",
                             "label": "Блокировать"
                           },
                           "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.interface.cursor-size')"
@@ -3387,8 +4107,12 @@ define(function() {
                             "valueName": "org.gnome.desktop.a11y.interface.show-status-shapes",
                             "required": true,
                             "items": {
-                              "0": "Отключено",
-                              "1": "Включено"
+                              "1": "Включено",
+                              "0": "Отключено"
+                            },
+                            "itemValueKinds": {
+                              "1": "decimal",
+                              "0": "decimal"
                             },
                             "label": "Использование фигур:",
                             "defaultItem": "0"
@@ -3403,6 +4127,8 @@ define(function() {
                             "valueName": "org.gnome.desktop.a11y.interface.show-status-shapes",
                             "trueValue": 1,
                             "falseValue": 0,
+                            "trueValueKind": "decimal",
+                            "falseValueKind": "decimal",
                             "label": "Блокировать"
                           },
                           "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.desktop.a11y.interface.show-status-shapes')"
@@ -3444,6 +4170,12 @@ define(function() {
                           "hibernate": "Режим гибернации",
                           "nothing": "Ничего не делать"
                         },
+                        "itemValueKinds": {
+                          "suspend": "string",
+                          "interactive": "string",
+                          "hibernate": "string",
+                          "nothing": "string"
+                        },
                         "label": "Действие кнопки питания:",
                         "defaultItem": "0"
                       },
@@ -3457,6 +4189,8 @@ define(function() {
                         "valueName": "org.gnome.settings-daemon.plugins.power.power-button-action",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.settings-daemon.plugins.power.power-button-action')"
@@ -3465,12 +4199,12 @@ define(function() {
                   },
                   "ALT_PowerManagement_Gnome:GnomeSleepInactiveBattery": {
                     "displayName": "Спящий режим при питании от батареи",
-                    "help": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от батареи.\n\nПараметр «Время до перехода в спящий режим при питании от батареи» имеет смысл только при включённом параметре «Переходить в спящий режим при питании от батареи».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от батареи.\n\nПараметр «Время до перехода в спящий режим при питании от батареи» используется только при включённом параметре «Переходить в спящий режим при питании от батареи».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "GnomeSleepInactiveBattery",
                       "displayName": "Спящий режим при питании от батареи",
-                      "explainText": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от батареи.\n\nПараметр «Время до перехода в спящий режим при питании от батареи» имеет смысл только при включённом параметре «Переходить в спящий режим при питании от батареи».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от батареи.\n\nПараметр «Время до перехода в спящий режим при питании от батареи» используется только при включённом параметре «Переходить в спящий режим при питании от батареи».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.GnomeSleepInactiveBattery-pr)",
@@ -3487,6 +4221,10 @@ define(function() {
                           "suspend": "Включено",
                           "nothing": "Отключено"
                         },
+                        "itemValueKinds": {
+                          "suspend": "string",
+                          "nothing": "string"
+                        },
                         "label": "Переходить в спящий режим при питании от батареи:",
                         "defaultItem": "0"
                       },
@@ -3500,6 +4238,8 @@ define(function() {
                         "valueName": "org.gnome.settings-daemon.plugins.power.sleep-inactive-battery-type",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку перехода в спящий режим"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.settings-daemon.plugins.power.sleep-inactive-battery-type')"
@@ -3518,6 +4258,14 @@ define(function() {
                           "1200": "20 Минут",
                           "3600": "1 Час"
                         },
+                        "itemValueKinds": {
+                          "60": "decimal",
+                          "120": "decimal",
+                          "300": "decimal",
+                          "600": "decimal",
+                          "1200": "decimal",
+                          "3600": "decimal"
+                        },
                         "label": "Время до перехода в спящий режим при питании от батареи:",
                         "defaultItem": "0"
                       },
@@ -3531,6 +4279,8 @@ define(function() {
                         "valueName": "org.gnome.settings-daemon.plugins.power.sleep-inactive-battery-timeout",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку времени"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.settings-daemon.plugins.power.sleep-inactive-battery-timeout')"
@@ -3539,12 +4289,12 @@ define(function() {
                   },
                   "ALT_PowerManagement_Gnome:GnomeSleepInactiveAC": {
                     "displayName": "Спящий режим при питании от сети",
-                    "help": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от сети.\n\nПараметр «Время до перехода в спящий режим при питании от сети» имеет смысл только при включённом параметре «Переходить в спящий режим при питании от сети».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от сети.\n\nПараметр «Время до перехода в спящий режим при питании от сети» используется только при включённом параметре «Переходить в спящий режим при питании от сети».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "GnomeSleepInactiveAC",
                       "displayName": "Спящий режим при питании от сети",
-                      "explainText": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от сети.\n\nПараметр «Время до перехода в спящий режим при питании от сети» имеет смысл только при включённом параметре «Переходить в спящий режим при питании от сети».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от сети.\n\nПараметр «Время до перехода в спящий режим при питании от сети» используется только при включённом параметре «Переходить в спящий режим при питании от сети».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.GnomeSleepInactiveAC-pr)",
@@ -3561,6 +4311,10 @@ define(function() {
                           "suspend": "Включено",
                           "nothing": "Отключено"
                         },
+                        "itemValueKinds": {
+                          "suspend": "string",
+                          "nothing": "string"
+                        },
                         "label": "Переходить в спящий режим при питании от батареи:",
                         "defaultItem": "0"
                       },
@@ -3574,6 +4328,8 @@ define(function() {
                         "valueName": "org.gnome.settings-daemon.plugins.power.sleep-inactive-ac-type",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку перехода в спящий режим"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.settings-daemon.plugins.power.sleep-inactive-ac-type')"
@@ -3592,6 +4348,14 @@ define(function() {
                           "1200": "20 Минут",
                           "3600": "1 Час"
                         },
+                        "itemValueKinds": {
+                          "60": "decimal",
+                          "120": "decimal",
+                          "300": "decimal",
+                          "600": "decimal",
+                          "1200": "decimal",
+                          "3600": "decimal"
+                        },
                         "label": "Время до перехода в спящий режим при питании от батареи:",
                         "defaultItem": "0"
                       },
@@ -3605,6 +4369,8 @@ define(function() {
                         "valueName": "org.gnome.settings-daemon.plugins.power.sleep-inactive-ac-timeout",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку времени"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.settings-daemon.plugins.power.sleep-inactive-ac-timeout')"
@@ -3646,8 +4412,12 @@ define(function() {
                         "valueName": "org.mate.session.logout-prompt",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Запрос при выходе из сеанса:",
                         "defaultItem": "0"
@@ -3662,6 +4432,8 @@ define(function() {
                         "valueName": "org.mate.session.logout-prompt",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.session.logout-prompt')"
@@ -3670,12 +4442,12 @@ define(function() {
                   },
                   "ALT_Session_Mate:OrgMateSessionIdleDelayMachine": {
                     "displayName": "Интервал бездействия, по истечении которого сеанс считается простаивающим",
-                    "help": "Данная политика позволяет установить время в минутах, по истечении которого, сеанс будет считаться простаивающим.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Данная политика позволяет установить время в минутах, по истечении которого, сеанс будет считаться простаивающим.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateSessionIdleDelayMachine",
                       "displayName": "Интервал бездействия, по истечении которого сеанс считается простаивающим",
-                      "explainText": "Данная политика позволяет установить время в минутах, по истечении которого, сеанс будет считаться простаивающим.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Данная политика позволяет установить время в минутах, по истечении которого, сеанс будет считаться простаивающим.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateSessionIdleDelayMachine-pr)",
@@ -3703,6 +4475,8 @@ define(function() {
                         "valueName": "org.mate.session.idle-delay",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.session.idle-delay')"
@@ -3730,8 +4504,12 @@ define(function() {
                         "valueName": "org.mate.session.show-hidden-apps",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Отображение скрытых автоматически запускаемых приложений:",
                         "defaultItem": "0"
@@ -3746,6 +4524,8 @@ define(function() {
                         "valueName": "org.mate.session.show-hidden-apps",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.session.show-hidden-apps')"
@@ -3773,8 +4553,12 @@ define(function() {
                         "valueName": "org.mate.session.auto-save-session",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Сохранение сеансов:",
                         "defaultItem": "0"
@@ -3789,6 +4573,8 @@ define(function() {
                         "valueName": "org.mate.session.auto-save-session",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.session.auto-save-session')"
@@ -3830,6 +4616,8 @@ define(function() {
                         "valueName": "org.mate.session.logout-timeout",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.session.logout-timeout')"
@@ -3864,8 +4652,12 @@ define(function() {
                         "valueName": "org.mate.lockdown.disable-lock-screen",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -3880,6 +4672,8 @@ define(function() {
                         "valueName": "org.mate.lockdown.disable-lock-screen",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.lockdown.disable-lock-screen')"
@@ -3907,8 +4701,12 @@ define(function() {
                         "valueName": "org.mate.lockdown.disable-theme-settings",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -3923,6 +4721,8 @@ define(function() {
                         "valueName": "org.mate.lockdown.disable-theme-settings",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.lockdown.disable-theme-settings')"
@@ -3950,8 +4750,12 @@ define(function() {
                         "valueName": "org.mate.lockdown.disable-user-switching",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -3966,6 +4770,8 @@ define(function() {
                         "valueName": "org.mate.lockdown.disable-user-switching",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.lockdown.disable-user-switching')"
@@ -3993,8 +4799,12 @@ define(function() {
                         "valueName": "org.mate.lockdown.disable-log-out",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -4009,6 +4819,8 @@ define(function() {
                         "valueName": "org.mate.lockdown.disable-log-out",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.lockdown.disable-log-out')"
@@ -4043,8 +4855,12 @@ define(function() {
                         "valueName": "org.mate.Marco.general.auto-raise",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -4059,6 +4875,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.auto-raise",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.auto-raise')"
@@ -4086,8 +4904,12 @@ define(function() {
                         "valueName": "org.mate.Marco.general.show-tab-border",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -4102,6 +4924,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.show-tab-border",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.show-tab-border')"
@@ -4139,6 +4963,17 @@ define(function() {
                           "menu": "Показать меню",
                           "last": "Последнее действие"
                         },
+                        "itemValueKinds": {
+                          "toggle shade": "string",
+                          "toggle maximize": "string",
+                          "toggle maximize horizontally": "string",
+                          "toggle maximize vertically": "string",
+                          "minimize": "string",
+                          "none": "string",
+                          "lower": "string",
+                          "menu": "string",
+                          "last": "string"
+                        },
                         "label": "Действие:",
                         "defaultItem": "0"
                       },
@@ -4152,6 +4987,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.action-double-click-titlebar",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.action-double-click-titlebar')"
@@ -4189,6 +5026,17 @@ define(function() {
                           "menu": "Показать меню",
                           "last": "Последнее действие"
                         },
+                        "itemValueKinds": {
+                          "toggle shade": "string",
+                          "toggle maximize": "string",
+                          "toggle maximize horizontally": "string",
+                          "toggle maximize vertically": "string",
+                          "minimize": "string",
+                          "none": "string",
+                          "lower": "string",
+                          "menu": "string",
+                          "last": "string"
+                        },
                         "label": "Действие:",
                         "defaultItem": "0"
                       },
@@ -4202,6 +5050,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.action-right-click-titlebar",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.action-right-click-titlebar')"
@@ -4239,6 +5089,17 @@ define(function() {
                           "menu": "Показать меню",
                           "last": "Последнее действие"
                         },
+                        "itemValueKinds": {
+                          "toggle shade": "string",
+                          "toggle maximize": "string",
+                          "toggle maximize horizontally": "string",
+                          "toggle maximize vertically": "string",
+                          "minimize": "string",
+                          "none": "string",
+                          "lower": "string",
+                          "menu": "string",
+                          "last": "string"
+                        },
                         "label": "Действие:",
                         "defaultItem": "0"
                       },
@@ -4252,6 +5113,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.action-middle-click-titlebar",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.action-middle-click-titlebar')"
@@ -4260,12 +5123,12 @@ define(function() {
                   },
                   "ALT_Windows_Manager_Marco:OrgMateMarcoGeneralAutoRaiseDelayMachine": {
                     "displayName": "Задержка при восстановлении",
-                    "help": "Временной интервал в миллисекундах, по истечении которого окно в фокусе будет поднято поверх остальных.\n      \nЭтот параметр имеет смысл только при активированном параметре «Автоматически поднимать окно, получившее фокус».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Временной интервал в миллисекундах, по истечении которого окно в фокусе будет поднято поверх остальных.\n      \nЭтот параметр используется только при активированном параметре «Автоматически поднимать окно, получившее фокус».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateMarcoGeneralAutoRaiseDelayMachine",
                       "displayName": "Задержка при восстановлении",
-                      "explainText": "Временной интервал в миллисекундах, по истечении которого окно в фокусе будет поднято поверх остальных.\n      \nЭтот параметр имеет смысл только при активированном параметре «Автоматически поднимать окно, получившее фокус».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Временной интервал в миллисекундах, по истечении которого окно в фокусе будет поднято поверх остальных.\n      \nЭтот параметр используется только при активированном параметре «Автоматически поднимать окно, получившее фокус».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateMarcoGeneralAutoRaiseDelayMachine-pr)",
@@ -4293,6 +5156,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.auto-raise-delay",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.auto-raise-delay')"
@@ -4320,8 +5185,12 @@ define(function() {
                         "valueName": "org.mate.Marco.general.allow-tiling",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -4336,6 +5205,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.allow-tiling",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.allow-tiling')"
@@ -4373,6 +5244,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.button-layout",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.button-layout')"
@@ -4414,6 +5287,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.num-workspaces",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.num-workspaces')"
@@ -4441,8 +5316,12 @@ define(function() {
                         "valueName": "org.mate.Marco.general.compositing-fast-alt-tab",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -4457,6 +5336,8 @@ define(function() {
                         "valueName": "org.mate.Marco.compositing-fast-alt-tab",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.compositing-fast-alt-tab')"
@@ -4484,8 +5365,12 @@ define(function() {
                         "valueName": "org.mate.Marco.general.center-new-windows",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -4500,6 +5385,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.center-new-windows",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.center-new-windows')"
@@ -4531,6 +5418,11 @@ define(function() {
                           "classic": "Classic",
                           "toroidal": "Toroidal"
                         },
+                        "itemValueKinds": {
+                          "no wrap": "string",
+                          "classic": "string",
+                          "toroidal": "string"
+                        },
                         "label": "Метод:",
                         "defaultItem": "0"
                       },
@@ -4544,6 +5436,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.wrap-style",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.wrap-style')"
@@ -4574,6 +5468,10 @@ define(function() {
                           "smart": "Smart",
                           "strict": "Strict"
                         },
+                        "itemValueKinds": {
+                          "smart": "string",
+                          "strict": "string"
+                        },
                         "label": "Передача фокуса:",
                         "defaultItem": "0"
                       },
@@ -4587,6 +5485,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.focus-new-windows",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.focus-new-windows')"
@@ -4595,12 +5495,12 @@ define(function() {
                   },
                   "ALT_Windows_Manager_Marco:OrgMateMarcoGeneralAllowTopTilingMachine": {
                     "displayName": "Разворачивание при перетаскивании",
-                    "help": "Включает разворачивание окна во весь экран при его перетаскивании в верхнюю центральную часть экрана. Этот параметр имеет смысл только при активированном параметре «Изменение размеров окна при перетаскивании».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Включает разворачивание окна во весь экран при его перетаскивании в верхнюю центральную часть экрана. Этот параметр используется только при активированном параметре «Изменение размеров окна при перетаскивании».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateMarcoGeneralAllowTopTilingMachine",
                       "displayName": "Разворачивание при перетаскивании",
-                      "explainText": "Включает разворачивание окна во весь экран при его перетаскивании в верхнюю центральную часть экрана. Этот параметр имеет смысл только при активированном параметре «Изменение размеров окна при перетаскивании».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Включает разворачивание окна во весь экран при его перетаскивании в верхнюю центральную часть экрана. Этот параметр используется только при активированном параметре «Изменение размеров окна при перетаскивании».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateMarcoGeneralAllowTopTilingMachine-pr)",
@@ -4614,8 +5514,12 @@ define(function() {
                         "valueName": "org.mate.Marco.general.allow-top-tiling",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -4630,6 +5534,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.allow-top-tiling",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.allow-top-tiling')"
@@ -4671,6 +5577,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.icon-size",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.icon-size')"
@@ -4712,6 +5620,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.alt-tab-max-columns",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.alt-tab-max-columns')"
@@ -4743,6 +5653,11 @@ define(function() {
                           "pointer": "Указатель",
                           "manual": "Ручной"
                         },
+                        "itemValueKinds": {
+                          "automatic": "string",
+                          "pointer": "string",
+                          "manual": "string"
+                        },
                         "label": "Расположение:",
                         "defaultItem": "0"
                       },
@@ -4756,6 +5671,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.placement-mode",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.placement-mode')"
@@ -4787,6 +5704,11 @@ define(function() {
                           "sloppy": "Sloppy",
                           "mouse": "Mouse"
                         },
+                        "itemValueKinds": {
+                          "click": "string",
+                          "sloppy": "string",
+                          "mouse": "string"
+                        },
                         "label": "Режим переключения фокуса окон:",
                         "defaultItem": "0"
                       },
@@ -4800,6 +5722,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.focus-mode",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.focus-mode')"
@@ -4827,8 +5751,12 @@ define(function() {
                         "valueName": "org.mate.Marco.general.titlebar-uses-system-font",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -4843,6 +5771,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.titlebar-uses-system-font",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.titlebar-uses-system-font')"
@@ -4881,6 +5811,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.theme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.theme')"
@@ -4919,6 +5851,8 @@ define(function() {
                         "valueName": "org.mate.Marco.general.titlebar-font",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.Marco.general.titlebar-font')"
@@ -4965,6 +5899,8 @@ define(function() {
                             "valueName": "org.mate.peripherals-keyboard.delay",
                             "trueValue": 1,
                             "falseValue": 0,
+                            "trueValueKind": "decimal",
+                            "falseValueKind": "decimal",
                             "label": "Блокировать"
                           },
                           "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.peripherals-keyboard.delay')"
@@ -4992,8 +5928,12 @@ define(function() {
                             "valueName": "org.mate.peripherals-keyboard-repeat",
                             "required": true,
                             "items": {
-                              "0": "Отключено",
-                              "1": "Включено"
+                              "1": "Включено",
+                              "0": "Отключено"
+                            },
+                            "itemValueKinds": {
+                              "1": "decimal",
+                              "0": "decimal"
                             },
                             "label": "Повторять удерживаемую нажатой клавишу:",
                             "defaultItem": "0"
@@ -5008,6 +5948,8 @@ define(function() {
                             "valueName": "org.mate.peripherals-keyboard.repeat",
                             "trueValue": 1,
                             "falseValue": 0,
+                            "trueValueKind": "decimal",
+                            "falseValueKind": "decimal",
                             "label": "Блокировать"
                           },
                           "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.peripherals-keyboard.repeat')"
@@ -5048,6 +5990,8 @@ define(function() {
                             "valueName": "org.mate.peripherals-keyboard.rate",
                             "trueValue": 1,
                             "falseValue": 0,
+                            "trueValueKind": "decimal",
+                            "falseValueKind": "decimal",
                             "label": "Блокировать"
                           },
                           "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.peripherals-keyboard.rate')"
@@ -5065,12 +6009,12 @@ define(function() {
                 "policies": {
                   "ALT_Background_Mate:OrgMateBackgroundPictureFilenameMachine": {
                     "displayName": "Картинка фона рабочего стола",
-                    "help": "Позволяет установить изображение в качестве фона рабочего стола, указав файл (например, /usr/share/backgrounds/mate/nature/Wood.jpg), содержащий изображение.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Позволяет установить изображение в качестве фона рабочего стола, указав путь к изображению (например, /usr/share/backgrounds/mate/nature/Wood.jpg).\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateBackgroundPictureFilenameMachine",
                       "displayName": "Картинка фона рабочего стола",
-                      "explainText": "Позволяет установить изображение в качестве фона рабочего стола, указав файл (например, /usr/share/backgrounds/mate/nature/Wood.jpg), содержащий изображение.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Позволяет установить изображение в качестве фона рабочего стола, указав путь к изображению (например, /usr/share/backgrounds/mate/nature/Wood.jpg).\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateBackgroundPictureFilenameMachine-pr)",
@@ -5083,7 +6027,7 @@ define(function() {
                         "id": "OrgMateBackgroundPictureFilename_setter",
                         "valueName": "org.mate.background.picture-filename",
                         "required": false,
-                        "label": "Файл:"
+                        "label": "Путь к изображению:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.background.picture-filename')"
                     },
@@ -5095,6 +6039,8 @@ define(function() {
                         "valueName": "org.mate.background.picture-filename",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.background.picture-filename')"
@@ -5133,6 +6079,8 @@ define(function() {
                         "valueName": "org.mate.background.secondary-color",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.background.secondary-color')"
@@ -5168,6 +6116,15 @@ define(function() {
                           "zoom": "Zoom",
                           "spanned": "Spanned"
                         },
+                        "itemValueKinds": {
+                          "none": "string",
+                          "wallpaper": "string",
+                          "centered": "string",
+                          "scaled": "string",
+                          "stretched": "string",
+                          "zoom": "string",
+                          "spanned": "string"
+                        },
                         "label": "Метод отображения картинки фона рабочего стола:",
                         "defaultItem": "0"
                       },
@@ -5181,6 +6138,8 @@ define(function() {
                         "valueName": "org.mate.background.picture-options",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.background.picture-options')"
@@ -5219,6 +6178,8 @@ define(function() {
                         "valueName": "org.mate.background.primary-color",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.background.primary-color')"
@@ -5227,12 +6188,12 @@ define(function() {
                   },
                   "ALT_Background_Mate:OrgMateBackgroundColorShadingTypeMachine": {
                     "displayName": "Тип градиента",
-                    "help": "Устанавливает тип градиента:\n\n«Горизонтальный градиент» — градиентный эффект от левого края экрана к правому;\n\n«Вертикальный градиент» — градиентный эффект от верхнего края экрана к нижнему;\n\n«Сплошная заливка» — заполнить фон рабочего стола одним цветом.\n\nЭтот параметр имеет смысл, только если не установлен параметр «Картинка фона рабочего стола».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Устанавливает тип градиента:\n\n«Горизонтальный градиент» — градиентный эффект от левого края экрана к правому;\n\n«Вертикальный градиент» — градиентный эффект от верхнего края экрана к нижнему;\n\n«Сплошная заливка» — заполнить фон рабочего стола одним цветом.\n\nЭтот параметр используется только если не установлен параметр «Картинка фона рабочего стола».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateBackgroundColorShadingTypeMachine",
                       "displayName": "Тип градиента",
-                      "explainText": "Устанавливает тип градиента:\n\n«Горизонтальный градиент» — градиентный эффект от левого края экрана к правому;\n\n«Вертикальный градиент» — градиентный эффект от верхнего края экрана к нижнему;\n\n«Сплошная заливка» — заполнить фон рабочего стола одним цветом.\n\nЭтот параметр имеет смысл, только если не установлен параметр «Картинка фона рабочего стола».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Устанавливает тип градиента:\n\n«Горизонтальный градиент» — градиентный эффект от левого края экрана к правому;\n\n«Вертикальный градиент» — градиентный эффект от верхнего края экрана к нижнему;\n\n«Сплошная заливка» — заполнить фон рабочего стола одним цветом.\n\nЭтот параметр используется только если не установлен параметр «Картинка фона рабочего стола».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateBackgroundColorShadingTypeMachine-pr)",
@@ -5250,6 +6211,11 @@ define(function() {
                           "vertical-gradient": "Вертикальный градиент",
                           "solid": "Сплошная заливка"
                         },
+                        "itemValueKinds": {
+                          "horizontal-gradient": "string",
+                          "vertical-gradient": "string",
+                          "solid": "string"
+                        },
                         "label": "Тип градиента:",
                         "defaultItem": "0"
                       },
@@ -5263,6 +6229,8 @@ define(function() {
                         "valueName": "org.mate.background.color-shading-type",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.background.color-shading-type')"
@@ -5278,12 +6246,12 @@ define(function() {
                 "policies": {
                   "ALT_Screensaver_Mate:OrgMateScreensaverLockEnabledMachine": {
                     "displayName": "Блокировка компьютера",
-                    "help": "Включает блокировку компьютера при активации хранителя экрана. Блокировка будет включена через интервал времени, установленный в параметре «Время до блокировки паролем».\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Включает блокировку компьютера при активации хранителя экрана. Блокировка будет включена через интервал времени, установленный в параметре «Время до блокировки паролем».\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateScreensaverLockEnabledMachine",
                       "displayName": "Блокировка компьютера",
-                      "explainText": "Включает блокировку компьютера при активации хранителя экрана. Блокировка будет включена через интервал времени, установленный в параметре «Время до блокировки паролем».\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Включает блокировку компьютера при активации хранителя экрана. Блокировка будет включена через интервал времени, установленный в параметре «Время до блокировки паролем».\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverLockEnabledMachine-pr)",
@@ -5297,8 +6265,12 @@ define(function() {
                         "valueName": "org.mate.screensaver.lock-enabled",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -5313,6 +6285,8 @@ define(function() {
                         "valueName": "org.mate.screensaver.lock-enabled",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.screensaver.lock-enabled')"
@@ -5340,8 +6314,12 @@ define(function() {
                         "valueName": "org.mate.screensaver.idle-activation-enabled",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -5356,6 +6334,8 @@ define(function() {
                         "valueName": "org.mate.screensaver.idle-activation-enabled",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.screensaver.idle-activation-enabled')"
@@ -5364,12 +6344,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverLockDelayMachine": {
                     "displayName": "Время до блокировки паролем",
-                    "help": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, компьютер будет заблокирован.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, компьютер будет заблокирован.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateScreensaverLockDelayMachine",
                       "displayName": "Время до блокировки паролем",
-                      "explainText": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, компьютер будет заблокирован.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, компьютер будет заблокирован.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverLockDelayMachine-pr)",
@@ -5397,6 +6377,8 @@ define(function() {
                         "valueName": "org.mate.screensaver.lock-delay",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.screensaver.lock-delay')"
@@ -5405,12 +6387,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverLogoutDelayMachine": {
                     "displayName": "Время до выхода из сеанса",
-                    "help": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, пользователю будет предоставлена возможность выхода из сеанса.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Выход из сеанса после блокировки».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, пользователю будет предоставлена возможность выхода из сеанса.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Выход из сеанса после блокировки».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateScreensaverLogoutDelayMachine",
                       "displayName": "Время до выхода из сеанса",
-                      "explainText": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, пользователю будет предоставлена возможность выхода из сеанса.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Выход из сеанса после блокировки».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, пользователю будет предоставлена возможность выхода из сеанса.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Выход из сеанса после блокировки».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverLogoutDelayMachine-pr)",
@@ -5438,6 +6420,8 @@ define(function() {
                         "valueName": "org.mate.screensaver.logout-delay",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.screensaver.logout-delay')"
@@ -5446,12 +6430,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverCycleDelayMachine": {
                     "displayName": "Время смены тем",
-                    "help": "Устанавливает интервал (в минутах) между сменами тем хранителя экрана.\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана» и если для параметра «Режим работы» установлено значение «Случайные темы».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Устанавливает интервал (в минутах) между сменами тем хранителя экрана.\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана» и если для параметра «Режим работы» установлено значение «Случайные темы».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateScreensaverCycleDelayMachine",
                       "displayName": "Время смены тем",
-                      "explainText": "Устанавливает интервал (в минутах) между сменами тем хранителя экрана.\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана» и если для параметра «Режим работы» установлено значение «Случайные темы».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Устанавливает интервал (в минутах) между сменами тем хранителя экрана.\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана» и если для параметра «Режим работы» установлено значение «Случайные темы».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverCycleDelayMachine-pr)",
@@ -5479,6 +6463,8 @@ define(function() {
                         "valueName": "org.mate.screensaver.cycle-delay",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.screensaver.cycle-delay')"
@@ -5487,12 +6473,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverLogoutEnabledMachine": {
                     "displayName": "Выход из сеанса после блокировки",
-                    "help": "После некоторой задержки добавляет кнопку выхода из сеанса («Завершить сеанс») к диалогу разблокирования экрана. Время задержки указывается в параметре «Время выхода из сеанса».\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "После некоторой задержки добавляет кнопку выхода из сеанса («Завершить сеанс») к диалогу разблокирования экрана. Время задержки указывается в параметре «Время выхода из сеанса».\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateScreensaverLogoutEnabledMachine",
                       "displayName": "Выход из сеанса после блокировки",
-                      "explainText": "После некоторой задержки добавляет кнопку выхода из сеанса («Завершить сеанс») к диалогу разблокирования экрана. Время задержки указывается в параметре «Время выхода из сеанса».\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "После некоторой задержки добавляет кнопку выхода из сеанса («Завершить сеанс») к диалогу разблокирования экрана. Время задержки указывается в параметре «Время выхода из сеанса».\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverLogoutEnabledMachine-pr)",
@@ -5506,8 +6492,12 @@ define(function() {
                         "valueName": "org.mate.screensaver.logout-enabled",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -5522,6 +6512,8 @@ define(function() {
                         "valueName": "org.mate.screensaver.logout-enabled",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.screensaver.logout-enabled')"
@@ -5530,12 +6522,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverUserSwitchEnabledMachine": {
                     "displayName": "Переключить пользователя после блокировки",
-                    "help": "Добавляет кнопку «Переключить пользователя» к диалогу разблокирования экрана.\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Добавляет кнопку «Переключить пользователя» к диалогу разблокирования экрана.\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateScreensaverUserSwitchEnabledMachine",
                       "displayName": "Переключить пользователя после блокировки",
-                      "explainText": "Добавляет кнопку «Переключить пользователя» к диалогу разблокирования экрана.\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Добавляет кнопку «Переключить пользователя» к диалогу разблокирования экрана.\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverUserSwitchEnabledMachine-pr)",
@@ -5549,8 +6541,12 @@ define(function() {
                         "valueName": "org.mate.screensaver.user-switch-enabled",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Выберите «Включено» или «Отключено»:",
                         "defaultItem": "0"
@@ -5565,6 +6561,8 @@ define(function() {
                         "valueName": "org.mate.screensaver.user-switch-enabled",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.screensaver.user-switch-enabled')"
@@ -5573,12 +6571,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverModeMachine": {
                     "displayName": "Режим работы",
-                    "help": "Устанавливает режим работы хранителя экрана. Этот параметр имеет смысл только при активированном параметре «Включение хранителя экрана».\n\nВозможные значения:\n\n«Пустой экран» — не показывать никаких изображений, только чёрный экран;\n\n«Случайные темы» — выбрать тему хранителя экрана случайным образом;\n\n«Выбранная тема» — показывать одну (указанную) тему хранителя экрана.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Устанавливает режим работы хранителя экрана. Этот параметр используется только при активированном параметре «Включение хранителя экрана».\n\nВозможные значения:\n\n«Пустой экран» — не показывать никаких изображений, только чёрный экран;\n\n«Случайные темы» — выбрать тему хранителя экрана случайным образом;\n\n«Выбранная тема» — показывать одну (указанную) тему хранителя экрана.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "Machine",
                       "name": "OrgMateScreensaverModeMachine",
                       "displayName": "Режим работы",
-                      "explainText": "Устанавливает режим работы хранителя экрана. Этот параметр имеет смысл только при активированном параметре «Включение хранителя экрана».\n\nВозможные значения:\n\n«Пустой экран» — не показывать никаких изображений, только чёрный экран;\n\n«Случайные темы» — выбрать тему хранителя экрана случайным образом;\n\n«Выбранная тема» — показывать одну (указанную) тему хранителя экрана.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Устанавливает режим работы хранителя экрана. Этот параметр используется только при активированном параметре «Включение хранителя экрана».\n\nВозможные значения:\n\n«Пустой экран» — не показывать никаких изображений, только чёрный экран;\n\n«Случайные темы» — выбрать тему хранителя экрана случайным образом;\n\n«Выбранная тема» — показывать одну (указанную) тему хранителя экрана.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverModeMachine-pr)",
@@ -5596,6 +6594,11 @@ define(function() {
                           "random": "Случайные темы",
                           "single": "Выбранная тема"
                         },
+                        "itemValueKinds": {
+                          "blank-only": "string",
+                          "random": "string",
+                          "single": "string"
+                        },
                         "label": "Выберите режим работы хранителя экрана:",
                         "defaultItem": "0"
                       },
@@ -5609,6 +6612,8 @@ define(function() {
                         "valueName": "org.mate.screensaver.mode",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.mate.screensaver.mode')"
@@ -5672,6 +6677,8 @@ define(function() {
                     "valueName": "kwinrc.Desktops.Rows",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку количества строк отображения виртуальных столов"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kwinrc.Desktops.Rows')"
@@ -5684,6 +6691,8 @@ define(function() {
                     "valueName": "kwinrc.Desktops.Number",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку количества виртуальных столов"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kwinrc.Desktops.Number')"
@@ -5712,6 +6721,8 @@ define(function() {
                     "valueName": "ShowDeleteCommand",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Добавить кнопку «Удалить» в контекстное меню Dolphin"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kdeglobals\\KDE\\ShowDeleteCommand')"
@@ -5724,6 +6735,8 @@ define(function() {
                     "valueName": "kdeglobals.KDE.ShowDeleteCommand",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kdeglobals.KDE.ShowDeleteCommand')"
@@ -5752,6 +6765,8 @@ define(function() {
                     "valueName": "AutomountEnabled",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Автоматически монтировать устройства"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kded_device_automounterrc\\General\\AutomountEnabled')"
@@ -5764,6 +6779,8 @@ define(function() {
                     "valueName": "kded_device_automounterrc.General.AutomountEnabled",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку автоматического монтирования"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kded_device_automounterrc.General.AutomountEnabled')"
@@ -5776,6 +6793,8 @@ define(function() {
                     "valueName": "AutomountOnLogin",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "При входе в систему"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kded_device_automounterrc\\General\\AutomountOnLogin')"
@@ -5788,6 +6807,8 @@ define(function() {
                     "valueName": "kded_device_automounterrc.General.AutomountOnLogin",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку автоматического монтирования при входе в систему"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kded_device_automounterrc.General.AutomountOnLogin')"
@@ -5800,6 +6821,8 @@ define(function() {
                     "valueName": "AutomountOnPlugin",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "При подключении"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kded_device_automounterrc\\General\\AutomountOnPlugin')"
@@ -5812,6 +6835,8 @@ define(function() {
                     "valueName": "kded_device_automounterrc.General.AutomountOnPlugin",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку автоматического монтирования при подключении"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kded_device_automounterrc.General.AutomountOnPlugin')"
@@ -5824,6 +6849,8 @@ define(function() {
                     "valueName": "AutomountUnknownDevices",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Автоматически монтировать те носители, которые никогда ранее не были примонтированы вручную"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kded_device_automounterrc\\General\\AutomountUnknownDevices')"
@@ -5836,6 +6863,8 @@ define(function() {
                     "valueName": "kded_device_automounterrc.General.AutomountUnknownDevices",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку автоматического монтирования устройств, которые не были примонтированы вручную"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kded_device_automounterrc.General.AutomountUnknownDevices')"
@@ -5874,6 +6903,8 @@ define(function() {
                     "valueName": "plasma-localerc.Formats.LANG",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку стандарта системы"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\plasma-localerc.Formats.LANG')"
@@ -5896,6 +6927,8 @@ define(function() {
                     "valueName": "plasma-localerc.Translation.LANGUAGE",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку языка системы"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\plasma-localerc.Translation.LANGUAGE')"
@@ -5924,6 +6957,8 @@ define(function() {
                     "valueName": "Indexing-Enabled",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Включить службу поиска файлов"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\baloofilerc\\Basic Settings\\Indexing-Enabled')"
@@ -5936,6 +6971,8 @@ define(function() {
                     "valueName": "only basic indexing",
                     "trueValue": 0,
                     "falseValue": 1,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Включить индексацию содержимого файлов"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\baloofilerc\\General\\only basic indexing')"
@@ -5948,6 +6985,8 @@ define(function() {
                     "valueName": "index hidden folders",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Включить индексацию скрытых файлов и папок"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\baloofilerc\\General\\index hidden folders')"
@@ -5960,6 +6999,8 @@ define(function() {
                     "valueName": "baloofilerc.Basic Settings.Indexing-Enabled",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\baloofilerc.Basic Settings.Indexing-Enabled')"
@@ -6004,6 +7045,8 @@ define(function() {
                         "valueName": "plasmarc.Theme.name",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\plasmarc.Theme.name')"
@@ -6042,6 +7085,8 @@ define(function() {
                         "valueName": "kdeglobals.KDE.LookAndFeelPackage",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kdeglobals.KDE.LookAndFeelPackage')"
@@ -6080,6 +7125,8 @@ define(function() {
                         "valueName": "ksplashrc.KSplash.Theme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\ksplashrc.KSplash.Theme')"
@@ -6118,6 +7165,8 @@ define(function() {
                         "valueName": "kdeglobals.Icons.Theme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kdeglobals.Icons.Theme')"
@@ -6156,6 +7205,8 @@ define(function() {
                         "valueName": "kcminputrc.Mouse.cursorTheme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kcminputrc.Mouse.cursorTheme')"
@@ -6194,6 +7245,8 @@ define(function() {
                         "valueName": "kdeglobals.General.ColorScheme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kdeglobals.General.ColorScheme')"
@@ -6235,6 +7288,8 @@ define(function() {
                         "valueName": "Autolock",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Автоматически блокировать экран"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kscreenlockerrc\\Daemon\\Autolock')"
@@ -6247,6 +7302,8 @@ define(function() {
                         "valueName": "kscreenlockerrc.Daemon.Autolock",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку автоматической блокировки экрана"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kscreenlockerrc.Daemon.Autolock')"
@@ -6272,6 +7329,8 @@ define(function() {
                         "valueName": "kscreenlockerrc.Daemon.Timeout",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройки времени до блокировки"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kscreenlockerrc.Daemon.Timeout')"
@@ -6284,6 +7343,8 @@ define(function() {
                         "valueName": "LockOnResume",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Автоматически блокировать экран после выхода из ждущего режима"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kscreenlockerrc\\Daemon\\LockOnResume')"
@@ -6296,6 +7357,8 @@ define(function() {
                         "valueName": "kscreenlockerrc.Daemon.LockOnResume",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку автоматической блокировки при выходе из ждущего режима"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kscreenlockerrc.Daemon.LockOnResume')"
@@ -6321,6 +7384,8 @@ define(function() {
                         "valueName": "kscreenlockerrc.Daemon.LockGrace",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку времени автоматической разблокировки"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kscreenlockerrc.Daemon.LockGrace')"
@@ -6349,6 +7414,8 @@ define(function() {
                         "valueName": "Enabled",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Включить графические эффекты"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kwinrc\\Compositing\\Enabled')"
@@ -6361,6 +7428,8 @@ define(function() {
                         "valueName": "kwinrc.Compositing.Enabled",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kwinrc.Compositing.Enabled')"
@@ -6394,6 +7463,13 @@ define(function() {
                           "High": "Предпочитать более плавную анимацию",
                           "NONE": "Принудительно наиболее плавная анимация"
                         },
+                        "itemValueKinds": {
+                          "ExtremelyLow": "string",
+                          "Low": "string",
+                          "Medium": "string",
+                          "High": "string",
+                          "NONE": "string"
+                        },
                         "label": "Возможные режимы:",
                         "defaultItem": "4"
                       },
@@ -6407,6 +7483,8 @@ define(function() {
                         "valueName": "kwinrc.Compositing.LatencyPolicy",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kwinrc.Compositing.LatencyPolicy')"
@@ -6435,6 +7513,8 @@ define(function() {
                         "valueName": "SingleClick",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Открытие папки или файла одним щелчком"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kdeglobals\\KDE\\SingleClick')"
@@ -6447,6 +7527,8 @@ define(function() {
                         "valueName": "kdeglobals.KDE.SingleClick",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kdeglobals.KDE.SingleClick')"
@@ -6479,6 +7561,12 @@ define(function() {
                           "FocusUnderMouse": "Фокус под мышью",
                           "FocusStrictlyUnderMouse": "Фокус строго под мышью"
                         },
+                        "itemValueKinds": {
+                          "FocusFollowMouse": "string",
+                          "FocusFollowsMouse": "string",
+                          "FocusUnderMouse": "string",
+                          "FocusStrictlyUnderMouse": "string"
+                        },
                         "label": "Возможные режимы:",
                         "defaultItem": "0"
                       },
@@ -6492,6 +7580,8 @@ define(function() {
                         "valueName": "NextFocusPrefersMouse",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Приоритет мыши"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kwinrc\\Windows\\NextFocusPrefersMouse')"
@@ -6504,6 +7594,8 @@ define(function() {
                         "valueName": "kwinrc.Windows.FocusPolicy",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kwinrc.Windows.FocusPolicy')"
@@ -6549,6 +7641,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.AC)(DimDisplay.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку потухания при питании от сети"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.AC)(DimDisplay.idleTime')"
@@ -6561,6 +7655,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.Battery)(DimDisplay.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку потухания при питании от батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.Battery)(DimDisplay.idleTime')"
@@ -6573,6 +7669,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.LowBattery)(DimDisplay.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку потухания при низком заряде батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.LowBattery)(DimDisplay.idleTime')"
@@ -6611,6 +7709,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.AC)(DPMSControl.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку времени при питании от сети"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.AC)(DPMSControl.idleTime')"
@@ -6623,6 +7723,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.Battery)(DPMSControl.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку времени при питании от батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.Battery)(DPMSControl.idleTime')"
@@ -6635,6 +7737,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.LowBattery)(DPMSControl.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку времени при низком заряде батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.LowBattery)(DPMSControl.idleTime')"
@@ -6673,6 +7777,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.AC)(KeyboardBrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при питании от сети"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.AC)(KeyboardBrightnessControl.value')"
@@ -6685,6 +7791,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.Battery)(KeyboardBrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при питании от батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.Battery)(KeyboardBrightnessControl.value')"
@@ -6697,6 +7805,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.LowBattery)(KeyboardBrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при низком заряде батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.LowBattery)(KeyboardBrightnessControl.value')"
@@ -6735,6 +7845,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.AC)(BrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при питании от сети"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.AC)(BrightnessControl.value')"
@@ -6747,6 +7859,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.Battery)(BrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при питании от батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.Battery)(BrightnessControl.value')"
@@ -6759,6 +7873,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.LowBattery)(BrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при низком заряде батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.LowBattery)(BrightnessControl.value')"
@@ -6808,6 +7924,14 @@ define(function() {
                       "Auth_self_keep": "Auth_self_keep",
                       "Auth_admin_keep": "Auth_admin_keep"
                     },
+                    "itemValueKinds": {
+                      "No": "string",
+                      "Yes": "string",
+                      "Auth_self": "string",
+                      "Auth_admin": "string",
+                      "Auth_self_keep": "string",
+                      "Auth_admin_keep": "string"
+                    },
                     "label": "Варианты ограничений:",
                     "defaultItem": "1"
                   },
@@ -6821,6 +7945,8 @@ define(function() {
                     "valueName": "org.freedesktop.policykit.exec",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.policykit.exec')"
@@ -6861,6 +7987,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -6874,6 +8008,8 @@ define(function() {
                         "valueName": "org.freedesktop.accounts.set-login-option",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.accounts.set-login-option')"
@@ -6908,6 +8044,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -6921,6 +8065,8 @@ define(function() {
                         "valueName": "org.freedesktop.accounts.change-own-password",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.accounts.change-own-password')"
@@ -6955,6 +8101,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -6968,6 +8122,8 @@ define(function() {
                         "valueName": "org.freedesktop.accounts.change-own-user-data",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.accounts.change-own-user-data')"
@@ -7002,6 +8158,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7015,6 +8179,8 @@ define(function() {
                         "valueName": "org.freedesktop.accounts.user-administration",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.accounts.user-administration')"
@@ -7056,6 +8222,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7069,6 +8243,8 @@ define(function() {
                         "valueName": "org.freedesktop.color-manager.modify-profile",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.color-manager.modify-profile')"
@@ -7103,6 +8279,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7116,6 +8300,8 @@ define(function() {
                         "valueName": "org.freedesktop.color-manager.modify-device",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.color-manager.modify-device')"
@@ -7150,6 +8336,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7163,6 +8357,8 @@ define(function() {
                         "valueName": "org.freedesktop.color-manager.sensor-lock",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.color-manager.sensor-lock')"
@@ -7197,6 +8393,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7210,6 +8414,8 @@ define(function() {
                         "valueName": "org.freedesktop.color-manager.create-profile",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.color-manager.create-profile')"
@@ -7244,6 +8450,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7257,6 +8471,8 @@ define(function() {
                         "valueName": "org.freedesktop.color-manager.create-device",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.color-manager.create-device')"
@@ -7291,6 +8507,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7304,6 +8528,8 @@ define(function() {
                         "valueName": "org.freedesktop.color-manager.delete-profile",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.color-manager.delete-profile')"
@@ -7338,6 +8564,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7351,6 +8585,8 @@ define(function() {
                         "valueName": "org.freedesktop.color-manager.delete-device",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.color-manager.delete-device')"
@@ -7385,6 +8621,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7398,6 +8642,8 @@ define(function() {
                         "valueName": "org.freedesktop.color-manager.install-system-wide",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.color-manager.install-system-wide')"
@@ -7432,6 +8678,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7445,6 +8699,8 @@ define(function() {
                         "valueName": "org.freedesktop.color-manager.device-inhibit",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.color-manager.device-inhibit')"
@@ -7486,6 +8742,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7499,6 +8763,8 @@ define(function() {
                         "valueName": "org.freedesktop.DisplayManager.AccountsService.ModifyOwn",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.DisplayManager.AccountsService.ModifyOwn')"
@@ -7533,6 +8799,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7546,6 +8820,8 @@ define(function() {
                         "valueName": "org.freedesktop.DisplayManager.AccountsService.ModifyAny",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.DisplayManager.AccountsService.ModifyAny')"
@@ -7580,6 +8856,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7593,6 +8877,8 @@ define(function() {
                         "valueName": "org.freedesktop.DisplayManager.AccountsService.ReadAny",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.DisplayManager.AccountsService.ReadAny')"
@@ -7634,6 +8920,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7647,6 +8941,8 @@ define(function() {
                         "valueName": "org.freedesktop.hostname1.set-hostname",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.hostname1.set-hostname')"
@@ -7681,6 +8977,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7694,6 +8998,8 @@ define(function() {
                         "valueName": "org.freedesktop.hostname1.set-machine-info",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.hostname1.set-machine-info')"
@@ -7728,6 +9034,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7741,6 +9055,8 @@ define(function() {
                         "valueName": "org.freedesktop.hostname1.set-static-hostname",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.hostname1.set-static-hostname')"
@@ -7782,6 +9098,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7795,6 +9119,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.lock-sessions",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.lock-sessions')"
@@ -7829,6 +9155,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7842,6 +9176,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.power-off",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.power-off')"
@@ -7876,6 +9212,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7889,6 +9233,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.power-off-ignore-inhibit",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.power-off-ignore-inhibit')"
@@ -7923,6 +9269,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7936,6 +9290,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.power-off-multiple-sessions",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.power-off-multiple-sessions')"
@@ -7970,6 +9326,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -7983,6 +9347,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.chvt",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.chvt')"
@@ -8017,6 +9383,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8030,6 +9404,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.halt",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.halt')"
@@ -8064,6 +9440,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8077,6 +9461,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.halt-ignore-inhibit",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.halt-ignore-inhibit')"
@@ -8111,6 +9497,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8124,6 +9518,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.halt-multiple-sessions",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.halt-multiple-sessions')"
@@ -8158,6 +9554,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8171,6 +9575,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.flush-devices",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.flush-devices')"
@@ -8205,6 +9611,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8218,6 +9632,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.hibernate",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.hibernate')"
@@ -8252,6 +9668,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8265,6 +9689,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.hibernate-ignore-inhibit",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.hibernate-ignore-inhibit')"
@@ -8299,6 +9725,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8312,6 +9746,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.hibernate-multiple-sessions",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.hibernate-multiple-sessions')"
@@ -8346,6 +9782,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8359,6 +9803,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.reboot",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.reboot')"
@@ -8393,6 +9839,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8406,6 +9860,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.reboot-ignore-inhibit",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.reboot-ignore-inhibit')"
@@ -8440,6 +9896,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8453,6 +9917,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.reboot-multiple-sessions",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.reboot-multiple-sessions')"
@@ -8487,6 +9953,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8500,6 +9974,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.inhibit-block-shutdown",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.inhibit-block-shutdown')"
@@ -8534,6 +10010,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8547,6 +10031,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.inhibit-block-idle",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.inhibit-block-idle')"
@@ -8581,6 +10067,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8594,6 +10088,8 @@ define(function() {
                         "valueName": "inhibit-handle-hibernate-key",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\inhibit-handle-hibernate-key')"
@@ -8628,6 +10124,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8641,6 +10145,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.inhibit-handle-lid-switch",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.inhibit-handle-lid-switch')"
@@ -8675,6 +10181,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8688,6 +10202,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.inhibit-handle-reboot-key",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.inhibit-handle-reboot-key')"
@@ -8722,6 +10238,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8735,6 +10259,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.inhibit-handle-power-key",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.inhibit-handle-power-key')"
@@ -8769,6 +10295,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8782,6 +10316,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.inhibit-handle-suspend-key",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.inhibit-handle-suspend-key')"
@@ -8816,6 +10352,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8829,6 +10373,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.inhibit-block-sleep",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.inhibit-block-sleep')"
@@ -8863,6 +10409,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8876,6 +10430,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.inhibit-delay-shutdown",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.inhibit-delay-shutdown')"
@@ -8910,6 +10466,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8923,6 +10487,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.inhibit-delay-sleep",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.inhibit-delay-sleep')"
@@ -8957,6 +10523,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -8970,6 +10544,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.suspend",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.suspend')"
@@ -9004,6 +10580,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9017,6 +10601,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.suspend-ignore-inhibit",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.suspend-ignore-inhibit')"
@@ -9051,6 +10637,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9064,6 +10658,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.suspend-multiple-sessions",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.suspend-multiple-sessions')"
@@ -9098,6 +10694,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9111,6 +10715,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.attach-device",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.attach-device')"
@@ -9145,6 +10751,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9158,6 +10772,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.set-self-linger",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.set-self-linger')"
@@ -9192,6 +10808,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9205,6 +10829,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.set-user-linger",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.set-user-linger')"
@@ -9239,6 +10865,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9252,6 +10886,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.set-reboot-to-boot-loader-entry",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.set-reboot-to-boot-loader-entry')"
@@ -9286,6 +10922,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9299,6 +10943,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.set-reboot-to-boot-loader-menu",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.set-reboot-to-boot-loader-menu')"
@@ -9333,6 +10979,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9346,6 +11000,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.set-reboot-to-firmware-setup",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.set-reboot-to-firmware-setup')"
@@ -9380,6 +11036,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9393,6 +11057,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.manage",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.manage')"
@@ -9427,6 +11093,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9440,6 +11114,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.set-reboot-parameter",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.set-reboot-parameter')"
@@ -9474,6 +11150,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9487,6 +11171,8 @@ define(function() {
                         "valueName": "org.freedesktop.login1.set-wall-message",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.login1.set-wall-message')"
@@ -9528,6 +11214,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9541,6 +11235,8 @@ define(function() {
                         "valueName": "org.freedesktop.machine1.login",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.machine1.login')"
@@ -9575,6 +11271,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9588,6 +11292,8 @@ define(function() {
                         "valueName": "org.freedesktop.machine1.host-login",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.machine1.host-login')"
@@ -9622,6 +11328,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9635,6 +11349,8 @@ define(function() {
                         "valueName": "org.freedesktop.machine1.shell",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.machine1.shell')"
@@ -9669,6 +11385,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9682,6 +11406,8 @@ define(function() {
                         "valueName": "org.freedesktop.machine1.host-shell",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.machine1.host-shell')"
@@ -9716,6 +11442,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9729,6 +11463,8 @@ define(function() {
                         "valueName": "org.freedesktop.machine1.open-pty",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.machine1.open-pty')"
@@ -9763,6 +11499,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9776,6 +11520,8 @@ define(function() {
                         "valueName": "org.freedesktop.machine1.host-open-pty",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.machine1.host-open-pty')"
@@ -9810,6 +11556,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9823,6 +11577,8 @@ define(function() {
                         "valueName": "org.freedesktop.machine1.manage-machines",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.machine1.manage-machines')"
@@ -9857,6 +11613,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -9870,6 +11634,8 @@ define(function() {
                         "valueName": "org.freedesktop.machine1.manage-images",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.machine1.manage-images')"
@@ -9911,6 +11677,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -9924,6 +11698,8 @@ define(function() {
                         "valueName": "org.freedesktop.ModemManager1.Device.Control",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.ModemManager1.Device.Control')"
@@ -9958,6 +11734,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -9971,6 +11755,8 @@ define(function() {
                         "valueName": "org.freedesktop.ModemManager1.Contacts",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.ModemManager1.Contacts')"
@@ -10005,6 +11791,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -10018,6 +11812,8 @@ define(function() {
                         "valueName": "org.freedesktop.ModemManager1.USSD",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.ModemManager1.USSD')"
@@ -10052,6 +11848,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -10065,6 +11869,8 @@ define(function() {
                         "valueName": "org.freedesktop.ModemManager1.Time",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.ModemManager1.Time')"
@@ -10099,6 +11905,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -10112,6 +11926,8 @@ define(function() {
                         "valueName": "org.freedesktop.ModemManager1.Messaging",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.ModemManager1.Messaging')"
@@ -10146,6 +11962,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -10159,6 +11983,8 @@ define(function() {
                         "valueName": "org.freedesktop.ModemManager1.Voice",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.ModemManager1.Voice')"
@@ -10193,6 +12019,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -10206,6 +12040,8 @@ define(function() {
                         "valueName": "org.freedesktop.ModemManager1.Location",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.ModemManager1.Location')"
@@ -10240,6 +12076,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -10253,6 +12097,8 @@ define(function() {
                         "valueName": "org.freedesktop.ModemManager1.Control",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.ModemManager1.Control')"
@@ -10287,6 +12133,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -10300,6 +12154,8 @@ define(function() {
                         "valueName": "org.freedesktop.ModemManager1.Firmware",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.ModemManager1.Firmware')"
@@ -10341,6 +12197,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10354,6 +12218,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.enable-disable-wwan",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.enable-disable-wwan')"
@@ -10388,6 +12254,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10401,6 +12275,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.enable-disable-network",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.enable-disable-network')"
@@ -10435,6 +12311,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10448,6 +12332,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.enable-disable-statistics",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.enable-disable-statistics')"
@@ -10482,6 +12368,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10495,6 +12389,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.enable-disable-wifi",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.enable-disable-wifi')"
@@ -10529,6 +12425,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10542,6 +12446,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.enable-disable-wimax",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.enable-disable-wimax')"
@@ -10576,6 +12482,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10589,6 +12503,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.settings.modify.global-dns",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.settings.modify.global-dns')"
@@ -10623,6 +12539,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10636,6 +12560,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.settings.modify.own",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.settings.modify.own')"
@@ -10670,6 +12596,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10683,6 +12617,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.settings.modify.hostname",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.settings.modify.hostname')"
@@ -10717,6 +12653,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10730,6 +12674,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.settings.modify.system",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.settings.modify.system')"
@@ -10764,6 +12710,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10777,6 +12731,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.network-control",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.network-control')"
@@ -10811,6 +12767,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10824,6 +12788,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.sleep-wake",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.sleep-wake')"
@@ -10858,6 +12824,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10871,6 +12845,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.checkpoint-rollback",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.checkpoint-rollback')"
@@ -10905,6 +12881,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10918,6 +12902,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.reload",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.reload')"
@@ -10952,6 +12938,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -10965,6 +12959,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.enable-disable-connectivity-check",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.enable-disable-connectivity-check')"
@@ -10999,6 +12995,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11012,6 +13016,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.wifi.scan",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.wifi.scan')"
@@ -11046,6 +13052,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11059,6 +13073,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.wifi.share.protected",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.wifi.share.protected')"
@@ -11093,6 +13109,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11106,6 +13130,8 @@ define(function() {
                         "valueName": "org.freedesktop.NetworkManager.wifi.share.open",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.NetworkManager.wifi.share.open')"
@@ -11147,6 +13173,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11160,6 +13194,8 @@ define(function() {
                         "valueName": "org.freedesktop.packagekit.repair-system",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.packagekit.repair-system')"
@@ -11194,6 +13230,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11207,6 +13251,8 @@ define(function() {
                         "valueName": "org.freedesktop.packagekit.system-trust-signing-key",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.packagekit.system-trust-signing-key')"
@@ -11241,6 +13287,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11254,6 +13308,8 @@ define(function() {
                         "valueName": "org.freedesktop.packagekit.package-remove",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.packagekit.package-remove')"
@@ -11288,6 +13344,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11301,6 +13365,8 @@ define(function() {
                         "valueName": "org.freedesktop.packagekit.system-sources-refresh",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.packagekit.system-sources-refresh')"
@@ -11335,6 +13401,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11348,6 +13422,8 @@ define(function() {
                         "valueName": "org.freedesktop.packagekit.package-reinstall",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.packagekit.package-reinstall')"
@@ -11382,6 +13458,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11395,6 +13479,8 @@ define(function() {
                         "valueName": "org.freedesktop.packagekit.package-eula-accept",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.packagekit.package-eula-accept')"
@@ -11429,6 +13515,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11442,6 +13536,8 @@ define(function() {
                         "valueName": "org.freedesktop.packagekit.system-sources-configure",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.packagekit.system-sources-configure')"
@@ -11476,6 +13572,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11489,6 +13593,8 @@ define(function() {
                         "valueName": "org.freedesktop.packagekit.package-remove",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.packagekit.package-remove')"
@@ -11523,6 +13629,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11536,6 +13650,8 @@ define(function() {
                         "valueName": "org.freedesktop.packagekit.package-install-untrusted",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.packagekit.package-install-untrusted')"
@@ -11570,6 +13686,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11583,6 +13707,8 @@ define(function() {
                         "valueName": "org.freedesktop.packagekit.package-install",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.packagekit.package-install')"
@@ -11624,6 +13750,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11637,6 +13771,8 @@ define(function() {
                         "valueName": "org.freedesktop.realmd.discover-realm",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.realmd.discover-realm')"
@@ -11671,6 +13807,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11684,6 +13828,8 @@ define(function() {
                         "valueName": "org.freedesktop.realmd.login-policy",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.realmd.login-policy')"
@@ -11718,6 +13864,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11731,6 +13885,8 @@ define(function() {
                         "valueName": "org.freedesktop.realmd.configure-realm",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.realmd.configure-realm')"
@@ -11765,6 +13921,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11778,6 +13942,8 @@ define(function() {
                         "valueName": "org.freedesktop.realmd.deconfigure-realm",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.realmd.deconfigure-realm')"
@@ -11819,6 +13985,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11832,6 +14006,8 @@ define(function() {
                         "valueName": "org.freedesktop.systemd1.reply-password",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.systemd1.reply-password')"
@@ -11866,6 +14042,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11879,6 +14063,8 @@ define(function() {
                         "valueName": "org.freedesktop.systemd1.reload-daemon",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.systemd1.reload-daemon')"
@@ -11913,6 +14099,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11926,6 +14120,8 @@ define(function() {
                         "valueName": "org.freedesktop.systemd1.manage-units",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.systemd1.manage-units')"
@@ -11960,6 +14156,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -11973,6 +14177,8 @@ define(function() {
                         "valueName": "org.freedesktop.systemd1.manage-unit-files",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.systemd1.manage-unit-files')"
@@ -12007,6 +14213,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12020,6 +14234,8 @@ define(function() {
                         "valueName": "org.freedesktop.systemd1.set-environment",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.systemd1.set-environment')"
@@ -12061,6 +14277,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12074,6 +14298,8 @@ define(function() {
                         "valueName": "org.freedesktop.timedate1.set-ntp",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.timedate1.set-ntp')"
@@ -12108,6 +14334,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12121,6 +14355,8 @@ define(function() {
                         "valueName": "org.freedesktop.timedate1.set-local-rtc",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.timedate1.set-local-rtc')"
@@ -12155,6 +14391,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12168,6 +14412,8 @@ define(function() {
                         "valueName": "org.freedesktop.timedate1.set-time",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.timedate1.set-time')"
@@ -12202,6 +14448,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12215,6 +14469,8 @@ define(function() {
                         "valueName": "org.freedesktop.timedate1.set-timezone",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.timedate1.set-timezone')"
@@ -12256,6 +14512,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений на монтирование съёмных запоминающих устройств:",
                         "defaultItem": "1"
                       },
@@ -12269,6 +14533,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.filesystem-mount",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку ограничений на монтирование съёмных запоминающих устройств"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.filesystem-mount')"
@@ -12287,6 +14553,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений на монтирование съёмных запоминающих устройств в удалённых сеансах:",
                         "defaultItem": "1"
                       },
@@ -12300,6 +14574,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.filesystem-mount-other-seat",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку ограничений на монтирование съёмных запоминающих устройств в удалённых сеансах"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.filesystem-mount-other-seat')"
@@ -12318,6 +14594,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений на монтирование системных разделов:",
                         "defaultItem": "1"
                       },
@@ -12331,6 +14615,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.filesystem-mount-system",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку ограничений на монтирование системных разделов"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.filesystem-mount-system')"
@@ -12365,6 +14651,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12378,6 +14672,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.ata-smart-enable-disable",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.ata-smart-enable-disable')"
@@ -12412,6 +14708,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12425,6 +14729,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.filesystem-unmount-others",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.filesystem-unmount-others')"
@@ -12459,6 +14765,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12472,6 +14786,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.encrypted-lock-others",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.encrypted-lock-others')"
@@ -12506,6 +14822,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12519,6 +14843,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.ata-smart-selftest",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.ata-smart-selftest')"
@@ -12553,6 +14879,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12566,6 +14900,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.eject-media",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.eject-media')"
@@ -12600,6 +14936,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12613,6 +14957,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.eject-media-other-seat",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.eject-media-other-seat')"
@@ -12647,6 +14993,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12660,6 +15014,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.eject-media-system",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.eject-media-system')"
@@ -12694,6 +15050,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12707,6 +15071,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.modify-drive-settings",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.modify-drive-settings')"
@@ -12741,6 +15107,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12754,6 +15128,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.modify-system-configuration",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.modify-system-configuration')"
@@ -12788,6 +15164,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12801,6 +15185,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.loop-modify-others",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.loop-modify-others')"
@@ -12835,6 +15221,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12848,6 +15242,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.modify-device-system",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.modify-device-system')"
@@ -12882,6 +15278,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12895,6 +15299,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.modify-device",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.modify-device')"
@@ -12929,6 +15335,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12942,6 +15356,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.modify-device-other-seat",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.modify-device-other-seat')"
@@ -12976,6 +15392,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -12989,6 +15413,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.encrypted-change-passphrase",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.encrypted-change-passphrase')"
@@ -13023,6 +15449,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13036,6 +15470,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.encrypted-change-passphrase-system",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.encrypted-change-passphrase-system')"
@@ -13070,6 +15506,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13083,6 +15527,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.filesystem-mount-system",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.filesystem-mount-system')"
@@ -13117,6 +15563,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13130,6 +15584,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.filesystem-mount-other-seat",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.filesystem-mount-other-seat')"
@@ -13164,6 +15620,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13177,6 +15641,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.filesystem-mount",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.filesystem-mount')"
@@ -13211,6 +15677,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13224,6 +15698,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.filesystem-mount-other-user",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.filesystem-mount-other-user')"
@@ -13258,6 +15734,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13271,6 +15755,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.filesystem-fstab",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.filesystem-fstab')"
@@ -13305,6 +15791,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13318,6 +15812,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.ata-secure-erase",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.ata-secure-erase')"
@@ -13352,6 +15848,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13365,6 +15869,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.ata-smart-update",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.ata-smart-update')"
@@ -13399,6 +15905,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13412,6 +15926,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.cancel-job",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.cancel-job')"
@@ -13446,6 +15962,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13459,6 +15983,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.cancel-job-other-user",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.cancel-job-other-user')"
@@ -13493,6 +16019,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13506,6 +16040,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.ata-standby-other-seat",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.ata-standby-other-seat')"
@@ -13540,6 +16076,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13553,6 +16097,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.ata-standby-system",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.ata-standby-system')"
@@ -13587,6 +16133,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13600,6 +16154,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.ata-standby",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.ata-standby')"
@@ -13634,6 +16190,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13647,6 +16211,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.encrypted-unlock-system",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.encrypted-unlock-system')"
@@ -13681,6 +16247,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13694,6 +16268,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.encrypted-unlock",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.encrypted-unlock')"
@@ -13728,6 +16304,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13741,6 +16325,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.encrypted-unlock-other-seat",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.encrypted-unlock-other-seat')"
@@ -13775,6 +16361,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13788,6 +16382,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.encrypted-unlock-crypttab",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.encrypted-unlock-crypttab')"
@@ -13822,6 +16418,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13835,6 +16439,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.ata-check-power",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.ata-check-power')"
@@ -13869,6 +16475,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13882,6 +16496,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.filesystem-take-ownership",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.filesystem-take-ownership')"
@@ -13916,6 +16532,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13929,6 +16553,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.loop-delete-others",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.loop-delete-others')"
@@ -13963,6 +16589,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -13976,6 +16610,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.manage-md-raid",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.manage-md-raid')"
@@ -14010,6 +16646,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -14023,6 +16667,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.loop-setup",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.loop-setup')"
@@ -14057,6 +16703,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -14070,6 +16724,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.manage-swapspace",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.manage-swapspace')"
@@ -14104,6 +16760,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -14117,6 +16781,8 @@ define(function() {
                         "valueName": "org.freedesktop.udisks2.ata-smart-simulate",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.freedesktop.udisks2.ata-smart-simulate')"
@@ -14158,6 +16824,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -14171,6 +16845,8 @@ define(function() {
                         "valueName": "org.debian.pcsc-lite.access_pcsc",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.debian.pcsc-lite.access_pcsc')"
@@ -14205,6 +16881,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -14218,6 +16902,8 @@ define(function() {
                         "valueName": "org.debian.pcsc-lite.access_card",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\PolkitLocks\\org.debian.pcsc-lite.access_card')"
@@ -14258,6 +16944,11 @@ define(function() {
                       "restricted": "Только root",
                       "legacy": "Режим совместимости"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string",
+                      "legacy": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
                   },
@@ -14289,6 +16980,11 @@ define(function() {
                       "public": "Только cdwriter",
                       "restricted": "Только root",
                       "legacy": "Режим совместимости"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string",
+                      "legacy": "string"
                     },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
@@ -14322,6 +17018,11 @@ define(function() {
                       "restricted": "Только root",
                       "legacy": "Режим совместимости"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string",
+                      "legacy": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
                   },
@@ -14354,6 +17055,11 @@ define(function() {
                       "restricted": "Только root",
                       "legacy": "Режим совместимости"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string",
+                      "legacy": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
                   },
@@ -14385,6 +17091,11 @@ define(function() {
                       "public": "Только cdwriter",
                       "restricted": "Только root",
                       "legacy": "Режим совместимости"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string",
+                      "legacy": "string"
                     },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
@@ -14431,6 +17142,11 @@ define(function() {
                       "netadmin": "Группа netadmin",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "netadmin": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "1"
                   },
@@ -14465,6 +17181,13 @@ define(function() {
                       "public_caps": "Любой пользователь (в контейнерах)",
                       "netadmin_caps": "Группа netadmin (в контейнерах)"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "netadmin": "string",
+                      "restricted": "string",
+                      "public_caps": "string",
+                      "netadmin_caps": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
                   },
@@ -14498,6 +17221,12 @@ define(function() {
                       "uucp": "Группа uucp",
                       "public": "Любой пользователь"
                     },
+                    "itemValueKinds": {
+                      "restricted": "string",
+                      "traditional": "string",
+                      "uucp": "string",
+                      "public": "string"
+                    },
                     "label": "Выберите режим работы и кто имеет право на запуск:",
                     "defaultItem": "1"
                   },
@@ -14530,6 +17259,12 @@ define(function() {
                       "relaxed": "Любой пользователь без захвата трафика",
                       "netadmin": "Группа netadmin",
                       "restricted": "Только root"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "relaxed": "string",
+                      "netadmin": "string",
+                      "restricted": "string"
                     },
                     "label": "Выберите режим работы и кто имеет право на запуск:",
                     "defaultItem": "1"
@@ -14570,6 +17305,11 @@ define(function() {
                       "deny": "Не разрешено",
                       "default": "По умолчанию"
                     },
+                    "itemValueKinds": {
+                      "allow": "string",
+                      "deny": "string",
+                      "default": "string"
+                    },
                     "label": "Поиск в обратном направлении:",
                     "defaultItem": "0"
                   },
@@ -14595,7 +17335,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": "enabled",
-                    "disabledValue": "disabled"
+                    "enabledValueKind": "string",
+                    "disabledValue": "disabled",
+                    "disabledValueKind": "string",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\sftp')"
                 },
@@ -14619,7 +17363,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": "enabled",
-                    "disabledValue": "disabled"
+                    "enabledValueKind": "string",
+                    "disabledValue": "disabled",
+                    "disabledValueKind": "string",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\ssh-gssapi-auth')"
                 },
@@ -14649,6 +17397,11 @@ define(function() {
                       "public": "Все пользователи",
                       "restricted": "Только root",
                       "atdaemon": "Режим совместимости"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string",
+                      "atdaemon": "string"
                     },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
@@ -14684,6 +17437,13 @@ define(function() {
                       "try": "Пробовать",
                       "demand": "Требовать"
                     },
+                    "itemValueKinds": {
+                      "default": "string",
+                      "never": "string",
+                      "allow": "string",
+                      "try": "string",
+                      "demand": "string"
+                    },
                     "label": "Выберите режим работы:",
                     "defaultItem": "4"
                   },
@@ -14714,6 +17474,10 @@ define(function() {
                     "items": {
                       "public": "Любой пользователь",
                       "restricted": "Только root"
+                    },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "restricted": "string"
                     },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
@@ -14747,6 +17511,11 @@ define(function() {
                       "mailadm": "Группа mailadm",
                       "restricted": "Только root"
                     },
+                    "itemValueKinds": {
+                      "public": "string",
+                      "mailadm": "string",
+                      "restricted": "string"
+                    },
                     "label": "Кому разрешено выполнять:",
                     "defaultItem": "0"
                   },
@@ -14778,6 +17547,10 @@ define(function() {
                       "server": "Внешний интерфейс IPP",
                       "local": "Только локальные утилиты"
                     },
+                    "itemValueKinds": {
+                      "server": "string",
+                      "local": "string"
+                    },
                     "label": "Режим работы CUPS:",
                     "defaultItem": "0"
                   },
@@ -14808,6 +17581,10 @@ define(function() {
                     "items": {
                       "server": "Сервер",
                       "client": "Клиент"
+                    },
+                    "itemValueKinds": {
+                      "server": "string",
+                      "client": "string"
                     },
                     "label": "Выберите режим работы:",
                     "defaultItem": "1"
@@ -14841,6 +17618,11 @@ define(function() {
                       "server": "Сервер (фильтры отключены)",
                       "filter": "Фильтр"
                     },
+                    "itemValueKinds": {
+                      "local": "string",
+                      "server": "string",
+                      "filter": "string"
+                    },
                     "label": "Выберите режим работы:",
                     "defaultItem": "0"
                   },
@@ -14871,6 +17653,10 @@ define(function() {
                     "items": {
                       "server": "Сервер",
                       "local": "Локальный"
+                    },
+                    "itemValueKinds": {
+                      "server": "string",
+                      "local": "string"
                     },
                     "label": "Выберите режим работы:",
                     "defaultItem": "1"
@@ -14903,7 +17689,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\sshd-password-auth')"
                     },
@@ -14934,6 +17724,12 @@ define(function() {
                           "enabled": "Разрешено",
                           "disabled": "Не разрешено",
                           "default": "По умолчанию"
+                        },
+                        "itemValueKinds": {
+                          "without_password": "string",
+                          "enabled": "string",
+                          "disabled": "string",
+                          "default": "string"
                         },
                         "label": "Выберите режим работы:",
                         "defaultItem": "3"
@@ -14968,6 +17764,12 @@ define(function() {
                           "wheelonly": "Только wheel",
                           "remoteonly": "Только remote"
                         },
+                        "itemValueKinds": {
+                          "users": "string",
+                          "remote": "string",
+                          "wheelonly": "string",
+                          "remoteonly": "string"
+                        },
                         "label": "Выберите режим работы:",
                         "defaultItem": "0"
                       },
@@ -14993,7 +17795,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\sshd-allow-groups')"
                     },
@@ -15017,7 +17823,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\sshd-gssapi-auth')"
                     },
@@ -15055,6 +17865,11 @@ define(function() {
                           "disabled": "Отключено",
                           "default": "По умолчанию"
                         },
+                        "itemValueKinds": {
+                          "enabled": "string",
+                          "disabled": "string",
+                          "default": "string"
+                        },
                         "label": "Выберите режим работы:",
                         "defaultItem": "0"
                       },
@@ -15088,6 +17903,12 @@ define(function() {
                           "disabled": "Отключено",
                           "default": "По умолчанию"
                         },
+                        "itemValueKinds": {
+                          "enforced": "string",
+                          "permissived": "string",
+                          "disabled": "string",
+                          "default": "string"
+                        },
                         "label": "Выберите режим работы:",
                         "defaultItem": "0"
                       },
@@ -15119,6 +17940,11 @@ define(function() {
                           "enabled": "Включено",
                           "disabled": "Отключено",
                           "default": "По умолчанию"
+                        },
+                        "itemValueKinds": {
+                          "enabled": "string",
+                          "disabled": "string",
+                          "default": "string"
                         },
                         "label": "Выберите режим работы:",
                         "defaultItem": "0"
@@ -15152,6 +17978,11 @@ define(function() {
                           "disabled": "Отключено",
                           "default": "По умолчанию"
                         },
+                        "itemValueKinds": {
+                          "enabled": "string",
+                          "disabled": "string",
+                          "default": "string"
+                        },
                         "label": "Выберите режим работы:",
                         "defaultItem": "0"
                       },
@@ -15183,6 +18014,11 @@ define(function() {
                           "enabled": "Включено",
                           "disabled": "Отключено",
                           "default": "По умолчанию"
+                        },
+                        "itemValueKinds": {
+                          "enabled": "string",
+                          "disabled": "string",
+                          "default": "string"
                         },
                         "label": "Выберите режим работы:",
                         "defaultItem": "0"
@@ -15216,6 +18052,11 @@ define(function() {
                           "unprivileged": "Непривилегированный",
                           "default": "По умолчанию"
                         },
+                        "itemValueKinds": {
+                          "privileged": "string",
+                          "unprivileged": "string",
+                          "default": "string"
+                        },
                         "label": "Выберите режим работы:",
                         "defaultItem": "0"
                       },
@@ -15248,7 +18089,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\smb-conf-usershare-allow-guests')"
                     },
@@ -15272,7 +18117,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\smb-conf-usershare-owner-only')"
                     },
@@ -15296,7 +18145,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\role-sambashare')"
                     },
@@ -15320,7 +18173,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\role-usershares')"
                     },
@@ -15344,7 +18201,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\smb-conf-usershare-deny-list')"
                     },
@@ -15368,7 +18229,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\smb-conf-usershare-allow-list')"
                     },
@@ -15392,7 +18257,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": "enabled",
-                        "disabledValue": "disabled"
+                        "enabledValueKind": "string",
+                        "disabledValue": "disabled",
+                        "disabledValueKind": "string",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Control\\smb-conf-usershares')"
                     },
@@ -15423,7 +18292,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\avahi-daemon.service')"
                     },
@@ -15447,7 +18320,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\chronyd.service')"
                     },
@@ -15471,7 +18348,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\cpufreq-simple.service')"
                     },
@@ -15495,7 +18376,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\bind.service')"
                     },
@@ -15519,7 +18404,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\krb5kdc.service')"
                     },
@@ -15543,7 +18432,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\openct.service')"
                     },
@@ -15567,7 +18460,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\nmb.service')"
                     },
@@ -15591,7 +18488,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\smb.service')"
                     },
@@ -15615,7 +18516,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\winbind.service')"
                     },
@@ -15639,7 +18544,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\postfix.service')"
                     },
@@ -15663,7 +18572,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\lightdm.service')"
                     },
@@ -15687,7 +18600,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\upower.service')"
                     },
@@ -15711,7 +18628,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\polkit.service')"
                     },
@@ -15735,7 +18656,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\ModemManager.service')"
                     },
@@ -15759,7 +18684,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\gpm.service')"
                     },
@@ -15783,7 +18712,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\NetworkManager-wait-online.service')"
                     },
@@ -15807,7 +18740,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\rpcbind.service')"
                     },
@@ -15831,7 +18768,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\cups.service')"
                     },
@@ -15855,7 +18796,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\ahttpd.service')"
                     },
@@ -15879,7 +18824,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\alteratord.service')"
                     },
@@ -15903,7 +18852,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\colord.service')"
                     },
@@ -15927,7 +18880,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\consolesaver.service')"
                     },
@@ -15951,7 +18908,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\nscd.service')"
                     },
@@ -15975,7 +18936,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\nslcd.service')"
                     },
@@ -15999,7 +18964,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\kmod-static-nodes.service')"
                     },
@@ -16023,7 +18992,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\oddjobd.service')"
                     },
@@ -16047,7 +19020,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\crond.service')"
                     },
@@ -16071,7 +19048,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\dnsmasq.service')"
                     },
@@ -16095,7 +19076,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\NetworkManager.service')"
                     },
@@ -16119,7 +19104,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\pcscd.service')"
                     },
@@ -16143,7 +19132,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\auditd.service')"
                     },
@@ -16167,7 +19160,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\sshd.service')"
                     },
@@ -16191,7 +19188,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\network.service')"
                     },
@@ -16215,7 +19216,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\acpid.service')"
                     },
@@ -16239,7 +19244,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\SystemdUnits\\accounts-daemon.service')"
                     },
@@ -16283,12 +19292,12 @@ define(function() {
                   },
                   "ALT_WinbindDNSupdateOptions:WinbindDNSUpdateIPv4": {
                     "displayName": "Обновление IPv4 DNS записей",
-                    "help": "Политика позволяет включить обновление прямой и обратной IPv4 DNS записи компьютера.\n\nПримечание: включение параметра «Обновление обратной IPv4 DNS записи» имеет смысл только при включённом параметре «Обновление прямой IPv4 DNS записи».",
+                    "help": "Политика позволяет включить обновление прямой и обратной IPv4 DNS записи компьютера.\n\nПримечание: параметр «Обновление обратной IPv4 DNS записи» используется только при включённом параметре «Обновление прямой IPv4 DNS записи».",
                     "header": {
                       "class": "Machine",
                       "name": "WinbindDNSUpdateIPv4",
                       "displayName": "Обновление IPv4 DNS записей",
-                      "explainText": "Политика позволяет включить обновление прямой и обратной IPv4 DNS записи компьютера.\n\nПримечание: включение параметра «Обновление обратной IPv4 DNS записи» имеет смысл только при включённом параметре «Обновление прямой IPv4 DNS записи».",
+                      "explainText": "Политика позволяет включить обновление прямой и обратной IPv4 DNS записи компьютера.\n\nПримечание: параметр «Обновление обратной IPv4 DNS записи» используется только при включённом параметре «Обновление прямой IPv4 DNS записи».",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.WinbindDNSUpdateIPv4-pr)",
@@ -16302,8 +19311,12 @@ define(function() {
                         "valueName": "org.altlinux.winbind.dnsupdate.enable-update-ipv4",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Обновление прямой IPv4 DNS записи:",
                         "defaultItem": "0"
@@ -16318,6 +19331,8 @@ define(function() {
                         "valueName": "org.altlinux.winbind.dnsupdate.ipv4-ptr-update",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Обновление обратной IPv4 DNS записи:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.altlinux.winbind.dnsupdate.ipv4-ptr-update')"
@@ -16326,12 +19341,12 @@ define(function() {
                   },
                   "ALT_WinbindDNSupdateOptions:WinbindDNSUpdateIPv6": {
                     "displayName": "Обновление IPv6 DNS записей",
-                    "help": "Политика позволяет включить обновление прямой и обратной IPv6 DNS записи компьютера.\n\nПримечание: включение параметра «Обновление обратной IPv6 DNS записи» имеет смысл только при включённом параметре «Обновление прямой IPv6 DNS записи».",
+                    "help": "Политика позволяет включить обновление прямой и обратной IPv6 DNS записи компьютера.\n\nПримечание: параметр «Обновление обратной IPv6 DNS записи» используется только при включённом параметре «Обновление прямой IPv6 DNS записи».",
                     "header": {
                       "class": "Machine",
                       "name": "WinbindDNSUpdateIPv6",
                       "displayName": "Обновление IPv6 DNS записей",
-                      "explainText": "Политика позволяет включить обновление прямой и обратной IPv6 DNS записи компьютера.\n\nПримечание: включение параметра «Обновление обратной IPv6 DNS записи» имеет смысл только при включённом параметре «Обновление прямой IPv6 DNS записи».",
+                      "explainText": "Политика позволяет включить обновление прямой и обратной IPv6 DNS записи компьютера.\n\nПримечание: параметр «Обновление обратной IPv6 DNS записи» используется только при включённом параметре «Обновление прямой IPv6 DNS записи».",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.WinbindDNSUpdateIPv6-pr)",
@@ -16345,8 +19360,12 @@ define(function() {
                         "valueName": "org.altlinux.winbind.dnsupdate.enable-update-ipv6",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Обновление прямой IPv6 DNS записи:",
                         "defaultItem": "1"
@@ -16361,6 +19380,8 @@ define(function() {
                         "valueName": "org.altlinux.winbind.dnsupdate.ipv6-ptr-update",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Обновление обратной IPv6 DNS записи:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.altlinux.winbind.dnsupdate.ipv6-ptr-update')"
@@ -16411,6 +19432,8 @@ define(function() {
                     "valueName": "org.gnome.Vino.alternative-port",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.Vino.alternative-port')"
@@ -16438,8 +19461,12 @@ define(function() {
                     "valueName": "org.gnome.Vino.use-alternative-port",
                     "required": true,
                     "items": {
-                      "0": "Отключено",
-                      "1": "Включено"
+                      "1": "Включено",
+                      "0": "Отключено"
+                    },
+                    "itemValueKinds": {
+                      "1": "decimal",
+                      "0": "decimal"
                     },
                     "label": "Выберите «Включено» или «Отключено»:",
                     "defaultItem": "0"
@@ -16454,6 +19481,8 @@ define(function() {
                     "valueName": "org.gnome.Vino.use-alternative-port",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.Vino.use-alternative-port')"
@@ -16485,6 +19514,11 @@ define(function() {
                       "always": "Всегда",
                       "client": "Только при подключении клиента"
                     },
+                    "itemValueKinds": {
+                      "never": "string",
+                      "always": "string",
+                      "client": "string"
+                    },
                     "label": "Показывать уведомление:",
                     "defaultItem": "0"
                   },
@@ -16498,6 +19532,8 @@ define(function() {
                     "valueName": "org.gnome.Vino.icon-visibility",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.Vino.icon-visibility')"
@@ -16528,6 +19564,10 @@ define(function() {
                       "none": "None",
                       "vnc": "Vnc"
                     },
+                    "itemValueKinds": {
+                      "none": "string",
+                      "vnc": "string"
+                    },
                     "label": "Метод:",
                     "defaultItem": "0"
                   },
@@ -16541,6 +19581,8 @@ define(function() {
                     "valueName": "org.gnome.Vino.authentication-methods",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.Vino.authentication-methods')"
@@ -16568,8 +19610,12 @@ define(function() {
                     "valueName": "org.gnome.Vino.prompt-enabled",
                     "required": true,
                     "items": {
-                      "0": "Отключено",
-                      "1": "Включено"
+                      "1": "Включено",
+                      "0": "Отключено"
+                    },
+                    "itemValueKinds": {
+                      "1": "decimal",
+                      "0": "decimal"
                     },
                     "label": "Выберите «Включено» или «Отключено»:",
                     "defaultItem": "0"
@@ -16584,6 +19630,8 @@ define(function() {
                     "valueName": "org.gnome.Vino.prompt-enabled",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.Vino.prompt-enabled')"
@@ -16611,8 +19659,12 @@ define(function() {
                     "valueName": "org.gnome.Vino.view-only",
                     "required": true,
                     "items": {
-                      "0": "Отключено",
-                      "1": "Включено"
+                      "1": "Включено",
+                      "0": "Отключено"
+                    },
+                    "itemValueKinds": {
+                      "1": "decimal",
+                      "0": "decimal"
                     },
                     "label": "Выберите «Включено» или «Отключено»:",
                     "defaultItem": "0"
@@ -16627,6 +19679,8 @@ define(function() {
                     "valueName": "org.gnome.Vino.view-only",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.Vino.view-only')"
@@ -16654,8 +19708,12 @@ define(function() {
                     "valueName": "org.gnome.Vino.enabled",
                     "required": true,
                     "items": {
-                      "0": "Отключено",
-                      "1": "Включено"
+                      "1": "Включено",
+                      "0": "Отключено"
+                    },
+                    "itemValueKinds": {
+                      "1": "decimal",
+                      "0": "decimal"
                     },
                     "label": "Выберите «Включено» или «Отключено»:",
                     "defaultItem": "0"
@@ -16670,6 +19728,8 @@ define(function() {
                     "valueName": "org.gnome.Vino.enabled",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GSettingsLocks\\org.gnome.Vino.enabled')"
@@ -16701,7 +19761,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Packages\\Sync')"
                 },
@@ -16808,12 +19872,46 @@ define(function() {
             "category": "Графическая подсистема",
             "help": "Настройка параметров графической подсистемы.",
             "policies": {},
-            "inherited": []
+            "inherited": [
+              {
+                "category": "Настройки DisplayManager",
+                "help": "Настройка параметров DisplayManager.",
+                "policies": {},
+                "inherited": []
+              }
+            ]
           },
           {
             "category": "Групповые политики",
             "help": "Настройки групповых политик.",
-            "policies": {},
+            "policies": {
+              "ALT_GroupPolicies:PluginsListUser": {
+                "displayName": "Список плагинов GPUpdate",
+                "help": "Политика позволяет настроить список допустимых плагинов GPUpdate для применения пользовательских групповых политик.\n\nВключено — используются плагины, указанные в списке;\n\nОтключено/Не сконфигурировано — используются все плагины, находящиеся в каталогах /usr/lib/gpupdate/plugins/ и /gpoa/frontend_plugins/\n\nПример: DMApplier\n\nПримечание: данная настройка используется только при включённой политике «Включение плагинов GPUpdate».",
+                "header": {
+                  "class": "User",
+                  "name": "PluginsListUser",
+                  "displayName": "Список плагинов GPUpdate",
+                  "explainText": "Политика позволяет настроить список допустимых плагинов GPUpdate для применения пользовательских групповых политик.\n\nВключено — используются плагины, указанные в списке;\n\nОтключено/Не сконфигурировано — используются все плагины, находящиеся в каталогах /usr/lib/gpupdate/plugins/ и /gpoa/frontend_plugins/\n\nПример: DMApplier\n\nПримечание: данная настройка используется только при включённой политике «Включение плагинов GPUpdate».",
+                  "key": "Software\\BaseALT\\Policies\\GPUpdate",
+                  "valueName": null,
+                  "presentation": "$(presentation.PluginsList-pr)",
+                  "parentCategory": "ALT_GroupPolicies",
+                  "supportedOn": "11 Платформа ALT как минимум"
+                },
+                "Software\\BaseALT\\Policies\\GPUpdate\\Pluginslist": {
+                  "metadata": {
+                    "type": "list",
+                    "id": "PluginsListSetter",
+                    "key": "Software\\BaseALT\\Policies\\GPUpdate\\Pluginslist",
+                    "additive": true,
+                    "label": "Список плагинов:"
+                  },
+                  "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\Pluginslist')"
+                },
+                "id": "ALT_GroupPolicies:PluginsListUser"
+              }
+            },
             "inherited": [
               {
                 "category": "Групповые политики для локальных пользователей",
@@ -16824,6 +19922,12 @@ define(function() {
               {
                 "category": "Механизмы GPUpdate",
                 "help": "Механизмы применения групповых политик.",
+                "policies": {},
+                "inherited": []
+              },
+              {
+                "category": "Обработка настройки Ini-файлов",
+                "help": "Раздел содержит параметры, определяющие обработку Ini-файлов, настраиваемых через редактор групповых политик.",
                 "policies": {},
                 "inherited": []
               }
@@ -16906,7 +20010,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\CifsaclDisable')"
                 },
@@ -16930,7 +20038,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\DriveMapsHome')"
                 },
@@ -16954,7 +20066,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\DriveMapsHomeUser')"
                 },
@@ -16982,6 +20098,8 @@ define(function() {
                     "valueName": "DriveMapsHomeDisableNet",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Убрать префикс «net.» из имён ссылок каталогов для сетевых дисков машины"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\DriveMapsHomeDisableNet')"
@@ -16994,6 +20112,8 @@ define(function() {
                     "valueName": "DriveMapsHomeDisableNetUser",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Убрать префикс «net.» из имён ссылок каталогов для сетевых дисков пользователя"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\GPUpdate\\DriveMapsHomeDisableNetUser')"
@@ -17033,8 +20153,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.screensaver.lock-enabled",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Автоматическия блокировка экрана:",
                         "defaultItem": "0"
@@ -17056,6 +20180,16 @@ define(function() {
                           "300": "5 Минут",
                           "1800": "30 Минут",
                           "3600": "1 Час"
+                        },
+                        "itemValueKinds": {
+                          "0": "decimal",
+                          "30": "decimal",
+                          "60": "decimal",
+                          "120": "decimal",
+                          "180": "decimal",
+                          "300": "decimal",
+                          "1800": "decimal",
+                          "3600": "decimal"
                         },
                         "label": "Задержка:",
                         "defaultItem": "0"
@@ -17085,7 +20219,6 @@ define(function() {
                         "valueName": "org.gnome.desktop.session.idle-delay",
                         "required": true,
                         "items": {
-                          "0": "0 Минут",
                           "60": "1 Минута",
                           "120": "2 Минуты",
                           "180": "3 Минуты",
@@ -17094,7 +20227,20 @@ define(function() {
                           "480": "8 Минут",
                           "600": "10 Минут",
                           "720": "12 Минут",
-                          "900": "15 Минут"
+                          "900": "15 Минут",
+                          "0": "0 Минут"
+                        },
+                        "itemValueKinds": {
+                          "60": "decimal",
+                          "120": "decimal",
+                          "180": "decimal",
+                          "240": "decimal",
+                          "300": "decimal",
+                          "480": "decimal",
+                          "600": "decimal",
+                          "720": "decimal",
+                          "900": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Период бездействия:",
                         "defaultItem": "0"
@@ -17124,8 +20270,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.notifications.show-in-lock-screen",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Уведомления на экране блокировки:",
                         "defaultItem": "0"
@@ -17170,6 +20320,15 @@ define(function() {
                           "zoom": "Zoom",
                           "spanned": "Spanned"
                         },
+                        "itemValueKinds": {
+                          "none": "string",
+                          "wallpaper": "string",
+                          "centered": "string",
+                          "scaled": "string",
+                          "stretched": "string",
+                          "zoom": "string",
+                          "spanned": "string"
+                        },
                         "label": "Способ подгонки:",
                         "defaultItem": "0"
                       },
@@ -17200,6 +20359,10 @@ define(function() {
                         "items": {
                           "prefer-light": "Светлая тема",
                           "prefer-dark": "Тёмная тема"
+                        },
+                        "itemValueKinds": {
+                          "prefer-light": "string",
+                          "prefer-dark": "string"
                         },
                         "label": "Стиль оформления:",
                         "defaultItem": "0"
@@ -17234,6 +20397,12 @@ define(function() {
                           "GNOME": "GNOME",
                           "Hicolor": "Hicolor"
                         },
+                        "itemValueKinds": {
+                          "Adwaita": "string",
+                          "HighContrast": "string",
+                          "GNOME": "string",
+                          "Hicolor": "string"
+                        },
                         "label": "Тема оформления значков:",
                         "defaultItem": "0"
                       },
@@ -17243,12 +20412,12 @@ define(function() {
                   },
                   "ALT_Apperance_Gnome:OrgGnomeBackgroundPictureFilenameUser": {
                     "displayName": "Фон рабочего стола",
-                    "help": "Политика позволяет выбрать фон рабочего стола в зависимости от темы оформления внешнего вида, указав путь до изображения в формате file:///home/user/Изображения/picture.jpg\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Политика позволяет выбрать фон рабочего стола в зависимости от темы оформления внешнего вида, указав путь к изображениюв формате file:///home/user/Изображения/picture.jpg\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgGnomeBackgroundPictureFilenameUser",
                       "displayName": "Фон рабочего стола",
-                      "explainText": "Политика позволяет выбрать фон рабочего стола в зависимости от темы оформления внешнего вида, указав путь до изображения в формате file:///home/user/Изображения/picture.jpg\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Политика позволяет выбрать фон рабочего стола в зависимости от темы оформления внешнего вида, указав путь к изображениюв формате file:///home/user/Изображения/picture.jpg\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgGnomeBackgroundPictureFilenameUser-pr)",
@@ -17261,7 +20430,7 @@ define(function() {
                         "id": "OrgGnomeBackgroundPictureFilename_light_setter",
                         "valueName": "org.gnome.desktop.background.picture-uri",
                         "required": false,
-                        "label": "Путь до изображения для светлой темы:"
+                        "label": "Путь к изображению для светлой темы:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.gnome.desktop.background.picture-uri')"
                     },
@@ -17271,7 +20440,7 @@ define(function() {
                         "id": "OrgGnomeBackgroundPictureFilename_dark_setter",
                         "valueName": "org.gnome.desktop.background.picture-uri-dark",
                         "required": false,
-                        "label": "Путь до изображения для тёмной темы:"
+                        "label": "Путь к изображению для тёмной темы:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.gnome.desktop.background.picture-uri-dark')"
                     },
@@ -17305,8 +20474,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.enable-hot-corners",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Горячий угол:",
                         "defaultItem": "0"
@@ -17317,12 +20490,12 @@ define(function() {
                   },
                   "ALT_Multitasking_Gnome:gnome-desktops-user": {
                     "displayName": "Рабочие столы",
-                    "help": "Политика позволяет управлять количеством рабочих столов.\n\nДинамические рабочие столы — количество рабочих столов меняется в зависимости от количества открытых окон.\n\nФиксированные рабочие столы — количество рабочих столов остаётся постоянным, независимо от того, есть ли на них окна или нет.\n\nПримечание: параметр «Количество рабочих столов» имеет смысл только при фиксированном режиме.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Политика позволяет управлять количеством рабочих столов.\n\nДинамические рабочие столы — количество рабочих столов меняется в зависимости от количества открытых окон.\n\nФиксированные рабочие столы — количество рабочих столов остаётся постоянным, независимо от того, есть ли на них окна или нет.\n\nПримечание: параметр «Количество рабочих столов» используется только при фиксированном режиме.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "gnome-desktops-user",
                       "displayName": "Рабочие столы",
-                      "explainText": "Политика позволяет управлять количеством рабочих столов.\n\nДинамические рабочие столы — количество рабочих столов меняется в зависимости от количества открытых окон.\n\nФиксированные рабочие столы — количество рабочих столов остаётся постоянным, независимо от того, есть ли на них окна или нет.\n\nПримечание: параметр «Количество рабочих столов» имеет смысл только при фиксированном режиме.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Политика позволяет управлять количеством рабочих столов.\n\nДинамические рабочие столы — количество рабочих столов меняется в зависимости от количества открытых окон.\n\nФиксированные рабочие столы — количество рабочих столов остаётся постоянным, независимо от того, есть ли на них окна или нет.\n\nПримечание: параметр «Количество рабочих столов» используется только при фиксированном режиме.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.gnome-desktops-user-pr)",
@@ -17336,8 +20509,12 @@ define(function() {
                         "valueName": "org.gnome.mutter.dynamic-workspaces",
                         "required": true,
                         "items": {
-                          "0": "Фиксированные",
-                          "1": "Динамические"
+                          "1": "Динамические",
+                          "0": "Фиксированные"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Рабочие столы:",
                         "defaultItem": "0"
@@ -17380,8 +20557,12 @@ define(function() {
                         "valueName": "org.gnome.mutter.workspaces-only-on-primary",
                         "required": true,
                         "items": {
-                          "0": "На всех дисплеях",
-                          "1": "На основном дисплее"
+                          "1": "На основном дисплее",
+                          "0": "На всех дисплеях"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Рабочие столы:",
                         "defaultItem": "0"
@@ -17418,8 +20599,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.clock-show-date",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Отображение даты:",
                         "defaultItem": "0"
@@ -17449,8 +20634,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.clock-show-weekday",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Отображение дня недели:",
                         "defaultItem": "0"
@@ -17480,8 +20669,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.show-battery-percentage",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Отображение процента заряда батареи:",
                         "defaultItem": "0"
@@ -17511,8 +20704,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.clock-show-seconds",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Отображение секунд:",
                         "defaultItem": "0"
@@ -17546,6 +20743,11 @@ define(function() {
                           "sloppy": "Срабатывает при наведении",
                           "mouse": "Фокус следует за мышью"
                         },
+                        "itemValueKinds": {
+                          "click": "string",
+                          "sloppy": "string",
+                          "mouse": "string"
+                        },
                         "label": "Фокус окна:",
                         "defaultItem": "0"
                       },
@@ -17558,8 +20760,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.wm.preferences.auto-raise",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Поднимать окно над другими при установке фокуса:",
                         "defaultItem": "0"
@@ -17589,8 +20795,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.interface.enable-animations",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Эффекты анимации:",
                         "defaultItem": "0"
@@ -17627,8 +20837,12 @@ define(function() {
                         "valueName": "org.gnome.desktop.a11y.always-show-universal-access-status",
                         "required": true,
                         "items": {
-                          "0": "Отключено",
-                          "1": "Включено"
+                          "1": "Включено",
+                          "0": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "1": "decimal",
+                          "0": "decimal"
                         },
                         "label": "Меню специальных возможностей:",
                         "defaultItem": "0"
@@ -17664,8 +20878,12 @@ define(function() {
                             "valueName": "org.gnome.desktop.a11y.interface.high-contrast",
                             "required": true,
                             "items": {
-                              "0": "Отключено",
-                              "1": "Включено"
+                              "1": "Включено",
+                              "0": "Отключено"
+                            },
+                            "itemValueKinds": {
+                              "1": "decimal",
+                              "0": "decimal"
                             },
                             "label": "Высокая контрастность:",
                             "defaultItem": "0"
@@ -17701,6 +20919,13 @@ define(function() {
                               "64": "64px",
                               "96": "96px"
                             },
+                            "itemValueKinds": {
+                              "24": "decimal",
+                              "32": "decimal",
+                              "48": "decimal",
+                              "64": "decimal",
+                              "96": "decimal"
+                            },
                             "label": "Размер курсора:",
                             "defaultItem": "0"
                           },
@@ -17729,8 +20954,12 @@ define(function() {
                             "valueName": "org.gnome.desktop.a11y.interface.show-status-shapes",
                             "required": true,
                             "items": {
-                              "0": "Отключено",
-                              "1": "Включено"
+                              "1": "Включено",
+                              "0": "Отключено"
+                            },
+                            "itemValueKinds": {
+                              "1": "decimal",
+                              "0": "decimal"
                             },
                             "label": "Использование фигур:",
                             "defaultItem": "0"
@@ -17774,6 +21003,12 @@ define(function() {
                           "hibernate": "Режим гибернации",
                           "nothing": "Ничего не делать"
                         },
+                        "itemValueKinds": {
+                          "suspend": "string",
+                          "interactive": "string",
+                          "hibernate": "string",
+                          "nothing": "string"
+                        },
                         "label": "Действие кнопки питания:",
                         "defaultItem": "0"
                       },
@@ -17783,12 +21018,12 @@ define(function() {
                   },
                   "ALT_PowerManagement_Gnome:GnomeSleepInactiveBattery-user": {
                     "displayName": "Спящий режим при питании от батареи",
-                    "help": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от батареи.\n\nПараметр «Время до перехода в спящий режим при питании от батареи» имеет смысл только при включённом параметре «Переходить в спящий режим при питании от батареи».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от батареи.\n\nПараметр «Время до перехода в спящий режим при питании от батареи» используется только при включённом параметре «Переходить в спящий режим при питании от батареи».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "GnomeSleepInactiveBattery-user",
                       "displayName": "Спящий режим при питании от батареи",
-                      "explainText": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от батареи.\n\nПараметр «Время до перехода в спящий режим при питании от батареи» имеет смысл только при включённом параметре «Переходить в спящий режим при питании от батареи».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от батареи.\n\nПараметр «Время до перехода в спящий режим при питании от батареи» используется только при включённом параметре «Переходить в спящий режим при питании от батареи».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.GnomeSleepInactiveBattery-user-pr)",
@@ -17804,6 +21039,10 @@ define(function() {
                         "items": {
                           "suspend": "Включено",
                           "nothing": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "suspend": "string",
+                          "nothing": "string"
                         },
                         "label": "Переходить в спящий режим при питании от батареи:",
                         "defaultItem": "0"
@@ -17824,6 +21063,14 @@ define(function() {
                           "1200": "20 Минут",
                           "3600": "1 Час"
                         },
+                        "itemValueKinds": {
+                          "60": "decimal",
+                          "120": "decimal",
+                          "300": "decimal",
+                          "600": "decimal",
+                          "1200": "decimal",
+                          "3600": "decimal"
+                        },
                         "label": "Время до перехода в спящий режим при питании от батареи:",
                         "defaultItem": "0"
                       },
@@ -17833,12 +21080,12 @@ define(function() {
                   },
                   "ALT_PowerManagement_Gnome:GnomeSleepInactiveAC-user": {
                     "displayName": "Спящий режим при питании от сети",
-                    "help": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от сети.\n\nПараметр «Время до перехода в спящий режим при питании от сети» имеет смысл только при включённом параметре «Переходить в спящий режим при питании от сети».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от сети.\n\nПараметр «Время до перехода в спящий режим при питании от сети» используется только при включённом параметре «Переходить в спящий режим при питании от сети».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "GnomeSleepInactiveAC-user",
                       "displayName": "Спящий режим при питании от сети",
-                      "explainText": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от сети.\n\nПараметр «Время до перехода в спящий режим при питании от сети» имеет смысл только при включённом параметре «Переходить в спящий режим при питании от сети».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Политика позволяет управлять условием перехода устройства в спящий режим при питании от сети.\n\nПараметр «Время до перехода в спящий режим при питании от сети» используется только при включённом параметре «Переходить в спящий режим при питании от сети».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.GnomeSleepInactiveAC-user-pr)",
@@ -17854,6 +21101,10 @@ define(function() {
                         "items": {
                           "suspend": "Включено",
                           "nothing": "Отключено"
+                        },
+                        "itemValueKinds": {
+                          "suspend": "string",
+                          "nothing": "string"
                         },
                         "label": "Переходить в спящий режим при питании от батареи:",
                         "defaultItem": "0"
@@ -17873,6 +21124,14 @@ define(function() {
                           "600": "10 Минут",
                           "1200": "20 Минут",
                           "3600": "1 Час"
+                        },
+                        "itemValueKinds": {
+                          "60": "decimal",
+                          "120": "decimal",
+                          "300": "decimal",
+                          "600": "decimal",
+                          "1200": "decimal",
+                          "3600": "decimal"
                         },
                         "label": "Время до перехода в спящий режим при питании от батареи:",
                         "defaultItem": "0"
@@ -17913,7 +21172,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.session.logout-prompt')"
                     },
@@ -17921,12 +21184,12 @@ define(function() {
                   },
                   "ALT_Session_Mate:OrgMateSessionIdleDelayUser": {
                     "displayName": "Интервал бездействия, по истечении которого сеанс считается простаивающим",
-                    "help": "Данная политика позволяет установить время в минутах, по истечении которого, сеанс будет считаться простаивающим.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Данная политика позволяет установить время в минутах, по истечении которого, сеанс будет считаться простаивающим.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateSessionIdleDelayUser",
                       "displayName": "Интервал бездействия, по истечении которого сеанс считается простаивающим",
-                      "explainText": "Данная политика позволяет установить время в минутах, по истечении которого, сеанс будет считаться простаивающим.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Данная политика позволяет установить время в минутах, по истечении которого, сеанс будет считаться простаивающим.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateSessionIdleDelayUser-pr)",
@@ -17966,7 +21229,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.session.show-hidden-apps')"
                     },
@@ -17990,7 +21257,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.session.auto-save-session')"
                     },
@@ -18050,7 +21321,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.lockdown.disable-lock-screen')"
                     },
@@ -18074,7 +21349,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.lockdown.disable-theme-settings')"
                     },
@@ -18098,7 +21377,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.lockdown.disable-user-switching')"
                     },
@@ -18122,7 +21405,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.lockdown.disable-log-out')"
                     },
@@ -18153,7 +21440,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.Marco.general.auto-raise')"
                     },
@@ -18177,7 +21468,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.Marco.general.show-tab-border')"
                     },
@@ -18213,6 +21508,17 @@ define(function() {
                           "lower": "Задвинуть",
                           "menu": "Показать меню",
                           "last": "Последнее действие"
+                        },
+                        "itemValueKinds": {
+                          "toggle shade": "string",
+                          "toggle maximize": "string",
+                          "toggle maximize horizontally": "string",
+                          "toggle maximize vertically": "string",
+                          "minimize": "string",
+                          "none": "string",
+                          "lower": "string",
+                          "menu": "string",
+                          "last": "string"
                         },
                         "label": "Действие:",
                         "defaultItem": "0"
@@ -18252,6 +21558,17 @@ define(function() {
                           "menu": "Показать меню",
                           "last": "Последнее действие"
                         },
+                        "itemValueKinds": {
+                          "toggle shade": "string",
+                          "toggle maximize": "string",
+                          "toggle maximize horizontally": "string",
+                          "toggle maximize vertically": "string",
+                          "minimize": "string",
+                          "none": "string",
+                          "lower": "string",
+                          "menu": "string",
+                          "last": "string"
+                        },
                         "label": "Действие:",
                         "defaultItem": "0"
                       },
@@ -18290,6 +21607,17 @@ define(function() {
                           "menu": "Показать меню",
                           "last": "Последнее действие"
                         },
+                        "itemValueKinds": {
+                          "toggle shade": "string",
+                          "toggle maximize": "string",
+                          "toggle maximize horizontally": "string",
+                          "toggle maximize vertically": "string",
+                          "minimize": "string",
+                          "none": "string",
+                          "lower": "string",
+                          "menu": "string",
+                          "last": "string"
+                        },
                         "label": "Действие:",
                         "defaultItem": "0"
                       },
@@ -18299,12 +21627,12 @@ define(function() {
                   },
                   "ALT_Windows_Manager_Marco:OrgMateMarcoGeneralAutoRaiseDelayUser": {
                     "displayName": "Задержка при восстановлении",
-                    "help": "Временной интервал в миллисекундах, по истечении которого окно в фокусе будет поднято поверх остальных.\n      \nЭтот параметр имеет смысл только при активированном параметре «Автоматически поднимать окно, получившее фокус».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Временной интервал в миллисекундах, по истечении которого окно в фокусе будет поднято поверх остальных.\n      \nЭтот параметр используется только при активированном параметре «Автоматически поднимать окно, получившее фокус».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateMarcoGeneralAutoRaiseDelayUser",
                       "displayName": "Задержка при восстановлении",
-                      "explainText": "Временной интервал в миллисекундах, по истечении которого окно в фокусе будет поднято поверх остальных.\n      \nЭтот параметр имеет смысл только при активированном параметре «Автоматически поднимать окно, получившее фокус».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Временной интервал в миллисекундах, по истечении которого окно в фокусе будет поднято поверх остальных.\n      \nЭтот параметр используется только при активированном параметре «Автоматически поднимать окно, получившее фокус».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateMarcoGeneralAutoRaiseDelayUser-pr)",
@@ -18344,7 +21672,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.Marco.general.allow-tiling')"
                     },
@@ -18422,7 +21754,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.Marco.general.compositing-fast-alt-tab')"
                     },
@@ -18446,7 +21782,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.Marco.general.center-new-windows')"
                     },
@@ -18476,6 +21816,11 @@ define(function() {
                           "no wrap": "No wrap",
                           "classic": "Classic",
                           "toroidal": "Toroidal"
+                        },
+                        "itemValueKinds": {
+                          "no wrap": "string",
+                          "classic": "string",
+                          "toroidal": "string"
                         },
                         "label": "Метод:",
                         "defaultItem": "0"
@@ -18508,6 +21853,10 @@ define(function() {
                           "smart": "Smart",
                           "strict": "Strict"
                         },
+                        "itemValueKinds": {
+                          "smart": "string",
+                          "strict": "string"
+                        },
                         "label": "Передача фокуса:",
                         "defaultItem": "0"
                       },
@@ -18517,12 +21866,12 @@ define(function() {
                   },
                   "ALT_Windows_Manager_Marco:OrgMateMarcoGeneralAllowTopTilingUser": {
                     "displayName": "Разворачивание при перетаскивании",
-                    "help": "Включает разворачивание окна во весь экран при его перетаскивании в верхнюю центральную часть экрана. Этот параметр имеет смысл только при активированном параметре «Изменение размеров окна при перетаскивании».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Включает разворачивание окна во весь экран при его перетаскивании в верхнюю центральную часть экрана. Этот параметр используется только при активированном параметре «Изменение размеров окна при перетаскивании».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateMarcoGeneralAllowTopTilingUser",
                       "displayName": "Разворачивание при перетаскивании",
-                      "explainText": "Включает разворачивание окна во весь экран при его перетаскивании в верхнюю центральную часть экрана. Этот параметр имеет смысл только при активированном параметре «Изменение размеров окна при перетаскивании».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Включает разворачивание окна во весь экран при его перетаскивании в верхнюю центральную часть экрана. Этот параметр используется только при активированном параметре «Изменение размеров окна при перетаскивании».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": "org.mate.Marco.general.allow-top-tiling",
                       "presentation": null,
@@ -18533,7 +21882,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.Marco.general.allow-top-tiling')"
                     },
@@ -18622,6 +21975,11 @@ define(function() {
                           "pointer": "Указатель",
                           "manual": "Ручной"
                         },
+                        "itemValueKinds": {
+                          "automatic": "string",
+                          "pointer": "string",
+                          "manual": "string"
+                        },
                         "label": "Расположение:",
                         "defaultItem": "0"
                       },
@@ -18654,6 +22012,11 @@ define(function() {
                           "sloppy": "Sloppy",
                           "mouse": "Mouse"
                         },
+                        "itemValueKinds": {
+                          "click": "string",
+                          "sloppy": "string",
+                          "mouse": "string"
+                        },
                         "label": "Режим переключения фокуса окон:",
                         "defaultItem": "0"
                       },
@@ -18679,7 +22042,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.Marco.general.titlebar-uses-system-font')"
                     },
@@ -18789,7 +22156,11 @@ define(function() {
                           "metadata": {
                             "type": "policyValue",
                             "enabledValue": 1,
-                            "disabledValue": 0
+                            "enabledValueKind": "decimal",
+                            "disabledValue": 0,
+                            "disabledValueKind": "decimal",
+                            "enabledList": [],
+                            "disabledList": []
                           },
                           "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.peripherals-keyboard.repeat')"
                         },
@@ -18834,12 +22205,12 @@ define(function() {
                 "policies": {
                   "ALT_Background_Mate:OrgMateBackgroundPictureFilenameUser": {
                     "displayName": "Картинка фона рабочего стола",
-                    "help": "Позволяет установить изображение в качестве фона рабочего стола, указав файл (например, /usr/share/backgrounds/mate/nature/Wood.jpg), содержащий изображение.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Позволяет установить изображение в качестве фона рабочего стола, указав путь к изображению (например, /usr/share/backgrounds/mate/nature/Wood.jpg).\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateBackgroundPictureFilenameUser",
                       "displayName": "Картинка фона рабочего стола",
-                      "explainText": "Позволяет установить изображение в качестве фона рабочего стола, указав файл (например, /usr/share/backgrounds/mate/nature/Wood.jpg), содержащий изображение.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Позволяет установить изображение в качестве фона рабочего стола, указав путь к изображению (например, /usr/share/backgrounds/mate/nature/Wood.jpg).\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateBackgroundPictureFilenameUser-pr)",
@@ -18852,7 +22223,7 @@ define(function() {
                         "id": "OrgMateBackgroundPictureFilename_setter",
                         "valueName": "org.mate.background.picture-filename",
                         "required": false,
-                        "label": "Файл:"
+                        "label": "Путь к изображению:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.background.picture-filename')"
                     },
@@ -18913,6 +22284,15 @@ define(function() {
                           "zoom": "Zoom",
                           "spanned": "Spanned"
                         },
+                        "itemValueKinds": {
+                          "none": "string",
+                          "wallpaper": "string",
+                          "centered": "string",
+                          "scaled": "string",
+                          "stretched": "string",
+                          "zoom": "string",
+                          "spanned": "string"
+                        },
                         "label": "Метод отображения картинки фона рабочего стола:",
                         "defaultItem": "0"
                       },
@@ -18948,12 +22328,12 @@ define(function() {
                   },
                   "ALT_Background_Mate:OrgMateBackgroundColorShadingTypeUser": {
                     "displayName": "Тип градиента",
-                    "help": "Устанавливает тип градиента:\n\n«Горизонтальный градиент» — градиентный эффект от левого края экрана к правому;\n\n«Вертикальный градиент» — градиентный эффект от верхнего края экрана к нижнему;\n\n«Сплошная заливка» — заполнить фон рабочего стола одним цветом.\n\nЭтот параметр имеет смысл, только если не установлен параметр «Картинка фона рабочего стола».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Устанавливает тип градиента:\n\n«Горизонтальный градиент» — градиентный эффект от левого края экрана к правому;\n\n«Вертикальный градиент» — градиентный эффект от верхнего края экрана к нижнему;\n\n«Сплошная заливка» — заполнить фон рабочего стола одним цветом.\n\nЭтот параметр используется только если не установлен параметр «Картинка фона рабочего стола».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateBackgroundColorShadingTypeUser",
                       "displayName": "Тип градиента",
-                      "explainText": "Устанавливает тип градиента:\n\n«Горизонтальный градиент» — градиентный эффект от левого края экрана к правому;\n\n«Вертикальный градиент» — градиентный эффект от верхнего края экрана к нижнему;\n\n«Сплошная заливка» — заполнить фон рабочего стола одним цветом.\n\nЭтот параметр имеет смысл, только если не установлен параметр «Картинка фона рабочего стола».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Устанавливает тип градиента:\n\n«Горизонтальный градиент» — градиентный эффект от левого края экрана к правому;\n\n«Вертикальный градиент» — градиентный эффект от верхнего края экрана к нижнему;\n\n«Сплошная заливка» — заполнить фон рабочего стола одним цветом.\n\nЭтот параметр используется только если не установлен параметр «Картинка фона рабочего стола».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateBackgroundColorShadingTypeUser-pr)",
@@ -18971,6 +22351,11 @@ define(function() {
                           "vertical-gradient": "Вертикальный градиент",
                           "solid": "Сплошная заливка"
                         },
+                        "itemValueKinds": {
+                          "horizontal-gradient": "string",
+                          "vertical-gradient": "string",
+                          "solid": "string"
+                        },
                         "label": "Тип градиента:",
                         "defaultItem": "0"
                       },
@@ -18987,12 +22372,12 @@ define(function() {
                 "policies": {
                   "ALT_Screensaver_Mate:OrgMateScreensaverLockEnabledUser": {
                     "displayName": "Блокировка компьютера",
-                    "help": "Включает блокировку компьютера при активации хранителя экрана. Блокировка будет включена через интервал времени, установленный в параметре «Время до блокировки паролем».\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Включает блокировку компьютера при активации хранителя экрана. Блокировка будет включена через интервал времени, установленный в параметре «Время до блокировки паролем».\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateScreensaverLockEnabledUser",
                       "displayName": "Блокировка компьютера",
-                      "explainText": "Включает блокировку компьютера при активации хранителя экрана. Блокировка будет включена через интервал времени, установленный в параметре «Время до блокировки паролем».\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Включает блокировку компьютера при активации хранителя экрана. Блокировка будет включена через интервал времени, установленный в параметре «Время до блокировки паролем».\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": "org.mate.screensaver.lock-enabled",
                       "presentation": null,
@@ -19003,7 +22388,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.screensaver.lock-enabled')"
                     },
@@ -19027,7 +22416,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.screensaver.idle-activation-enabled')"
                     },
@@ -19035,12 +22428,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverLockDelayUser": {
                     "displayName": "Время до блокировки паролем",
-                    "help": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, компьютер будет заблокирован.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, компьютер будет заблокирован.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateScreensaverLockDelayUser",
                       "displayName": "Время до блокировки паролем",
-                      "explainText": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, компьютер будет заблокирован.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, компьютер будет заблокирован.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverLockDelayUser-pr)",
@@ -19064,12 +22457,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverLogoutDelayUser": {
                     "displayName": "Время до выхода из сеанса",
-                    "help": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, пользователю будет предоставлена возможность выхода из сеанса.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Выход из сеанса после блокировки».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, пользователю будет предоставлена возможность выхода из сеанса.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Выход из сеанса после блокировки».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateScreensaverLogoutDelayUser",
                       "displayName": "Время до выхода из сеанса",
-                      "explainText": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, пользователю будет предоставлена возможность выхода из сеанса.\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Выход из сеанса после блокировки».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Устанавливает количество минут, по истечении которых после активации хранителя экрана, пользователю будет предоставлена возможность выхода из сеанса.\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Выход из сеанса после блокировки».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverLogoutDelayUser-pr)",
@@ -19093,12 +22486,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverCycleDelayUser": {
                     "displayName": "Время смены тем",
-                    "help": "Устанавливает интервал (в минутах) между сменами тем хранителя экрана.\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана» и если для параметра «Режим работы» установлено значение «Случайные темы».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Устанавливает интервал (в минутах) между сменами тем хранителя экрана.\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана» и если для параметра «Режим работы» установлено значение «Случайные темы».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateScreensaverCycleDelayUser",
                       "displayName": "Время смены тем",
-                      "explainText": "Устанавливает интервал (в минутах) между сменами тем хранителя экрана.\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана» и если для параметра «Режим работы» установлено значение «Случайные темы».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Устанавливает интервал (в минутах) между сменами тем хранителя экрана.\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана» и если для параметра «Режим работы» установлено значение «Случайные темы».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverCycleDelayUser-pr)",
@@ -19122,12 +22515,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverLogoutEnabledUser": {
                     "displayName": "Выход из сеанса после блокировки",
-                    "help": "После некоторой задержки добавляет кнопку выхода из сеанса («Завершить сеанс») к диалогу разблокирования экрана. Время задержки указывается в параметре «Время выхода из сеанса».\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "После некоторой задержки добавляет кнопку выхода из сеанса («Завершить сеанс») к диалогу разблокирования экрана. Время задержки указывается в параметре «Время выхода из сеанса».\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateScreensaverLogoutEnabledUser",
                       "displayName": "Выход из сеанса после блокировки",
-                      "explainText": "После некоторой задержки добавляет кнопку выхода из сеанса («Завершить сеанс») к диалогу разблокирования экрана. Время задержки указывается в параметре «Время выхода из сеанса».\n\nЭтот параметр имеет смысл только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "После некоторой задержки добавляет кнопку выхода из сеанса («Завершить сеанс») к диалогу разблокирования экрана. Время задержки указывается в параметре «Время выхода из сеанса».\n\nЭтот параметр используется только при активированных параметрах «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": "org.mate.screensaver.logout-enabled",
                       "presentation": null,
@@ -19138,7 +22531,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.screensaver.logout-enabled')"
                     },
@@ -19146,12 +22543,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverUserSwitchEnabledUser": {
                     "displayName": "Переключить пользователя после блокировки",
-                    "help": "Добавляет кнопку «Переключить пользователя» к диалогу разблокирования экрана.\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Добавляет кнопку «Переключить пользователя» к диалогу разблокирования экрана.\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateScreensaverUserSwitchEnabledUser",
                       "displayName": "Переключить пользователя после блокировки",
-                      "explainText": "Добавляет кнопку «Переключить пользователя» к диалогу разблокирования экрана.\n\nЭтот параметр имеет смысл только при активированном параметре «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Добавляет кнопку «Переключить пользователя» к диалогу разблокирования экрана.\n\nЭтот параметр используется только при активированном параметре «Включение хранителя экрана» и «Блокировка компьютера».\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": "org.mate.screensaver.user-switch-enabled",
                       "presentation": null,
@@ -19162,7 +22559,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.mate.screensaver.user-switch-enabled')"
                     },
@@ -19170,12 +22571,12 @@ define(function() {
                   },
                   "ALT_Screensaver_Mate:OrgMateScreensaverModeUser": {
                     "displayName": "Режим работы",
-                    "help": "Устанавливает режим работы хранителя экрана. Этот параметр имеет смысл только при активированном параметре «Включение хранителя экрана».\n\nВозможные значения:\n\n«Пустой экран» — не показывать никаких изображений, только чёрный экран;\n\n«Случайные темы» — выбрать тему хранителя экрана случайным образом;\n\n«Выбранная тема» — показывать одну (указанную) тему хранителя экрана.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                    "help": "Устанавливает режим работы хранителя экрана. Этот параметр используется только при активированном параметре «Включение хранителя экрана».\n\nВозможные значения:\n\n«Пустой экран» — не показывать никаких изображений, только чёрный экран;\n\n«Случайные темы» — выбрать тему хранителя экрана случайным образом;\n\n«Выбранная тема» — показывать одну (указанную) тему хранителя экрана.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                     "header": {
                       "class": "User",
                       "name": "OrgMateScreensaverModeUser",
                       "displayName": "Режим работы",
-                      "explainText": "Устанавливает режим работы хранителя экрана. Этот параметр имеет смысл только при активированном параметре «Включение хранителя экрана».\n\nВозможные значения:\n\n«Пустой экран» — не показывать никаких изображений, только чёрный экран;\n\n«Случайные темы» — выбрать тему хранителя экрана случайным образом;\n\n«Выбранная тема» — показывать одну (указанную) тему хранителя экрана.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
+                      "explainText": "Устанавливает режим работы хранителя экрана. Этот параметр используется только при активированном параметре «Включение хранителя экрана».\n\nВозможные значения:\n\n«Пустой экран» — не показывать никаких изображений, только чёрный экран;\n\n«Случайные темы» — выбрать тему хранителя экрана случайным образом;\n\n«Выбранная тема» — показывать одну (указанную) тему хранителя экрана.\n\nОпция «Блокировать» — (доступна только для машинной политики) запрещает изменение данной настройки пользователем. Блокировка политики делает её приоритетнее аналогичной политики для пользователя.",
                       "key": "Software\\BaseALT\\Policies\\gsettings",
                       "valueName": null,
                       "presentation": "$(presentation.OrgMateScreensaverModeUser-pr)",
@@ -19192,6 +22593,11 @@ define(function() {
                           "blank-only": "Пустой экран",
                           "random": "Случайные темы",
                           "single": "Выбранная тема"
+                        },
+                        "itemValueKinds": {
+                          "blank-only": "string",
+                          "random": "string",
+                          "single": "string"
                         },
                         "label": "Выберите режим работы хранителя экрана:",
                         "defaultItem": "0"
@@ -19257,6 +22663,8 @@ define(function() {
                     "valueName": "kwinrc.Desktops.Rows",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку количества строк отображения виртуальных столов"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kwinrc.Desktops.Rows')"
@@ -19269,6 +22677,8 @@ define(function() {
                     "valueName": "kwinrc.Desktops.Number",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку количества виртуальных столов"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kwinrc.Desktops.Number')"
@@ -19297,6 +22707,8 @@ define(function() {
                     "valueName": "ShowDeleteCommand",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Добавить кнопку «Удалить» в контекстное меню Dolphin"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kdeglobals\\KDE\\ShowDeleteCommand')"
@@ -19309,6 +22721,8 @@ define(function() {
                     "valueName": "kdeglobals.KDE.ShowDeleteCommand",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kdeglobals.KDE.ShowDeleteCommand')"
@@ -19337,6 +22751,8 @@ define(function() {
                     "valueName": "AutomountEnabled",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Автоматически монтировать устройства"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kded_device_automounterrc\\General\\AutomountEnabled')"
@@ -19349,6 +22765,8 @@ define(function() {
                     "valueName": "kded_device_automounterrc.General.AutomountEnabled",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку автоматического монтирования"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kded_device_automounterrc.General.AutomountEnabled')"
@@ -19361,6 +22779,8 @@ define(function() {
                     "valueName": "AutomountOnLogin",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "При входе в систему"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kded_device_automounterrc\\General\\AutomountOnLogin')"
@@ -19373,6 +22793,8 @@ define(function() {
                     "valueName": "kded_device_automounterrc.General.AutomountOnLogin",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку автоматического монтирования при входе в систему"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kded_device_automounterrc.General.AutomountOnLogin')"
@@ -19385,6 +22807,8 @@ define(function() {
                     "valueName": "AutomountOnPlugin",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "При подключении"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kded_device_automounterrc\\General\\AutomountOnPlugin')"
@@ -19397,6 +22821,8 @@ define(function() {
                     "valueName": "kded_device_automounterrc.General.AutomountOnPlugin",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку автоматического монтирования при подключении"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kded_device_automounterrc.General.AutomountOnPlugin')"
@@ -19409,6 +22835,8 @@ define(function() {
                     "valueName": "AutomountUnknownDevices",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Автоматически монтировать те носители, которые никогда ранее не были примонтированы вручную"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kded_device_automounterrc\\General\\AutomountUnknownDevices')"
@@ -19421,6 +22849,8 @@ define(function() {
                     "valueName": "kded_device_automounterrc.General.AutomountUnknownDevices",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку автоматического монтирования устройств, которые не были примонтированы вручную"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kded_device_automounterrc.General.AutomountUnknownDevices')"
@@ -19459,6 +22889,8 @@ define(function() {
                     "valueName": "plasma-localerc.Formats.LANG",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку стандарта системы"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\plasma-localerc.Formats.LANG')"
@@ -19481,6 +22913,8 @@ define(function() {
                     "valueName": "plasma-localerc.Translation.LANGUAGE",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать настройку языка системы"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\plasma-localerc.Translation.LANGUAGE')"
@@ -19509,6 +22943,8 @@ define(function() {
                     "valueName": "Indexing-Enabled",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Включить службу поиска файлов"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\baloofilerc\\Basic Settings\\Indexing-Enabled')"
@@ -19521,6 +22957,8 @@ define(function() {
                     "valueName": "only basic indexing",
                     "trueValue": 0,
                     "falseValue": 1,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Включить индексацию содержимого файлов"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\baloofilerc\\General\\only basic indexing')"
@@ -19533,6 +22971,8 @@ define(function() {
                     "valueName": "index hidden folders",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Включить индексацию скрытых файлов и папок"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\baloofilerc\\General\\index hidden folders')"
@@ -19545,6 +22985,8 @@ define(function() {
                     "valueName": "baloofilerc.Basic Settings.Indexing-Enabled",
                     "trueValue": 1,
                     "falseValue": 0,
+                    "trueValueKind": "decimal",
+                    "falseValueKind": "decimal",
                     "label": "Блокировать"
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\baloofilerc.Basic Settings.Indexing-Enabled')"
@@ -19579,6 +23021,8 @@ define(function() {
                         "valueName": "FilterBar",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Включить панель фильтрации в файловом менеджере Dolphin"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\dolphinrc\\General\\FilterBar')"
@@ -19605,7 +23049,7 @@ define(function() {
                         "id": "kde-wallpaper_setter",
                         "valueName": "Image",
                         "required": false,
-                        "label": "Файл:"
+                        "label": "Путь к изображению:"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\wallpaper\\wallpaperimage\\Image')"
                     },
@@ -19643,6 +23087,8 @@ define(function() {
                         "valueName": "plasmarc.Theme.name",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\plasmarc.Theme.name')"
@@ -19681,6 +23127,8 @@ define(function() {
                         "valueName": "kdeglobals.KDE.LookAndFeelPackage",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kdeglobals.KDE.LookAndFeelPackage')"
@@ -19719,6 +23167,8 @@ define(function() {
                         "valueName": "ksplashrc.KSplash.Theme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\ksplashrc.KSplash.Theme')"
@@ -19757,6 +23207,8 @@ define(function() {
                         "valueName": "kdeglobals.Icons.Theme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kdeglobals.Icons.Theme')"
@@ -19795,6 +23247,8 @@ define(function() {
                         "valueName": "kcminputrc.Mouse.cursorTheme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kcminputrc.Mouse.cursorTheme')"
@@ -19833,6 +23287,8 @@ define(function() {
                         "valueName": "kdeglobals.General.ColorScheme",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kdeglobals.General.ColorScheme')"
@@ -19871,6 +23327,11 @@ define(function() {
                           "firefox.desktop;": "Firefox",
                           "chromium-gost.desktop;": "Chromium-gost"
                         },
+                        "itemValueKinds": {
+                          "yandex-browser.desktop;": "string",
+                          "firefox.desktop;": "string",
+                          "chromium-gost.desktop;": "string"
+                        },
                         "label": "Браузер по умолчанию:",
                         "defaultItem": "0"
                       },
@@ -19907,6 +23368,8 @@ define(function() {
                         "valueName": "Autolock",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Автоматически блокировать экран"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kscreenlockerrc\\Daemon\\Autolock')"
@@ -19919,6 +23382,8 @@ define(function() {
                         "valueName": "kscreenlockerrc.Daemon.Autolock",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку автоматической блокировки экрана"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kscreenlockerrc.Daemon.Autolock')"
@@ -19944,6 +23409,8 @@ define(function() {
                         "valueName": "kscreenlockerrc.Daemon.Timeout",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройки времени до блокировки"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kscreenlockerrc.Daemon.Timeout')"
@@ -19956,6 +23423,8 @@ define(function() {
                         "valueName": "LockOnResume",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Автоматически блокировать экран после выхода из ждущего режима"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kscreenlockerrc\\Daemon\\LockOnResume')"
@@ -19968,6 +23437,8 @@ define(function() {
                         "valueName": "kscreenlockerrc.Daemon.LockOnResume",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку автоматической блокировки при выходе из ждущего режима"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kscreenlockerrc.Daemon.LockOnResume')"
@@ -19993,6 +23464,8 @@ define(function() {
                         "valueName": "kscreenlockerrc.Daemon.LockGrace",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку времени автоматической разблокировки"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kscreenlockerrc.Daemon.LockGrace')"
@@ -20021,6 +23494,8 @@ define(function() {
                         "valueName": "Enabled",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Включить графические эффекты"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kwinrc\\Compositing\\Enabled')"
@@ -20033,6 +23508,8 @@ define(function() {
                         "valueName": "kwinrc.Compositing.Enabled",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kwinrc.Compositing.Enabled')"
@@ -20066,6 +23543,13 @@ define(function() {
                           "High": "Предпочитать более плавную анимацию",
                           "NONE": "Принудительно наиболее плавная анимация"
                         },
+                        "itemValueKinds": {
+                          "ExtremelyLow": "string",
+                          "Low": "string",
+                          "Medium": "string",
+                          "High": "string",
+                          "NONE": "string"
+                        },
                         "label": "Возможные режимы:",
                         "defaultItem": "4"
                       },
@@ -20079,6 +23563,8 @@ define(function() {
                         "valueName": "kwinrc.Compositing.LatencyPolicy",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kwinrc.Compositing.LatencyPolicy')"
@@ -20103,7 +23589,11 @@ define(function() {
                       "metadata": {
                         "type": "policyValue",
                         "enabledValue": 1,
-                        "disabledValue": 0
+                        "enabledValueKind": "decimal",
+                        "disabledValue": 0,
+                        "disabledValueKind": "decimal",
+                        "enabledList": [],
+                        "disabledList": []
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\Plasma\\Update')"
                     },
@@ -20131,6 +23621,8 @@ define(function() {
                         "valueName": "SingleClick",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Открытие папки или файла одним щелчком"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kdeglobals\\KDE\\SingleClick')"
@@ -20143,6 +23635,8 @@ define(function() {
                         "valueName": "kdeglobals.KDE.SingleClick",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kdeglobals.KDE.SingleClick')"
@@ -20175,6 +23669,12 @@ define(function() {
                           "FocusUnderMouse": "Фокус под мышью",
                           "FocusStrictlyUnderMouse": "Фокус строго под мышью"
                         },
+                        "itemValueKinds": {
+                          "FocusFollowMouse": "string",
+                          "FocusFollowsMouse": "string",
+                          "FocusUnderMouse": "string",
+                          "FocusStrictlyUnderMouse": "string"
+                        },
                         "label": "Возможные режимы:",
                         "defaultItem": "0"
                       },
@@ -20188,6 +23688,8 @@ define(function() {
                         "valueName": "NextFocusPrefersMouse",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Приоритет мыши"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDE\\kwinrc\\Windows\\NextFocusPrefersMouse')"
@@ -20200,6 +23702,8 @@ define(function() {
                         "valueName": "kwinrc.Windows.FocusPolicy",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\kwinrc.Windows.FocusPolicy')"
@@ -20245,6 +23749,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.AC)(DimDisplay.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку потухания при питании от сети"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.AC)(DimDisplay.idleTime')"
@@ -20257,6 +23763,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.Battery)(DimDisplay.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку потухания при питании от батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.Battery)(DimDisplay.idleTime')"
@@ -20269,6 +23777,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.LowBattery)(DimDisplay.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку потухания при низком заряде батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.LowBattery)(DimDisplay.idleTime')"
@@ -20307,6 +23817,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.AC)(DPMSControl.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку времени при питании от сети"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.AC)(DPMSControl.idleTime')"
@@ -20319,6 +23831,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.Battery)(DPMSControl.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку времени при питании от батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.Battery)(DPMSControl.idleTime')"
@@ -20331,6 +23845,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.LowBattery)(DPMSControl.idleTime",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку времени при низком заряде батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.LowBattery)(DPMSControl.idleTime')"
@@ -20369,6 +23885,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.AC)(KeyboardBrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при питании от сети"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.AC)(KeyboardBrightnessControl.value')"
@@ -20381,6 +23899,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.Battery)(KeyboardBrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при питании от батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.Battery)(KeyboardBrightnessControl.value')"
@@ -20393,6 +23913,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.LowBattery)(KeyboardBrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при низком заряде батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.LowBattery)(KeyboardBrightnessControl.value')"
@@ -20431,6 +23953,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.AC)(BrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при питании от сети"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.AC)(BrightnessControl.value')"
@@ -20443,6 +23967,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.Battery)(BrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при питании от батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.Battery)(BrightnessControl.value')"
@@ -20455,6 +23981,8 @@ define(function() {
                         "valueName": "powermanagementprofilesrc.LowBattery)(BrightnessControl.value",
                         "trueValue": 1,
                         "falseValue": 0,
+                        "trueValueKind": "decimal",
+                        "falseValueKind": "decimal",
                         "label": "Блокировать настройку яркости при низком заряде батареи"
                       },
                       "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\KDELocks\\powermanagementprofilesrc.LowBattery)(BrightnessControl.value')"
@@ -20504,6 +24032,14 @@ define(function() {
                       "Auth_self_keep": "Auth_self_keep",
                       "Auth_admin_keep": "Auth_admin_keep"
                     },
+                    "itemValueKinds": {
+                      "No": "string",
+                      "Yes": "string",
+                      "Auth_self": "string",
+                      "Auth_admin": "string",
+                      "Auth_self_keep": "string",
+                      "Auth_admin_keep": "string"
+                    },
                     "label": "Варианты ограничений:",
                     "defaultItem": "1"
                   },
@@ -20545,6 +24081,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -20579,6 +24123,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -20615,6 +24167,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -20649,6 +24209,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -20692,6 +24260,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -20726,6 +24302,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -20762,6 +24346,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -20796,6 +24388,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -20832,6 +24432,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -20866,6 +24474,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -20902,6 +24518,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -20937,6 +24561,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -20971,6 +24603,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21014,6 +24654,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21049,6 +24697,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21083,6 +24739,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21126,6 +24790,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21161,6 +24833,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21195,6 +24875,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21238,6 +24926,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21272,6 +24968,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21308,6 +25012,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21342,6 +25054,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21378,6 +25098,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21412,6 +25140,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21448,6 +25184,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21482,6 +25226,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21518,6 +25270,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21552,6 +25312,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21588,6 +25356,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21622,6 +25398,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21658,6 +25442,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21692,6 +25484,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21728,6 +25528,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21762,6 +25570,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21798,6 +25614,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21832,6 +25656,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21868,6 +25700,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21902,6 +25742,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -21938,6 +25786,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -21972,6 +25828,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22008,6 +25872,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22042,6 +25914,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22078,6 +25958,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22112,6 +26000,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22148,6 +26044,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22182,6 +26086,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22218,6 +26130,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22252,6 +26172,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22288,6 +26216,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22322,6 +26258,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22358,6 +26302,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22392,6 +26344,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22428,6 +26388,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22463,6 +26431,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22497,6 +26473,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22540,6 +26524,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22574,6 +26566,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22610,6 +26610,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22644,6 +26652,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22680,6 +26696,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22714,6 +26738,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22750,6 +26782,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -22784,6 +26824,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -22827,6 +26875,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -22861,6 +26917,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
@@ -22897,6 +26961,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -22931,6 +27003,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
@@ -22967,6 +27047,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -23001,6 +27089,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
@@ -23037,6 +27133,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -23072,6 +27176,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
                       },
@@ -23106,6 +27218,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений для службы ModemManager:",
                         "defaultItem": "1"
@@ -23149,6 +27269,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23183,6 +27311,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23219,6 +27355,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23253,6 +27397,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23289,6 +27441,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23323,6 +27483,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23359,6 +27527,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23393,6 +27569,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23429,6 +27613,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23463,6 +27655,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23499,6 +27699,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23533,6 +27741,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23569,6 +27785,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23603,6 +27827,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23639,6 +27871,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23674,6 +27914,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23708,6 +27956,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23751,6 +28007,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23785,6 +28049,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23821,6 +28093,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23855,6 +28135,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23891,6 +28179,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23925,6 +28221,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -23961,6 +28265,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -23995,6 +28307,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24031,6 +28351,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24065,6 +28393,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24108,6 +28444,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24142,6 +28486,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24178,6 +28530,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24212,6 +28572,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24255,6 +28623,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24289,6 +28665,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24325,6 +28709,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24360,6 +28752,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24394,6 +28794,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24437,6 +28845,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24471,6 +28887,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24507,6 +28931,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24541,6 +28973,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24584,6 +29024,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений на монтирование съёмных запоминающих устройств:",
                         "defaultItem": "1"
                       },
@@ -24603,6 +29051,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений на монтирование съёмных запоминающих устройств в удалённых сеансах:",
                         "defaultItem": "1"
                       },
@@ -24621,6 +29077,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений на монтирование системных разделов:",
                         "defaultItem": "1"
@@ -24657,6 +29121,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24691,6 +29163,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24727,6 +29207,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24761,6 +29249,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24797,6 +29293,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24831,6 +29335,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24867,6 +29379,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24901,6 +29421,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -24937,6 +29465,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -24971,6 +29507,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25007,6 +29551,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25041,6 +29593,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25077,6 +29637,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25111,6 +29679,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25147,6 +29723,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25181,6 +29765,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25217,6 +29809,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25251,6 +29851,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25287,6 +29895,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25321,6 +29937,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25357,6 +29981,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25391,6 +30023,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25427,6 +30067,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25461,6 +30109,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25497,6 +30153,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25531,6 +30195,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25567,6 +30239,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25601,6 +30281,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25637,6 +30325,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25671,6 +30367,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25707,6 +30411,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25741,6 +30453,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25777,6 +30497,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25811,6 +30539,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25847,6 +30583,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25881,6 +30625,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25917,6 +30669,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -25951,6 +30711,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -25994,6 +30762,14 @@ define(function() {
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
                         },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
+                        },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
                       },
@@ -26028,6 +30804,14 @@ define(function() {
                           "Auth_admin": "Auth_admin",
                           "Auth_self_keep": "Auth_self_keep",
                           "Auth_admin_keep": "Auth_admin_keep"
+                        },
+                        "itemValueKinds": {
+                          "No": "string",
+                          "Yes": "string",
+                          "Auth_self": "string",
+                          "Auth_admin": "string",
+                          "Auth_self_keep": "string",
+                          "Auth_admin_keep": "string"
                         },
                         "label": "Варианты ограничений:",
                         "defaultItem": "1"
@@ -26147,7 +30931,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.gnome.Vino.use-alternative-port')"
                 },
@@ -26177,6 +30965,11 @@ define(function() {
                       "never": "Никогда",
                       "always": "Всегда",
                       "client": "Только при подключении клиента"
+                    },
+                    "itemValueKinds": {
+                      "never": "string",
+                      "always": "string",
+                      "client": "string"
                     },
                     "label": "Показывать уведомление:",
                     "defaultItem": "0"
@@ -26209,6 +31002,10 @@ define(function() {
                       "none": "None",
                       "vnc": "Vnc"
                     },
+                    "itemValueKinds": {
+                      "none": "string",
+                      "vnc": "string"
+                    },
                     "label": "Метод:",
                     "defaultItem": "0"
                   },
@@ -26234,7 +31031,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.gnome.Vino.prompt-enabled')"
                 },
@@ -26258,7 +31059,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.gnome.Vino.view-only')"
                 },
@@ -26282,7 +31087,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\gsettings\\org.gnome.Vino.enabled')"
                 },
@@ -26313,7 +31122,11 @@ define(function() {
                   "metadata": {
                     "type": "policyValue",
                     "enabledValue": 1,
-                    "disabledValue": 0
+                    "enabledValueKind": "decimal",
+                    "disabledValue": 0,
+                    "disabledValueKind": "decimal",
+                    "enabledList": [],
+                    "disabledList": []
                   },
                   "data": "Read_Path_GPT('Software\\BaseALT\\Policies\\Packages\\Sync')"
                 },
