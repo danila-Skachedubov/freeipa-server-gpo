@@ -178,6 +178,8 @@ This approach provides predictable and controlled policy inheritance with flexib
 ### Requirements
 
 - FreeIPA server
+- `python3-module-admix` 0.1.x (at least 0.1.0 and below 0.2.0)
+- Administrative Templates provided by `admx-basealt`
 - Administrator rights
 - Valid Kerberos ticket
 
@@ -204,17 +206,13 @@ Options:
 1. **Extending LDAP schema** - adds new object classes for group policies
 2. **Creating SYSVOL structure** - creates directories for storing policy files
 3. **Configuring Samba** - creates SYSVOL share
+4. **Preparing the web editor** - grants the FreeIPA `ipaapi` service account
+   controlled access to GPO payloads and creates its private publication state
+   directory
 
 ## Technical implementation
 
 ### LDAP Schema
-- `cn` - Policy GUID
-- `displayName` - Display name of policy
-- `distinguishedName` - Object DN
-- `flags` - Policy flags
-- `gPCFileSysPath` - Path to policy files in SYSVOL
-- `versionNumber` - Policy version number
-
 **groupPolicyContainer (GPC)**
 - `cn` - Policy GUID
 - `displayName` - Display name of policy
@@ -222,6 +220,16 @@ Options:
 - `flags` - Policy flags
 - `gPCFileSysPath` - Path to policy files in SYSVOL
 - `versionNumber` - Policy version number
+- `gPCMachineExtensionNames` - Published machine-side policy extensions
+- `gPCUserExtensionNames` - Published user-side policy extensions
+
+### Web editor architecture
+
+The authenticated FreeIPA server plugin uses the `libadmix` Python binding
+directly. The browser exchanges typed policy and preference objects and never
+submits SYSVOL or registry paths. File changes are committed atomically by
+`libadmix`; the plugin publishes the resulting packed version and extension
+attributes to LDAP with a snapshot assertion before acknowledging the commit.
 
 **groupPolicyChain**
 - `cn` - Chain name
@@ -349,13 +357,15 @@ The extension includes a full-featured web interface integrated into the FreeIPA
 
 ### SYSVOL
 After installation, directory structure is created:
+```
 /var/lib/freeipa/sysvol/
-└── domain.example.com/
-├── Policies/
-│ └── {GUID}/
-│ ├── GPT.INI
-│ ├── Machine/
-│ └── User/
+├── domain.example.com/
+│ ├── Policies/
+│ │ ├── {GUID}/
+│ │ │ ├── GPT.INI
+│ │ │ ├── Machine/
+│ │ │ └── User/
+```
 
 
 ### Policy files

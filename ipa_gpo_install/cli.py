@@ -123,6 +123,9 @@ def perform_configuration_checks(checker: IPAChecker) -> Dict[str, Any]:
     results['sysvol_directory'] = checker.check_sysvol_directory()
     results['sysvol_share'] = checker.check_sysvol_share()
 
+    logger.info(_("Checking GPO editor filesystem permissions"))
+    results['editor_filesystem'] = checker.check_editor_filesystem()
+
     return results
 
 
@@ -141,7 +144,10 @@ def run_task(name: str, task_func: Callable, *args) -> bool:
         return False
 
 
-def execute_required_actions(actions: IPAActions, check_results: Dict[str, Any]) -> bool:
+def execute_required_actions(
+        actions: IPAActions,
+        check_results: Dict[str, Any],
+        checker: IPAChecker = None) -> bool:
     """Execute required actions based on check results"""
     tasks = []
 
@@ -158,6 +164,15 @@ def execute_required_actions(actions: IPAActions, check_results: Dict[str, Any])
         if not run_task(*task):
             return False
 
+    if not run_task(
+            _("Configure GPO editor filesystem"),
+            actions.configure_editor_filesystem):
+        return False
+
+    if checker is not None and not checker.check_editor_filesystem():
+        logger.error(_("GPO editor filesystem health check failed"))
+        return False
+
     # Activate plugins if not already activated
     if not actions.are_plugins_activated():
         if not run_task(_("Activate plugins"), actions.activate_plugins):
@@ -166,10 +181,6 @@ def execute_required_actions(actions: IPAActions, check_results: Dict[str, Any])
         logger.info(_("Plugins already activated"))
 
     if not run_task(_("Restart oddjob service"), actions.restart_oddjob):
-        return False
-
-    # Start GPUIService if not already running
-    if not run_task(_("Start GPUIService"), actions.start_gpuiservice):
         return False
 
     if not check_results['schema_complete']:
@@ -200,7 +211,7 @@ def main():
             return 0
 
         actions = IPAActions(logger, api)
-        if not execute_required_actions(actions, check_results):
+        if not execute_required_actions(actions, check_results, checker):
             return 1
 
         print(_("""

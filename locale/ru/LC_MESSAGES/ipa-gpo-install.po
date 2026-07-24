@@ -135,10 +135,6 @@ msgstr "Плагины уже активированы"
 msgid "Restart oddjob service"
 msgstr "Перезапуск службы oddjob"
 
-#: ipa_gpo_install/cli.py:172
-msgid "Start GPUIService"
-msgstr "Запуск GPUIService"
-
 #: ipa_gpo_install/cli.py:176
 msgid "About to perform irreversible schema update"
 msgstr "Выполняется необратимое обновление схемы"
@@ -417,28 +413,6 @@ msgstr "Не удалось перезапустить службу oddjob: {}"
 msgid "Error restarting oddjob service: {}"
 msgstr "Ошибка перезапуска службы oddjob: {}"
 
-#: ipa_gpo_install/actions.py:223
-msgid "Enabling and starting gpuiservice"
-msgstr "Включение и запуск gpuiservice"
-
-#: ipa_gpo_install/actions.py:231
-#, python-format
-msgid "Failed to enable/start gpuiservice: %s"
-msgstr "Не удалось включить/запустить gpuiservice: %s"
-
-#: ipa_gpo_install/actions.py:236
-msgid "gpuiservice is not active after start"
-msgstr "gpuiservice не активна после запуска"
-
-#: ipa_gpo_install/actions.py:239
-msgid "gpuiservice is enabled and running"
-msgstr "gpuiservice включена и запущена"
-
-#: ipa_gpo_install/actions.py:243
-#, python-format
-msgid "Unexpected error managing gpuiservice: %s"
-msgstr "Неожиданная ошибка управления gpuiservice: %s"
-
 #: ipa_gpo_install/actions.py:271 ipa_gpo_install/actions.py:305
 msgid "Plugin file not found: {}"
 msgstr "Файл плагина не найден: {}"
@@ -464,18 +438,6 @@ msgstr "Все файлы плагинов присутствуют"
 
 #~ msgid "oddjob service is not running, starting it"
 #~ msgstr "Служба oddjob не запущена, запускаем ее"
-
-#~ msgid "Checking GPUIService status"
-#~ msgstr "Проверка состояния GPUIService"
-
-#~ msgid "GPUIService is not running, starting it"
-#~ msgstr "GPUIService не запущена, запускаем ее"
-
-#~ msgid "GPUIService started successfully"
-#~ msgstr "GPUIService успешно запущена"
-
-#~ msgid "Error starting GPUIService: {}"
-#~ msgstr "Ошибка запуска GPUIService: {}"
 
 #~ msgid "Activating plugins from staging directory"
 #~ msgstr "Активация плагинов из промежуточной директории"

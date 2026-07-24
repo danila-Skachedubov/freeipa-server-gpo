@@ -1,13 +1,19 @@
+import base64
+import binascii
 import json
 import logging
-import uuid
+import os
 import re
+import threading
+import time
+import uuid
+from pathlib import Path
 
 import dbus
 import dbus.mainloop.glib
-from ipalib import api, errors, _, ngettext, Command, output
-from ipalib import Str, Int
-from ipalib import constants
+import ldap as _ldap
+from ipalib import Command, Int, Str, _, api, constants, errors, ngettext, output
+from ipalib.parameters import Dict
 from ipalib.plugable import Registry
 from ipapython.dn import DN
 
@@ -18,36 +24,6 @@ from ipaserver.plugins.baseldap import (
 
 logger = logging.getLogger(__name__)
 logger.debug('gpo plugin loaded')
-
-
-def escape_backslashes(text):
-    """
-    Escape backslashes in strings for display.
-    """
-    if not isinstance(text, str):
-        return text
-    return text.replace('\\', '\\\\')
-
-def _extract_guid(name_gpt):
-    """Extract GUID from GPO file system path or name."""
-    if not name_gpt:
-        return None
-    match = re.search(r'\{[0-9A-Fa-f-]+\}', str(name_gpt))
-    return match.group(0) if match else None
-
-def _update_ldap_version(api, guid, version):
-    """Update versionNumber in LDAP for a GPO identified by GUID."""
-    if not guid or version < 0:
-        return
-    try:
-        ldap = api.Backend.ldap2
-        dn = DN(('cn', guid), api.env.container_grouppolicy, api.env.basedn)
-        entry = ldap.get_entry(dn, ['versionnumber'])
-        entry['versionnumber'] = int(version)
-        ldap.update_entry(entry)
-        logger.debug('LDAP versionNumber updated to %d for %s', version, guid)
-    except Exception as e:
-        logger.warning('Failed to update LDAP versionNumber for %s: %s', guid, e)
 
 register = Registry()
 
@@ -104,6 +80,1354 @@ def verify_gpo_schema(ldap, api):
     except Exception as e:
         logger.debug("GPO schema check error: %s", str(e))
 
+
+GPO_TEMPLATE_ROOT = Path('/usr/share/PolicyDefinitions')
+GPO_SYSVOL_ROOT = Path('/var/lib/freeipa/sysvol')
+GPO_EDITOR_STATE_DIRECTORY = Path('/var/lib/freeipa/gpo-editor-state')
+GPO_CATALOG_REFRESH_INTERVAL = 5.0
+GPO_SCRIPT_UPLOAD_MAX_BYTES = 16 * 1024 * 1024
+GPO_SCRIPT_UPLOAD_MAX_ENCODED_BYTES = (
+    4 * ((GPO_SCRIPT_UPLOAD_MAX_BYTES + 2) // 3)
+)
+
+_SCRIPT_EVENTS = {
+    'computer': frozenset(('startup', 'shutdown')),
+    'user': frozenset(('logon', 'logoff')),
+}
+_SCRIPT_EXECUTABLE_GROUPS = frozenset(('classic', 'powershell'))
+_SCRIPT_EXECUTION_ORDERS = frozenset((
+    'unspecified', 'classic_first', 'powershell_first',
+))
+
+GPC_SNAPSHOT_ATTRIBUTES = (
+    'cn',
+    'displayname',
+    'distinguishedname',
+    'gpcfilesyspath',
+    'versionnumber',
+    'gpcmachineextensionnames',
+    'gpcuserextensionnames',
+)
+GPC_PUBLICATION_ATTRIBUTES = (
+    'gpcfilesyspath',
+    'versionnumber',
+    'gpcmachineextensionnames',
+    'gpcuserextensionnames',
+)
+
+# 389-DS does not implement RFC 4528 Assertion Control.  A schema-valid
+# temporary value lets one ordered atomic LDAP Modify assert that a
+# SINGLE-VALUE extension attribute is absent while leaving it absent.
+GPC_ABSENT_EXTENSION_PROBE = (
+    '[{00000000-0000-0000-0000-000000000000}'
+    '{00000000-0000-0000-0000-000000000000}]'
+)
+
+_GUID_RE = re.compile(
+    r'^\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-'
+    r'[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}$'
+)
+_UNC_RE = re.compile(
+    r'^\\\\([^\\]+)\\sysvol\\([^\\]+)\\policies\\(\{[^\\]+\})$',
+    re.IGNORECASE,
+)
+_LOCALE_RE = re.compile(r'^[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*$')
+
+_catalog_lock = threading.RLock()
+_catalog = None
+_catalog_last_refresh = 0.0
+_catalog_refresh_result = None
+_admix_module = None
+
+
+class EditorFailure(Exception):
+    """An internal, structured editor error safe to translate at the RPC edge."""
+
+    def __init__(self, category, message, field=None, path=None, details=None):
+        super().__init__(message)
+        self.category = category
+        self.message = message
+        self.field = field
+        self.path = path
+        self.details = details
+
+
+class EditorContext:
+    """Trusted request context.  Filesystem fields never leave the plugin."""
+
+    __slots__ = (
+        'displayname', 'guid', 'dn', 'file_sys_path', 'gpo_root',
+        'snapshot', 'presence',
+    )
+
+    def __init__(
+        self, displayname, guid, dn, file_sys_path, gpo_root, snapshot,
+        presence,
+    ):
+        self.displayname = displayname
+        self.guid = guid
+        self.dn = dn
+        self.file_sys_path = file_sys_path
+        self.gpo_root = gpo_root
+        self.snapshot = snapshot
+        self.presence = presence
+
+
+def _load_admix():
+    """Import the binding lazily so ordinary LDAP GPO CRUD remains usable."""
+    global _admix_module
+    if _admix_module is None:
+        try:
+            import admix
+        except Exception as exc:
+            raise EditorFailure(
+                'operational',
+                'The Group Policy editor binding is not available.',
+            ) from exc
+        _admix_module = admix
+    return _admix_module
+
+
+
+def _entry_values(entry, attribute):
+    """Return decoded LDAP values from LDAPEntry or a lightweight test double."""
+    names = (attribute, attribute.lower(), attribute.upper())
+    value = None
+    for name in names:
+        try:
+            if name in entry:
+                value = entry[name]
+                break
+        except (KeyError, TypeError):
+            continue
+    if value is None:
+        return []
+    if not isinstance(value, (list, tuple)):
+        value = [value]
+    result = []
+    for item in value:
+        if isinstance(item, bytes):
+            item = item.decode('utf-8')
+        result.append(item)
+    return result
+
+
+def _entry_text(entry, attribute, default=''):
+    values = _entry_values(entry, attribute)
+    if not values:
+        return default
+    return str(values[0])
+
+
+def _canonical_guid(value):
+    value = str(value or '')
+    if not _GUID_RE.fullmatch(value):
+        raise EditorFailure(
+            'validation',
+            'The Group Policy Object has an invalid GUID.',
+            field='cn',
+        )
+    try:
+        return '{' + str(uuid.UUID(value[1:-1])).upper() + '}'
+    except (ValueError, AttributeError) as exc:
+        raise EditorFailure(
+            'validation',
+            'The Group Policy Object has an invalid GUID.',
+            field='cn',
+        ) from exc
+
+
+def _canonical_unc(domain, guid):
+    return '\\\\{0}\\SysVol\\{0}\\Policies\\{1}'.format(domain, guid)
+
+
+def _validate_unc(value, domain, guid):
+    value = str(value or '').rstrip('\\')
+    match = _UNC_RE.fullmatch(value)
+    if not match:
+        raise EditorFailure(
+            'validation',
+            'The Group Policy Object has an invalid file location.',
+            field='gpcfilesyspath',
+        )
+    server, share_domain, unc_guid = match.groups()
+    try:
+        unc_guid = _canonical_guid(unc_guid)
+    except EditorFailure as exc:
+        raise EditorFailure(
+            'validation',
+            'The Group Policy Object has an invalid file location.',
+            field='gpcfilesyspath',
+        ) from exc
+    if (
+        server.casefold() != domain.casefold()
+        or share_domain.casefold() != domain.casefold()
+        or unc_guid != guid
+    ):
+        raise EditorFailure(
+            'validation',
+            'The Group Policy Object file location does not match its identity.',
+            field='gpcfilesyspath',
+        )
+    return _canonical_unc(domain, guid)
+
+
+def _authorize_editor(ldap_backend, dn, write=False):
+    attributes = GPC_PUBLICATION_ATTRIBUTES if write else ('versionnumber',)
+    try:
+        authorized = all(
+            ldap_backend.can_write(dn, attribute) for attribute in attributes
+        )
+    except errors.PublicError:
+        raise
+    except Exception as exc:
+        raise EditorFailure(
+            'operational',
+            'Group Policy editor authorization could not be checked.',
+        ) from exc
+    if not authorized:
+        raise errors.ACIError(
+            info=_('Group Policy Object editor permission is required')
+        )
+
+
+def _trusted_gpo_root(domain, guid):
+    policies_root = GPO_SYSVOL_ROOT / domain / 'Policies'
+    candidate = policies_root / guid
+
+    # Refuse symlinks at every deployment-controlled component.  resolve()
+    # below provides a second containment check against races and aliases.
+    for path in (
+        GPO_SYSVOL_ROOT,
+        GPO_SYSVOL_ROOT / domain,
+        policies_root,
+        candidate,
+    ):
+        if path.is_symlink():
+            raise EditorFailure(
+                'validation',
+                'The Group Policy Object file location is unsafe.',
+            )
+    try:
+        resolved_policies = policies_root.resolve(strict=True)
+        resolved_candidate = candidate.resolve(strict=True)
+    except (FileNotFoundError, OSError) as exc:
+        raise EditorFailure(
+            'operational',
+            'The Group Policy Object payload is unavailable.',
+        ) from exc
+    if not resolved_candidate.is_dir():
+        raise EditorFailure(
+            'operational',
+            'The Group Policy Object payload is unavailable.',
+        )
+    try:
+        contained = os.path.commonpath((resolved_policies, resolved_candidate))
+    except ValueError as exc:
+        raise EditorFailure(
+            'validation',
+            'The Group Policy Object file location is unsafe.',
+        ) from exc
+    if Path(contained) != resolved_policies or resolved_candidate == resolved_policies:
+        raise EditorFailure(
+            'validation',
+            'The Group Policy Object file location is unsafe.',
+        )
+    return resolved_candidate
+
+
+def _snapshot_from_entry(entry, guid, file_sys_path):
+    version_values = _entry_values(entry, 'versionnumber')
+    machine_values = _entry_values(entry, 'gpcmachineextensionnames')
+    user_values = _entry_values(entry, 'gpcuserextensionnames')
+    try:
+        version = int(version_values[0]) if version_values else 0
+    except (TypeError, ValueError) as exc:
+        raise EditorFailure(
+            'operational',
+            'The Group Policy Object version is invalid.',
+        ) from exc
+    if version < 0 or version > 0xffffffff:
+        raise EditorFailure(
+            'operational',
+            'The Group Policy Object version is invalid.',
+        )
+    dn = getattr(entry, 'dn', None)
+    if dn is None:
+        dn = _entry_text(entry, 'distinguishedname')
+    snapshot = {
+        'identity': {
+            'guid': guid,
+            'distinguished_name': str(dn),
+            'file_sys_path': file_sys_path,
+        },
+        'version_number': version,
+        'machine_extension_names': (
+            str(machine_values[0]) if machine_values else ''
+        ),
+        'user_extension_names': str(user_values[0]) if user_values else '',
+    }
+    presence = {
+        'version_number': bool(version_values),
+        'machine_extension_names': bool(machine_values),
+        'user_extension_names': bool(user_values),
+    }
+    return snapshot, presence
+
+
+def _resolve_editor_context(ldap_backend, api_instance, displayname, write=False):
+    """Resolve, authorize, and validate a GPO before touching SYSVOL."""
+    verify_gpo_schema(ldap_backend, api_instance)
+    base_dn = DN(
+        api_instance.env.container_grouppolicy,
+        api_instance.env.basedn,
+    )
+    try:
+        entry = ldap_backend.find_entry_by_attr(
+            'displayName',
+            displayname,
+            'groupPolicyContainer',
+            attrs_list=list(GPC_SNAPSHOT_ATTRIBUTES),
+            base_dn=base_dn,
+        )
+    except errors.NotFound:
+        raise errors.NotFound(
+            reason=_('%(pkey)s: Group Policy Object not found')
+            % {'pkey': displayname}
+        )
+
+    guid = _canonical_guid(_entry_text(entry, 'cn'))
+    domain = str(api_instance.env.domain).lower()
+    file_sys_path = _validate_unc(
+        _entry_text(entry, 'gpcfilesyspath'), domain, guid
+    )
+    dn = getattr(entry, 'dn', None)
+    if dn is None:
+        dn = DN(('cn', guid), base_dn)
+
+    # This must stay before every filesystem check or binding/catalog open.
+    _authorize_editor(ldap_backend, dn, write=write)
+    gpo_root = _trusted_gpo_root(domain, guid)
+    snapshot, presence = _snapshot_from_entry(entry, guid, file_sys_path)
+    return EditorContext(
+        str(displayname), guid, dn, file_sys_path, gpo_root, snapshot, presence
+    )
+
+
+def _read_gpc_snapshot(ldap_backend, context):
+    entry = ldap_backend.get_entry(
+        context.dn, attrs_list=list(GPC_SNAPSHOT_ATTRIBUTES)
+    )
+    observed_guid = _canonical_guid(_entry_text(entry, 'cn'))
+    if observed_guid != context.guid:
+        raise EditorFailure(
+            'publication_conflict',
+            'The Group Policy Object identity changed during publication.',
+            details={'conflict_fields': ['identity']},
+        )
+    observed_path = _validate_unc(
+        _entry_text(entry, 'gpcfilesyspath'),
+        context.file_sys_path.split('\\')[2].lower(),
+        context.guid,
+    )
+    snapshot, presence = _snapshot_from_entry(entry, context.guid, observed_path)
+    return snapshot, presence
+
+
+def _sanitize_diagnostics(diagnostics):
+    result = []
+    for diagnostic in diagnostics or ():
+        if isinstance(diagnostic, dict):
+            message = str(diagnostic.get('message', 'Template diagnostic'))
+        else:
+            message = str(diagnostic)
+        for internal in (
+            str(GPO_TEMPLATE_ROOT),
+            str(GPO_SYSVOL_ROOT),
+            str(GPO_EDITOR_STATE_DIRECTORY),
+        ):
+            message = message.replace(internal, '<server-path>')
+        message = re.sub(
+            r'\\\\[^\s\\]+\\(?:[^\s\\]+\\)+[^\s]+',
+            '<server-path>',
+            message,
+        )
+        message = re.sub(
+            r'\b(?:Machine|User)[/\\][^\s,;:]+',
+            '<gpo-path>',
+            message,
+            flags=re.IGNORECASE,
+        )
+        message = re.sub(
+            r'\b(?:GPT\.INI|Registry\.pol|comment\.cmt[xl])\b',
+            '<gpo-path>',
+            message,
+            flags=re.IGNORECASE,
+        )
+        result.append({'message': message})
+    return result
+
+
+def _catalog_public_state(catalog, refresh_result=None):
+    generation = dict(catalog.generation())
+    result = {
+        'generation': generation,
+        'diagnostics': _sanitize_diagnostics(catalog.diagnostics()),
+    }
+    if refresh_result is not None:
+        refresh = dict(refresh_result)
+        refresh['diagnostics'] = _sanitize_diagnostics(
+            refresh.get('diagnostics', [])
+        )
+        failure = refresh.get('failure')
+        if failure:
+            failure = dict(failure)
+            failure['message'] = 'The latest template refresh was unusable.'
+            failure['diagnostics'] = _sanitize_diagnostics(
+                failure.get('diagnostics', [])
+            )
+            refresh['failure'] = failure
+        result['refresh'] = refresh
+    else:
+        result['refresh'] = None
+    return result
+
+
+def _get_catalog(module=None, now=None):
+    """Return the worker-local healthy catalog, refreshing it at most once per interval."""
+    global _catalog, _catalog_last_refresh, _catalog_refresh_result
+    module = module or _load_admix()
+    now = time.monotonic() if now is None else now
+    with _catalog_lock:
+        if _catalog is None:
+            try:
+                _catalog = module.TemplateCatalog(
+                    str(GPO_TEMPLATE_ROOT), all_locales=True
+                )
+            except Exception as exc:
+                raise EditorFailure(
+                    'operational',
+                    'Administrative templates are unavailable.',
+                ) from exc
+            _catalog_last_refresh = now
+            _catalog_refresh_result = None
+        elif now - _catalog_last_refresh >= GPO_CATALOG_REFRESH_INTERVAL:
+            try:
+                _catalog_refresh_result = _catalog.refresh_if_changed()
+            except Exception as exc:
+                # Unexpected binding failures are operational.  A normal
+                # failed refresh is returned as a result and retains the last
+                # healthy generation inside TemplateCatalog.
+                raise EditorFailure(
+                    'operational',
+                    'Administrative templates could not be refreshed.',
+                ) from exc
+            _catalog_last_refresh = now
+        return _catalog, _catalog_public_state(
+            _catalog, _catalog_refresh_result
+        )
+
+
+def _select_locales(requested, generation):
+    loaded = list(generation.get('loaded_locales') or ())
+    if isinstance(requested, str):
+        requested = [requested]
+    requested = list(requested or ())
+    for locale in requested:
+        if not isinstance(locale, str) or not _LOCALE_RE.fullmatch(locale):
+            raise EditorFailure(
+                'validation',
+                'A requested locale is invalid.',
+                field='locales',
+            )
+
+    by_casefold = {locale.casefold(): locale for locale in loaded}
+    selected = []
+    for requested_locale in requested:
+        normalized = requested_locale.replace('_', '-').casefold()
+        match = by_casefold.get(normalized)
+        if match is None:
+            language = normalized.split('-', 1)[0]
+            match = next(
+                (
+                    candidate for candidate in loaded
+                    if candidate.casefold().split('-', 1)[0] == language
+                ),
+                None,
+            )
+        if match is not None and match not in selected:
+            selected.append(match)
+    if not selected and loaded:
+        selected.append(by_casefold.get('en-us', loaded[0]))
+    return selected
+
+
+def _comments_config(scope, locales):
+    if scope not in ('computer', 'user'):
+        raise EditorFailure(
+            'validation',
+            'Policy scope must be computer or user.',
+            field='scope',
+        )
+    directory = 'Machine' if scope == 'computer' else 'User'
+    return {
+        'cmtx_path': '{}/comment.cmtx'.format(directory),
+        'locale_paths': {
+            locale: '{}/{}/comment.cmtl'.format(directory, locale)
+            for locale in locales
+        },
+    }
+
+
+def _open_workspace(
+    context, requested_locales=(), load_preferences=False,
+    comment_scope=None, with_catalog=True,
+):
+    module = _load_admix()
+    kwargs = {
+        'load_preferences': bool(load_preferences),
+        'state_directory': str(GPO_EDITOR_STATE_DIRECTORY),
+        'state_key': context.guid,
+    }
+    catalog_state = None
+    locales = []
+    if with_catalog:
+        catalog, catalog_state = _get_catalog(module)
+        locales = _select_locales(
+            requested_locales, catalog_state['generation']
+        )
+        kwargs['template_catalog'] = catalog
+        kwargs['locales'] = locales
+    if comment_scope is not None:
+        kwargs['comments'] = _comments_config(comment_scope, locales)
+    try:
+        workspace = module.HighLevelApi(str(context.gpo_root), **kwargs)
+    except Exception:
+        raise
+    return workspace, {
+        'catalog': catalog_state,
+        'locales': locales,
+    }
+
+
+def _reset_editor_globals_for_tests():
+    global _catalog, _catalog_last_refresh, _catalog_refresh_result
+    global _admix_module
+    with _catalog_lock:
+        _catalog = None
+        _catalog_last_refresh = 0.0
+        _catalog_refresh_result = None
+        _admix_module = None
+
+
+def _validate_publication_plan(plan, expected_snapshot):
+    required = {
+        'identity', 'expected_version', 'target_version',
+        'machine_extension_names', 'user_extension_names',
+        'idempotency_token', 'affected_scopes',
+    }
+    if not isinstance(plan, dict) or not required.issubset(plan):
+        raise EditorFailure(
+            'operational',
+            'The editor binding returned an invalid publication plan.',
+        )
+    if plan['identity'] != expected_snapshot['identity']:
+        raise EditorFailure(
+            'publication_conflict',
+            'The publication plan identity does not match the GPO.',
+            details={'conflict_fields': ['identity']},
+        )
+    try:
+        expected_version = int(plan['expected_version'])
+        target_version = int(plan['target_version'])
+    except (TypeError, ValueError) as exc:
+        raise EditorFailure(
+            'operational',
+            'The editor binding returned an invalid publication version.',
+        ) from exc
+    if expected_version != int(expected_snapshot['version_number']):
+        raise EditorFailure(
+            'publication_conflict',
+            'The publication plan is based on a stale directory version.',
+            details={'conflict_fields': ['version']},
+        )
+    if target_version < 0 or target_version > 0xffffffff:
+        raise EditorFailure(
+            'operational',
+            'The editor binding returned an invalid target version.',
+        )
+
+
+def _ldap_value(ldap_backend, value):
+    encoded = ldap_backend.encode(str(value))
+    return [encoded]
+
+
+def _compare_replace_modifications(
+    ldap_backend, attribute, expected, target, present, absent_probe=None,
+):
+    """Build an atomic SINGLE-VALUE compare-and-replace sequence.
+
+    RFC 4511 requires all changes in one Modify request to be applied in the
+    listed order and atomically.  Deleting the exact observed value therefore
+    acts as the comparison for a present attribute.  Adding to a SINGLE-VALUE
+    attribute compares absence.  When both the expected and target states are
+    absent, a schema-valid add/delete probe performs that comparison with no
+    final value.
+    """
+    modifications = []
+    if present:
+        modifications.append((
+            _ldap.MOD_DELETE,
+            attribute,
+            _ldap_value(ldap_backend, expected),
+        ))
+    elif target is None:
+        if absent_probe is None:
+            raise EditorFailure(
+                'operational',
+                'The directory publication precondition is invalid.',
+            )
+        probe = _ldap_value(ldap_backend, absent_probe)
+        modifications.extend((
+            (_ldap.MOD_ADD, attribute, probe),
+            (_ldap.MOD_DELETE, attribute, probe),
+        ))
+        return modifications
+
+    if target is not None:
+        modifications.append((
+            _ldap.MOD_ADD,
+            attribute,
+            _ldap_value(ldap_backend, target),
+        ))
+    return modifications
+
+
+def _apply_publication_plan(
+    ldap_backend, context, plan, expected_snapshot, expected_presence=None,
+):
+    """Apply one libadmix plan with an atomic ordered compare-and-modify."""
+    _validate_publication_plan(plan, expected_snapshot)
+    expected_presence = expected_presence or {}
+    identity = expected_snapshot['identity']
+    modifications = _compare_replace_modifications(
+        ldap_backend,
+        'gPCFileSysPath',
+        identity['file_sys_path'],
+        identity['file_sys_path'],
+        True,
+    )
+    modifications.extend(_compare_replace_modifications(
+        ldap_backend,
+        'versionNumber',
+        expected_snapshot['version_number'],
+        int(plan['target_version']),
+        expected_presence.get('version_number', True),
+    ))
+    for attribute, snapshot_key, plan_key in (
+        (
+            'gPCMachineExtensionNames',
+            'machine_extension_names',
+            'machine_extension_names',
+        ),
+        (
+            'gPCUserExtensionNames',
+            'user_extension_names',
+            'user_extension_names',
+        ),
+    ):
+        target = plan[plan_key] or None
+        modifications.extend(_compare_replace_modifications(
+            ldap_backend,
+            attribute,
+            expected_snapshot[snapshot_key],
+            target,
+            expected_presence.get(
+                snapshot_key, expected_snapshot[snapshot_key] != ''
+            ),
+            absent_probe=GPC_ABSENT_EXTENSION_PROBE,
+        ))
+
+    cache_dropped = False
+    try:
+        ldap_backend.conn.modify_ext_s(str(context.dn), modifications)
+    except (
+        _ldap.NO_SUCH_ATTRIBUTE,
+        _ldap.TYPE_OR_VALUE_EXISTS,
+        _ldap.CONSTRAINT_VIOLATION,
+        _ldap.NO_SUCH_OBJECT,
+    ) as exc:
+        remove_cache_entry = getattr(
+            ldap_backend, 'remove_cache_entry', None
+        )
+        if remove_cache_entry is not None:
+            remove_cache_entry(context.dn)
+            cache_dropped = True
+        try:
+            observed, _ = _read_gpc_snapshot(ldap_backend, context)
+        except Exception as read_exc:
+            raise EditorFailure(
+                'publication_conflict',
+                'The Group Policy Object changed during directory publication.',
+                details={
+                    'conflict_fields': ['stale_read'],
+                    'safe_next_actions': ['retry_read', 'reconcile'],
+                },
+            ) from read_exc
+        raise EditorFailure(
+            'publication_conflict',
+            'The Group Policy Object changed during directory publication.',
+            details={
+                'conflict_fields': _snapshot_conflict_fields(
+                    expected_snapshot, observed
+                ),
+                'observed': _public_snapshot(observed),
+                'safe_next_actions': ['refresh', 'reconcile'],
+            },
+        ) from exc
+    except _ldap.LDAPError:
+        # Preserve FreeIPA's established LDAP error translation for every
+        # failure except an atomic comparison mismatch, which is a domain
+        # conflict handled above.
+        with ldap_backend.error_handler():
+            raise
+    finally:
+        # The direct controlled modify bypasses LDAPCache.update_entry().
+        remove_cache_entry = getattr(ldap_backend, 'remove_cache_entry', None)
+        if remove_cache_entry is not None and not cache_dropped:
+            remove_cache_entry(context.dn)
+
+
+def _snapshot_conflict_fields(expected, observed):
+    fields = []
+    if expected.get('identity') != observed.get('identity'):
+        fields.append('identity')
+    if expected.get('version_number') != observed.get('version_number'):
+        fields.append('version')
+    if (
+        expected.get('machine_extension_names')
+        != observed.get('machine_extension_names')
+    ):
+        fields.append('machine_extension_names')
+    if (
+        expected.get('user_extension_names')
+        != observed.get('user_extension_names')
+    ):
+        fields.append('user_extension_names')
+    return fields or ['stale_read']
+
+
+def _public_snapshot(snapshot):
+    identity = snapshot.get('identity') or {}
+    return {
+        'identity': {
+            'guid': identity.get('guid'),
+            'distinguished_name': identity.get('distinguished_name'),
+        },
+        'version_number': snapshot.get('version_number'),
+        'machine_extension_names': snapshot.get(
+            'machine_extension_names', ''
+        ),
+        'user_extension_names': snapshot.get('user_extension_names', ''),
+    }
+
+
+def _public_plan(plan):
+    if not plan:
+        return None
+    return {
+        'expected_version': plan.get('expected_version'),
+        'target_version': plan.get('target_version'),
+        'affected_scopes': dict(plan.get('affected_scopes') or {}),
+        'machine_extension_names': plan.get('machine_extension_names', ''),
+        'user_extension_names': plan.get('user_extension_names', ''),
+    }
+
+
+def _public_pending(pending):
+    if not pending:
+        return None
+    return {
+        'phase': pending.get('phase'),
+        'plan': _public_plan(pending.get('plan')),
+    }
+
+
+def _public_recovery(action):
+    if not action:
+        return {'kind': 'clean'}
+    result = {
+        'kind': action.get('kind'),
+        'plan': _public_plan(action.get('plan')),
+        'conflict': None,
+    }
+    conflict = action.get('conflict')
+    if conflict:
+        result['conflict'] = {
+            'code': conflict.get('code'),
+            'phase': conflict.get('phase'),
+            'conflict_fields': list(conflict.get('conflict_fields') or ()),
+            'expected': _public_snapshot(conflict.get('expected') or {}),
+            'observed': _public_snapshot(conflict.get('observed') or {}),
+            'safe_next_actions': list(
+                conflict.get('safe_next_actions') or ()
+            ),
+        }
+    return result
+
+
+def _public_documents(documents):
+    result = []
+    for document in documents or ():
+        item = dict(document)
+        item.pop('path', None)
+        result.append(item)
+    return result
+
+
+def _editor_envelope(context, runtime, workspace=None):
+    pending = None
+    diagnostics = []
+    if workspace is not None:
+        pending = workspace.pending_external_publication()
+        diagnostics = _sanitize_diagnostics(workspace.diagnostics())
+    catalog = runtime.get('catalog')
+    if catalog:
+        diagnostics = catalog.get('diagnostics', []) + diagnostics
+    return {
+        'gpo': {
+            'displayname': context.displayname,
+            'guid': context.guid,
+            'distinguished_name': str(context.dn),
+        },
+        'snapshot': _public_snapshot(context.snapshot),
+        'template': catalog,
+        'locales': list(runtime.get('locales') or ()),
+        'diagnostics': diagnostics,
+        'pending_publication': _public_pending(pending),
+    }
+
+
+def _script_assets_public(assets):
+    result = []
+    for asset in assets or ():
+        item = dict(asset)
+        references = []
+        for reference in item.get('references') or ():
+            references.append({
+                'event': str(reference.get('event') or ''),
+                'executable_group': str(
+                    reference.get('executable_group') or ''
+                ),
+                'index': int(reference.get('index', 0)),
+            })
+        result.append({
+            'name': str(item.get('name') or ''),
+            'byte_size': int(item.get('byte_size', 0)),
+            'revision': str(item.get('revision') or ''),
+            'references': references,
+        })
+    return result
+
+
+def _script_group_public(group, event, assets):
+    asset_names = {
+        item['name'].casefold(): item['name'] for item in assets
+    }
+    entries = []
+    for entry in dict(group).get('entries') or ():
+        if entry.get('event') != event:
+            continue
+        candidate = entry.get('managed_asset_name')
+        managed_name = None
+        if isinstance(candidate, str):
+            managed_name = asset_names.get(candidate.casefold())
+        entries.append({
+            'identity': str(entry.get('identity') or ''),
+            'command_line': str(entry.get('command_line') or ''),
+            'parameters': str(entry.get('parameters') or ''),
+            'managed_asset_name': managed_name,
+            'kind': 'managed_asset' if managed_name else 'external',
+        })
+    source_diagnostics = list(group.get('diagnostics') or ())
+    diagnostics = _sanitize_diagnostics(source_diagnostics)
+    for source, public in zip(source_diagnostics, diagnostics):
+        if isinstance(source, dict) and isinstance(source.get('code'), str):
+            public['code'] = source['code']
+    return {
+        'snapshot': str(group.get('snapshot') or ''),
+        'editable': bool(group.get('editable')),
+        'entries': entries,
+        'diagnostics': diagnostics,
+    }
+
+
+def _script_order_value(event, execution_order):
+    field = (
+        'start_execute_ps_first'
+        if event in ('startup', 'logon')
+        else 'end_execute_ps_first'
+    )
+    value = dict(execution_order or {}).get(field)
+    if value is None:
+        return 'unspecified'
+    return 'powershell_first' if value else 'classic_first'
+
+
+def _script_event_view(workspace, scope, event):
+    assets = _script_assets_public(workspace.list_script_assets(scope, event))
+    classic = workspace.show_script_group(scope, 'classic')
+    powershell = workspace.show_script_group(scope, 'powershell')
+    return {
+        'scope': scope,
+        'event': event,
+        'classic': _script_group_public(classic, event, assets),
+        'powershell': _script_group_public(powershell, event, assets),
+        'execution_order': _script_order_value(
+            event, powershell.get('execution_order')
+        ),
+        'assets': assets,
+        'upload_limit_bytes': GPO_SCRIPT_UPLOAD_MAX_BYTES,
+    }
+
+
+def _scripts_response(
+    context, runtime, workspace, scope, event, publication=None,
+):
+    result = _editor_envelope(context, runtime, workspace)
+    result['scripts'] = _script_event_view(workspace, scope, event)
+    if publication is not None:
+        result['publication'] = publication
+    return result
+
+
+def _acknowledge_publication(workspace, plan, resulting_snapshot):
+    try:
+        workspace.acknowledge_external(
+            plan['idempotency_token'], resulting_snapshot
+        )
+    except Exception as exc:
+        if getattr(exc, 'code', None) == 'conflict':
+            raise EditorFailure(
+                'publication_conflict',
+                'The resulting directory state could not be acknowledged.',
+                details={
+                    'safe_next_actions': ['reconcile', 'operator_intervention']
+                },
+            ) from exc
+        raise
+
+
+def _commit_external_once(workspace, ldap_backend, context):
+    """Finalize one in-memory mutation and coordinate one LDAP publication."""
+    starting_snapshot, starting_presence = _read_gpc_snapshot(
+        ldap_backend, context
+    )
+    result = workspace.commit_external(starting_snapshot)
+    files = result.get('files') or {}
+    paths = list(files.get('paths') or ())
+    affected = dict(files.get('affected_scopes') or {})
+    plan = result.get('publication_plan')
+    directory = result.get('directory')
+    pending = workspace.pending_external_publication()
+
+    if directory == 'no_publication_required':
+        if paths or any(affected.values()) or plan is not None or pending is not None:
+            raise EditorFailure(
+                'operational',
+                'The editor binding returned an inconsistent no-op result.',
+            )
+        context.snapshot = starting_snapshot
+        return {
+            'changed': False,
+            'snapshot': _public_snapshot(starting_snapshot),
+            'affected_scopes': affected,
+            'pending_publication': None,
+        }
+    if directory != 'external_handoff':
+        raise EditorFailure(
+            'operational',
+            'The editor binding returned an unknown directory outcome.',
+        )
+    if not paths or not any(affected.values()) or plan is None:
+        raise EditorFailure(
+            'operational',
+            'The editor binding returned an inconsistent external handoff.',
+        )
+
+    _apply_publication_plan(
+        ldap_backend,
+        context,
+        plan,
+        starting_snapshot,
+        starting_presence,
+    )
+    resulting_snapshot, _ = _read_gpc_snapshot(ldap_backend, context)
+    _acknowledge_publication(workspace, plan, resulting_snapshot)
+    context.snapshot = resulting_snapshot
+    return {
+        'changed': True,
+        'snapshot': _public_snapshot(resulting_snapshot),
+        'affected_scopes': dict(plan.get('affected_scopes') or {}),
+        'pending_publication': None,
+    }
+
+
+def _reconcile_workspace(workspace, ldap_backend, context, reject_conflict=False):
+    pending = workspace.pending_external_publication()
+    if pending is None:
+        snapshot, _ = _read_gpc_snapshot(ldap_backend, context)
+        context.snapshot = snapshot
+        return {'kind': 'clean'}, snapshot
+
+    if pending.get('phase') != 'awaiting_directory_publication':
+        original_plan = pending.get('plan')
+        if not isinstance(original_plan, dict):
+            raise EditorFailure(
+                'recovery_operator_action',
+                'Publication recovery has no complete original plan.',
+            )
+        resumed = workspace.resume_external_file_publication()
+        pending = workspace.pending_external_publication()
+        if (
+            not isinstance(resumed, dict)
+            or resumed.get('publication_plan') != original_plan
+            or not isinstance(pending, dict)
+            or pending.get('phase') != 'awaiting_directory_publication'
+            or pending.get('plan') != original_plan
+        ):
+            raise EditorFailure(
+                'recovery_operator_action',
+                'Publication file recovery did not restore the original attempt.',
+            )
+
+    observed, observed_presence = _read_gpc_snapshot(ldap_backend, context)
+    action = workspace.reconcile_external(observed)
+    kind = action.get('kind')
+    if kind == 'apply':
+        plan = action.get('plan')
+        precondition = pending.get('precondition')
+        if not precondition:
+            raise EditorFailure(
+                'recovery_operator_action',
+                'Publication recovery has no verified precondition.',
+            )
+        _apply_publication_plan(
+            ldap_backend, context, plan, precondition, observed_presence
+        )
+        resulting, _ = _read_gpc_snapshot(ldap_backend, context)
+        _acknowledge_publication(workspace, plan, resulting)
+        context.snapshot = resulting
+        return action, resulting
+    if kind == 'acknowledge':
+        plan = action.get('plan')
+        _acknowledge_publication(workspace, plan, observed)
+        context.snapshot = observed
+        return action, observed
+    if kind == 'conflict':
+        if reject_conflict:
+            conflict = _public_recovery(action).get('conflict')
+            raise EditorFailure(
+                'publication_conflict',
+                'Pending Group Policy publication conflicts with LDAP.',
+                details=conflict,
+            )
+        return action, observed
+    raise EditorFailure(
+        'operational',
+        'The editor binding returned an unknown recovery action.',
+    )
+
+
+def _recover_before_mutation(workspace, ldap_backend, context):
+    return _reconcile_workspace(
+        workspace, ldap_backend, context, reject_conflict=True
+    )
+
+
+def _identity(request):
+    if not isinstance(request, dict):
+        raise EditorFailure(
+            'validation', 'A structured request is required.', field='request'
+        )
+    identity = request.get('identity')
+    if not isinstance(identity, (list, tuple)) or not identity or not all(
+        isinstance(part, str) and part for part in identity
+    ):
+        raise EditorFailure(
+            'validation',
+            'A preference item identity is required.',
+            field='identity',
+        )
+    return list(identity)
+
+
+def _find_preference_item(workspace, scope, kind, identity):
+    for item in workspace.list_preference_items(scope, kind):
+        if list(item.get('identity') or ()) == list(identity):
+            return item
+    raise EditorFailure(
+        'not_found',
+        'The requested preference item was not found.',
+        field='identity',
+    )
+
+
+def _preference_filter_descriptors(workspace):
+    result = []
+    for descriptor in workspace.preference_filter_kinds():
+        item = dict(descriptor)
+        item['fields'] = workspace.get_new_preference_filter_fields(
+            item['kind']
+        )
+        result.append(item)
+    return result
+
+
+def _preference_parent_candidates(workspace, scope, kind):
+    result = []
+    for candidate in workspace.list_preference_parent_candidates(scope, kind):
+        identity = candidate.get('identity')
+        parent_identity = candidate.get('parent_identity')
+        result.append({
+            'identity': None if identity is None else list(identity),
+            'label': str(candidate.get('label') or ''),
+            'parent_identity': (
+                None if parent_identity is None else list(parent_identity)
+            ),
+            'depth': int(candidate.get('depth') or 0),
+        })
+    return result
+
+
+def _preference_detail(workspace, scope, kind, identity):
+    item = _find_preference_item(workspace, scope, kind, identity)
+    filters = workspace.list_preference_filters(scope, kind, identity)
+    filter_fields = []
+    for preference_filter in filters:
+        path = list(preference_filter.get('path') or ())
+        try:
+            fields = workspace.get_preference_filter_fields(
+                scope, kind, identity, path
+            )
+        except Exception as exc:
+            if getattr(exc, 'code', None) != 'not_loaded':
+                raise
+            filter_fields.append({
+                'path': path,
+                'fields': [],
+                'available': False,
+                'error_category': 'unsupported',
+            })
+        else:
+            filter_fields.append({
+                'path': path,
+                'fields': fields,
+                'available': True,
+            })
+    return {
+        'item': item,
+        'fields': workspace.get_preference_fields(
+            scope, kind, identity
+        ),
+        'filters': filters,
+        'filter_fields': filter_fields,
+        'filter_kinds': _preference_filter_descriptors(workspace),
+        'new_item_fields': workspace.get_new_preference_item_fields(
+            scope, kind
+        ),
+        'parent_candidates': _preference_parent_candidates(
+            workspace, scope, kind
+        ),
+    }
+
+
+def _new_preference_detail(workspace, scope, kind):
+    fields = workspace.get_new_preference_item_fields(scope, kind)
+    return {
+        'item': None,
+        'fields': fields,
+        'filters': [],
+        'filter_fields': [],
+        'filter_kinds': _preference_filter_descriptors(workspace),
+        'new_item_fields': fields,
+        'parent_candidates': _preference_parent_candidates(
+            workspace, scope, kind
+        ),
+    }
+
+
+def _apply_filter_operations(workspace, scope, kind, identity, operations):
+    if operations is None:
+        return
+    if not isinstance(operations, (list, tuple)):
+        raise EditorFailure(
+            'validation',
+            'Preference filter operations must be an ordered list.',
+            field='filters',
+        )
+    for operation in operations:
+        if not isinstance(operation, dict):
+            raise EditorFailure(
+                'validation',
+                'A preference filter operation is invalid.',
+                field='filters',
+            )
+        action = operation.get('op')
+        if action == 'insert':
+            workspace.insert_preference_filter(
+                scope,
+                kind,
+                identity,
+                list(operation.get('collection_path') or ()),
+                int(operation.get('index', 0)),
+                operation.get('filter_kind'),
+                list(operation.get('fields') or ()),
+            )
+        elif action == 'replace':
+            workspace.replace_preference_filter(
+                scope,
+                kind,
+                identity,
+                list(operation.get('path') or ()),
+                operation.get('filter_kind'),
+                list(operation.get('fields') or ()),
+            )
+        elif action == 'remove':
+            workspace.remove_preference_filter(
+                scope,
+                kind,
+                identity,
+                list(operation.get('path') or ()),
+            )
+        elif action == 'edit':
+            workspace.edit_preference_filter_fields(
+                scope,
+                kind,
+                identity,
+                list(operation.get('path') or ()),
+                list(operation.get('fields') or ()),
+            )
+        else:
+            raise EditorFailure(
+                'validation',
+                'A preference filter operation is invalid.',
+                field='filters',
+            )
+
+
+def _translate_editor_exception(exc):
+    if isinstance(exc, errors.PublicError):
+        raise exc
+    if isinstance(exc, EditorFailure):
+        failure = exc
+    elif isinstance(exc, (TypeError, ValueError)):
+        failure = EditorFailure(
+            'validation', 'The editor request is invalid.'
+        )
+    else:
+        code = getattr(exc, 'code', None)
+        script_details = _public_script_error_details(code, exc)
+        mapping = {
+            'invalid_argument': ('validation', 'The editor request is invalid.'),
+            'validation': ('validation', 'The editor request is invalid.'),
+            'not_found': ('not_found', 'The requested editor object was not found.'),
+            'not_loaded': ('unsupported', 'The requested editor feature is unavailable.'),
+            'conflict': ('storage_conflict', 'The GPO changed while it was being edited.'),
+            'asset_collision': ('asset_collision', 'The script asset name is already in use.'),
+            'asset_revision_conflict': ('asset_revision_conflict', 'The script asset changed while it was being edited.'),
+            'asset_still_referenced': ('asset_still_referenced', 'The script asset is still referenced.'),
+            'size_limit': ('size_limit', 'The script upload exceeds the allowed size.'),
+            'malformed_source': ('malformed_source', 'The script source cannot be edited safely.'),
+            'recoverable': ('publication_pending', 'The GPO has recoverable pending state.'),
+            'publication_pending': ('publication_pending', 'The GPO has a pending publication.'),
+            'durable_state_required': ('operational', 'The editor state directory is unavailable.'),
+            'recovery_operator_action': ('recovery_operator_action', 'The GPO requires operator recovery.'),
+            'io': ('operational', 'The GPO payload could not be accessed.'),
+            'internal': ('operational', 'The GPO editor failed internally.'),
+        }
+        if code in mapping:
+            category, message = mapping[code]
+            failure = EditorFailure(
+                category,
+                message,
+                field=getattr(exc, 'field', None),
+                path=getattr(exc, 'path', None),
+                details=script_details,
+            )
+        else:
+            logger.exception('Unexpected GPO editor failure')
+            failure = EditorFailure(
+                'operational', 'The Group Policy editor operation failed.'
+            )
+
+    data = {'error_category': failure.category}
+    if failure.field and '/' not in str(failure.field):
+        data['field'] = failure.field
+    # AdmixError.path is a GPO storage path, not a logical browser field path.
+    # Never forward it; `field` is the only safe field-level association.
+    if failure.details is not None:
+        data['details'] = json.dumps(
+            failure.details, ensure_ascii=False, sort_keys=True
+        )
+    raise errors.ExecutionError(message=_(failure.message), **data)
+
+
+def _public_script_error_details(code, exc):
+    """Allowlist owned script error details from the v3 binding."""
+    raw = getattr(exc, 'script_details', None)
+    if not isinstance(raw, dict):
+        return None
+
+    def safe_name(value):
+        if not isinstance(value, str) or not value or len(value) > 255:
+            return None
+        if '\x00' in value or '/' in value or '\\' in value or value in ('.', '..'):
+            return None
+        return value
+
+    if code == 'asset_collision':
+        existing = _script_assets_public([raw.get('existing')])
+        suggested_name = safe_name(raw.get('suggested_name'))
+        if not existing or suggested_name is None:
+            return None
+        return {'existing': existing[0], 'suggested_name': suggested_name}
+    if code == 'asset_revision_conflict':
+        name = safe_name(raw.get('name'))
+        expected = raw.get('expected_revision')
+        actual = raw.get('actual_revision')
+        if (name is None or not isinstance(expected, str)
+                or not isinstance(actual, str)):
+            return None
+        return {
+            'name': name,
+            'expected_revision': expected,
+            'actual_revision': actual,
+        }
+    if code == 'asset_still_referenced':
+        name = safe_name(raw.get('name'))
+        if name is None:
+            return None
+        references = []
+        for reference in raw.get('references') or ():
+            if not isinstance(reference, dict):
+                return None
+            event = reference.get('event')
+            group = reference.get('executable_group')
+            index = reference.get('index')
+            if (event not in ('startup', 'shutdown', 'logon', 'logoff')
+                    or group not in _SCRIPT_EXECUTABLE_GROUPS
+                    or not isinstance(index, int) or index < 0):
+                return None
+            references.append({
+                'event': event,
+                'executable_group': group,
+                'index': index,
+            })
+        return {'name': name, 'references': references}
+    return None
+
 @register()
 class gpo(LDAPObject):
     """
@@ -116,10 +1440,11 @@ class gpo(LDAPObject):
     permission_filter_objectclasses = ['groupPolicyContainer']
     default_attributes = [
         'cn', 'displayName', 'distinguishedName', 'flags',
-        'gPCFileSysPath', 'versionNumber',
+        'versionNumber', 'gPCMachineExtensionNames', 'gPCUserExtensionNames',
     ]
     search_display_attributes = [
         'cn', 'displayName', 'flags', 'versionNumber',
+        'gPCMachineExtensionNames', 'gPCUserExtensionNames',
     ]
     uuid_attribute = 'cn'
     allow_rename = True
@@ -133,6 +1458,7 @@ class gpo(LDAPObject):
             'ipapermdefaultattr': {
                 'cn', 'displayName', 'distinguishedName', 'flags',
                 'objectclass', 'gPCFileSysPath', 'versionNumber',
+                'gPCMachineExtensionNames', 'gPCUserExtensionNames',
             },
         },
         'System: Read Group Policy Objects Content': {
@@ -151,6 +1477,7 @@ class gpo(LDAPObject):
             'ipapermdefaultattr': {
                 'displayName', 'flags',
                 'gPCFileSysPath', 'versionNumber',
+                'gPCMachineExtensionNames', 'gPCUserExtensionNames',
             },
             'default_privileges': {'Group Policy Administrators'},
         },
@@ -191,6 +1518,14 @@ class gpo(LDAPObject):
             doc=_('Version number of the policy'),
             default=0,
             minvalue=0,
+        ),
+        Str('gpcmachineextensionnames?',
+            label=_('Machine extension names'),
+            doc=_('Canonical machine-side Group Policy extension pairs'),
+        ),
+        Str('gpcuserextensionnames?',
+            label=_('User extension names'),
+            doc=_('Canonical user-side Group Policy extension pairs'),
         ),
     )
 
@@ -281,63 +1616,6 @@ class gpo(LDAPObject):
                 logger.warning(error_msg)
                 return None
 
-    def _call_gpuiservice_method(self, method_name, *params):
-        """Call GPUIService DBus method."""
-        try:
-            bus = _get_bus()
-            obj = bus.get_object('org.altlinux.gpuiservice', '/org/altlinux/gpuiservice',
-                               follow_name_owner_changes=True)
-            gpuiservice = dbus.Interface(obj, 'org.altlinux.GPUIService')
-
-            method = getattr(gpuiservice, method_name)
-            result = method(*params)
-
-            return result
-
-        except dbus.DBusException as e:
-            error_msg = f'Failed to call GPUIService DBus method {method_name}: {str(e)}'
-            logger.error(error_msg)
-            raise errors.ExecutionError(
-                message=_('Failed to communicate with GPUIService: %(error)s') %
-                        {'error': str(e)}
-            )
-
-    def parse_admx_policies(self, policy_definitions_path=None, language='en-US'):
-        """
-        Parse ADMX/ADML policy definitions.
-
-        If policy_definitions_path is not provided, defaults to
-        /usr/share/PolicyDefinitions/
-        """
-        if policy_definitions_path is None:
-            policy_definitions_path = '/usr/share/PolicyDefinitions/'
-
-        logger.debug(f"parse_admx_policies called with path={policy_definitions_path}, language={language}")
-
-        # Call GPUIService DBus method
-        try:
-            # Call reload method to ensure fresh data
-            self._call_gpuiservice_method('reload')
-
-            # Get the root data structure
-            result_json = self._call_gpuiservice_method('get', "/")
-            if not result_json:
-                raise errors.ExecutionError(
-                    message=_('Failed to get ADMX policies from GPUIService')
-                )
-
-            # Parse JSON result
-            result = json.loads(result_json)
-            logger.debug(f"Successfully loaded ADMX policies from GPUIService")
-            return result
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON from GPUIService: {e}")
-            raise errors.ExecutionError(
-                message=_('Failed to parse ADMX policies from GPUIService')
-            )
-
-
 @register()
 class gpo_add(LDAPCreate):
     __doc__ = _('Create a new Group Policy Object.')
@@ -396,6 +1674,11 @@ class gpo_del(LDAPDelete):
 
         guid = str(dn[0].value)
         domain = api.env.domain.lower()
+        # Oddjob removes only the replicated SYSVOL tree.  The private editor
+        # state is deliberately preserved: the binding has no safe
+        # pending-inspection/cleanup API that is independent of the payload,
+        # and ordinary GPO CRUD must remain usable without a compatible
+        # editor binding.
         self.obj._call_dbus_method('delete_gpo_structure', guid, domain, fail_on_error=False)
 
         return dn
@@ -478,734 +1761,1128 @@ class gpo_mod(LDAPUpdate):
 
         return old_dn
 
-@register()
-class gpo_update_version(Command):
-    __doc__ = _("Update GPO version number in LDAP.")
 
-    takes_args = (
-        Str('guid',
-            cli_name='guid',
-            label=_('GPO GUID'),
-            doc=_('GUID of the Group Policy Object'),
-            pattern=r'^\{[0-9A-Fa-f-]+\}$',
-        ),
-        Int('gpo_version',
-            cli_name='gpo_version',
-            label=_('Version'),
-            doc=_('New version number'),
-            minvalue=0,
-        ),
+def _validated_scope(scope):
+    normalized = str(scope or '').lower()
+    if normalized == 'machine':
+        normalized = 'computer'
+    if normalized not in ('computer', 'user'):
+        raise EditorFailure(
+            'validation',
+            'Policy scope must be computer or user.',
+            field='scope',
+        )
+    return normalized
+
+
+def _validated_script_context(scope, event):
+    normalized_scope = _validated_scope(scope)
+    normalized_event = str(event or '').lower()
+    if normalized_event not in _SCRIPT_EVENTS[normalized_scope]:
+        raise EditorFailure(
+            'validation',
+            'The script event is not valid for this scope.',
+            field='event',
+        )
+    return normalized_scope, normalized_event
+
+
+def _script_request(request, allowed, required=()):
+    if not isinstance(request, dict):
+        raise EditorFailure(
+            'validation', 'A structured scripts request is required.',
+            field='request',
+        )
+    unknown = sorted(set(request) - set(allowed))
+    if unknown:
+        raise EditorFailure(
+            'validation', 'The scripts request contains an unknown field.',
+            field='request', details={'unknown_fields': unknown},
+        )
+    missing = [name for name in required if name not in request]
+    if missing:
+        raise EditorFailure(
+            'validation', 'The scripts request is missing a required field.',
+            field='request', details={'missing_fields': missing},
+        )
+    return request
+
+
+def _script_text(request, field, allow_empty=False, maximum=32768):
+    value = request.get(field)
+    if not isinstance(value, str) or '\x00' in value:
+        raise EditorFailure(
+            'validation', 'The scripts request field is invalid.', field=field
+        )
+    if (not allow_empty and not value) or len(value) > maximum:
+        raise EditorFailure(
+            'validation', 'The scripts request field is invalid.', field=field
+        )
+    return value
+
+
+def _script_group(request):
+    group = _script_text(request, 'executable_group', maximum=32).lower()
+    if group not in _SCRIPT_EXECUTABLE_GROUPS:
+        raise EditorFailure(
+            'validation', 'The script executable group is invalid.',
+            field='executable_group',
+        )
+    return group
+
+
+def _script_asset_name(request, field='name'):
+    name = _script_text(request, field, maximum=255)
+    if (
+        name in ('.', '..')
+        or '/' in name
+        or '\\' in name
+        or name.strip() != name
+    ):
+        raise EditorFailure(
+            'validation', 'The script asset name is invalid.', field=field
+        )
+    return name
+
+
+def _script_order(request):
+    value = _script_text(request, 'execution_order', maximum=32).lower()
+    if value not in _SCRIPT_EXECUTION_ORDERS:
+        raise EditorFailure(
+            'validation', 'The script execution order is invalid.',
+            field='execution_order',
+        )
+    return value
+
+
+def _script_identity(request, field='identity'):
+    return _script_text(request, field, maximum=4096)
+
+
+def _decode_script_upload(request):
+    value = request.get('content_base64')
+    if not isinstance(value, str):
+        raise EditorFailure(
+            'validation', 'The script upload content is invalid.',
+            field='content_base64',
+        )
+    if len(value) > GPO_SCRIPT_UPLOAD_MAX_ENCODED_BYTES:
+        raise EditorFailure(
+            'size_limit', 'The script upload exceeds the allowed size.',
+            field='content_base64',
+            details={'limit_bytes': GPO_SCRIPT_UPLOAD_MAX_BYTES},
+        )
+    try:
+        payload = base64.b64decode(value.encode('ascii'), validate=True)
+    except (UnicodeEncodeError, binascii.Error) as exc:
+        raise EditorFailure(
+            'validation', 'The script upload content is invalid.',
+            field='content_base64',
+        ) from exc
+    if len(payload) > GPO_SCRIPT_UPLOAD_MAX_BYTES:
+        raise EditorFailure(
+            'size_limit', 'The script upload exceeds the allowed size.',
+            field='content_base64',
+            details={'limit_bytes': GPO_SCRIPT_UPLOAD_MAX_BYTES},
+        )
+    return payload
+
+
+def _run_scripts_mutation(command, displayname, scope, event, operation):
+    """Run one trusted scripts transaction and publish it once."""
+    context = command._context(displayname, write=True)
+    ldap_backend = command.api.Backend.ldap2
+    workspace, runtime = _open_workspace(context, with_catalog=False)
+    _recover_before_mutation(workspace, ldap_backend, context)
+    operation(workspace)
+    publication = _commit_external_once(workspace, ldap_backend, context)
+    return _scripts_response(
+        context, runtime, workspace, scope, event, publication=publication
     )
 
+
+def _script_asset_collision(workspace, scope, event, name):
+    collision = workspace.script_asset_collision(scope, event, name)
+    if collision is None:
+        return
+    existing = _script_assets_public([collision.get('existing')])
+    raise EditorFailure(
+        'asset_collision', 'The script asset name is already in use.',
+        field='name', details={
+            'existing': existing[0] if existing else {},
+            'suggested_name': str(collision.get('suggested_name') or ''),
+        },
+    )
+
+
+class _GpoEditorCommand(Command):
     has_output = (
         output.summary,
-        output.Output('result', type=dict, doc=_('Updated attributes')),
+        output.Output('result', type=dict, doc=_('GPO editor result')),
     )
 
-    def execute(self, guid, gpo_version, **options):
-        ldap = self.api.Backend.ldap2
-        verify_gpo_schema(ldap, self.api)
+    def _run(self, callback):
+        try:
+            result = callback()
+            return {
+                'summary': str(
+                    _('Group Policy editor operation completed')
+                ),
+                'result': result,
+            }
+        except Exception as exc:
+            _translate_editor_exception(exc)
 
-        dn = DN(('cn', guid), self.api.env.container_grouppolicy, self.api.env.basedn)
-        entry = ldap.get_entry(dn, ['versionnumber'])
-        entry['versionnumber'] = gpo_version
-        ldap.update_entry(entry)
-
-        return dict(
-            summary=_('Updated GPO "%s" version to %d') % (guid, gpo_version),
-            result=dict(guid=guid, versionnumber=gpo_version),
+    def _context(self, displayname, write=False):
+        return _resolve_editor_context(
+            self.api.Backend.ldap2, self.api, displayname, write=write
         )
 
 
 @register()
-class gpo_get_policy(Command):
-    __doc__ = _("Get policy value from GPO.")
+class gpo_editor_open(_GpoEditorCommand):
+    __doc__ = _('Open a high-level Group Policy editor context.')
 
     takes_args = (
-        Str('path',
-            cli_name='path',
-            label=_('Policy path'),
-            doc=_('Path to the policy in GPO structure'),
-        ),
+        Str('displayname', label=_('Policy name')),
+    )
+    takes_options = (
+        Str('locales*', label=_('Preferred locales')),
     )
 
-    has_output = (
-        output.summary,
-        output.Output('result', type=dict, doc=_('Policy value')),
+    def execute(self, displayname, locales=None, **options):
+        def operation():
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(
+                context, locales or (), load_preferences=True
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result['preference_documents'] = _public_documents(
+                workspace.list_preference_documents()
+            )
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_children(_GpoEditorCommand):
+    __doc__ = _('List high-level policy/category children.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Policy scope')),
+    )
+    takes_options = (
+        Str('category_id?', label=_('Opaque category ID')),
+        Str('locales*', label=_('Preferred locales')),
     )
 
-    @classmethod
-    def _escape_backslashes(cls, text):
-        """
-        Escape backslashes in strings for display.
-        """
-        return escape_backslashes(text)
+    def execute(
+        self, displayname, scope, category_id=None, locales=None, **options
+    ):
+        def operation():
+            normalized_scope = _validated_scope(scope)
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(
+                context, locales or (), load_preferences=False
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result['children'] = workspace.list_policies(
+                normalized_scope,
+                category_id,
+                runtime['locales'],
+            )
+            return result
+        return self._run(operation)
 
-    @classmethod
-    def _format_dict_as_kv(cls, data, indent=0):
-        """
-        Format dictionary as key:value pairs with indentation for nested structures.
-        """
-        spaces = ' ' * indent
-        lines = []
 
-        if isinstance(data, dict):
-            for key, value in data.items():
-                escaped_key = cls._escape_backslashes(key)
-                if isinstance(value, (dict, list)):
-                    lines.append(f'{spaces}{escaped_key}:')
-                    lines.append(cls._format_dict_as_kv(value, indent + 2))
+@register()
+class gpo_editor_policy_show(_GpoEditorCommand):
+    __doc__ = _('Display a high-level Administrative Template policy.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Policy scope')),
+        Str('policy_id', label=_('Opaque policy ID')),
+    )
+    takes_options = (
+        Str('locales*', label=_('Preferred locales')),
+    )
+
+    def execute(
+        self, displayname, scope, policy_id, locales=None, **options
+    ):
+        def operation():
+            normalized_scope = _validated_scope(scope)
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(
+                context,
+                locales or (),
+                load_preferences=False,
+                comment_scope=normalized_scope,
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result['policy'] = workspace.get_policy(
+                normalized_scope, policy_id, runtime['locales']
+            )
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_policy_update(_GpoEditorCommand):
+    __doc__ = _('Atomically update a high-level policy form.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Policy scope')),
+        Str('policy_id', label=_('Opaque policy ID')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured policy update')),
+        Str('locales*', label=_('Preferred locales')),
+    )
+
+    def execute(
+        self, displayname, scope, policy_id, request,
+        locales=None, **options
+    ):
+        def operation():
+            if not isinstance(request, dict):
+                raise EditorFailure(
+                    'validation',
+                    'A structured policy update is required.',
+                    field='request',
+                )
+            normalized_scope = _validated_scope(scope)
+            context = self._context(displayname, write=True)
+            ldap_backend = self.api.Backend.ldap2
+            workspace, runtime = _open_workspace(
+                context,
+                locales or (),
+                load_preferences=False,
+                comment_scope=normalized_scope,
+            )
+            _recover_before_mutation(workspace, ldap_backend, context)
+
+            update_kwargs = {'locales': runtime['locales']}
+            has_policy_update = False
+            for request_key, binding_key in (
+                ('state', 'state'),
+                ('set_parameters', 'set_parameters'),
+                ('clear_parameters', 'clear_parameters'),
+            ):
+                if request_key in request:
+                    update_kwargs[binding_key] = request[request_key]
+                    has_policy_update = True
+            if has_policy_update:
+                policy = workspace.update_policy(
+                    normalized_scope, policy_id, **update_kwargs
+                )
+            else:
+                policy = workspace.get_policy(
+                    normalized_scope, policy_id, runtime['locales']
+                )
+
+            comment = request.get('comment')
+            if comment is not None:
+                if not isinstance(comment, dict):
+                    raise EditorFailure(
+                        'validation',
+                        'The policy comment operation is invalid.',
+                        field='comment',
+                    )
+                action = comment.get('action')
+                target = comment.get('target', 'embedded')
+                if action == 'set':
+                    text = comment.get('text')
+                    if not isinstance(text, str):
+                        raise EditorFailure(
+                            'validation',
+                            'Policy comment text is required.',
+                            field='comment.text',
+                        )
+                    policy = workspace.set_policy_comment(
+                        normalized_scope,
+                        policy_id,
+                        target,
+                        text,
+                        runtime['locales'],
+                    )
+                elif action == 'clear':
+                    policy = workspace.clear_policy_comment(
+                        normalized_scope,
+                        policy_id,
+                        target,
+                        runtime['locales'],
+                    )
                 else:
-                    escaped_value = cls._escape_backslashes(value) if isinstance(value, str) else value
-                    lines.append(f'{spaces}{escaped_key}: {escaped_value}')
-        elif isinstance(data, list):
-            for i, item in enumerate(data):
-                if isinstance(item, (dict, list)):
-                    lines.append(f'{spaces}-')
-                    lines.append(cls._format_dict_as_kv(item, indent + 2))
+                    raise EditorFailure(
+                        'validation',
+                        'The policy comment operation is invalid.',
+                        field='comment.action',
+                    )
+
+            publication = _commit_external_once(
+                workspace, ldap_backend, context
+            )
+            # Ask the same request-scoped workspace for the canonical DTO after
+            # commit; no workspace is retained for the next RPC.
+            policy = workspace.get_policy(
+                normalized_scope, policy_id, runtime['locales']
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result['policy'] = policy
+            result['publication'] = publication
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_reconcile(_GpoEditorCommand):
+    __doc__ = _('Explicitly reconcile pending external GPO publication.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+    )
+
+    def execute(self, displayname, **options):
+        def operation():
+            context = self._context(displayname, write=True)
+            ldap_backend = self.api.Backend.ldap2
+            workspace, runtime = _open_workspace(
+                context, load_preferences=False, with_catalog=False
+            )
+            action, snapshot = _reconcile_workspace(
+                workspace, ldap_backend, context, reject_conflict=False
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result['recovery'] = _public_recovery(action)
+            result['snapshot'] = _public_snapshot(snapshot)
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_preference_documents(_GpoEditorCommand):
+    __doc__ = _('List high-level Group Policy Preference documents.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+    )
+
+    def execute(self, displayname, **options):
+        def operation():
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(
+                context, load_preferences=True
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result['documents'] = _public_documents(
+                workspace.list_preference_documents()
+            )
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_preference_items(_GpoEditorCommand):
+    __doc__ = _('List opaque Group Policy Preference item identities.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Preference scope')),
+        Str('kind', label=_('Preference document kind')),
+    )
+
+    def execute(self, displayname, scope, kind, **options):
+        def operation():
+            normalized_scope = _validated_scope(scope)
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(
+                context, load_preferences=True
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result['items'] = workspace.list_preference_items(
+                normalized_scope, kind
+            )
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_preference_show(_GpoEditorCommand):
+    __doc__ = _('Display a descriptor-driven Preference item form.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Preference scope')),
+        Str('kind', label=_('Preference document kind')),
+    )
+    takes_options = (
+        Dict('request', label=_('Preference item identity request')),
+    )
+
+    def execute(self, displayname, scope, kind, request, **options):
+        def operation():
+            normalized_scope = _validated_scope(scope)
+            if not isinstance(request, dict):
+                raise EditorFailure(
+                    'validation', 'A structured request is required.',
+                    field='request'
+                )
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(
+                context, load_preferences=True
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            if request.get('identity') is None:
+                result.update(_new_preference_detail(
+                    workspace, normalized_scope, kind
+                ))
+            else:
+                result.update(_preference_detail(
+                    workspace,
+                    normalized_scope,
+                    kind,
+                    _identity(request),
+                ))
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_preference_create(_GpoEditorCommand):
+    __doc__ = _('Atomically create a Group Policy Preference item.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Preference scope')),
+        Str('kind', label=_('Preference document kind')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured Preference create request')),
+    )
+
+    def execute(self, displayname, scope, kind, request, **options):
+        def operation():
+            if not isinstance(request, dict):
+                raise EditorFailure(
+                    'validation', 'A structured request is required.',
+                    field='request'
+                )
+            normalized_scope = _validated_scope(scope)
+            context = self._context(displayname, write=True)
+            ldap_backend = self.api.Backend.ldap2
+            workspace, runtime = _open_workspace(
+                context, load_preferences=True
+            )
+            _recover_before_mutation(workspace, ldap_backend, context)
+            item = workspace.create_preference_item(
+                normalized_scope,
+                kind,
+                list(request.get('fields') or ()),
+                request.get('parent'),
+            )
+            identity = list(item['identity'])
+            _apply_filter_operations(
+                workspace,
+                normalized_scope,
+                kind,
+                identity,
+                request.get('filters'),
+            )
+            publication = _commit_external_once(
+                workspace, ldap_backend, context
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result.update(_preference_detail(
+                workspace, normalized_scope, kind, identity
+            ))
+            result['publication'] = publication
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_preference_update(_GpoEditorCommand):
+    __doc__ = _('Atomically update a Group Policy Preference item.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Preference scope')),
+        Str('kind', label=_('Preference document kind')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured Preference update request')),
+    )
+
+    def execute(self, displayname, scope, kind, request, **options):
+        def operation():
+            normalized_scope = _validated_scope(scope)
+            identity = _identity(request)
+            context = self._context(displayname, write=True)
+            ldap_backend = self.api.Backend.ldap2
+            workspace, runtime = _open_workspace(
+                context, load_preferences=True
+            )
+            _recover_before_mutation(workspace, ldap_backend, context)
+            _find_preference_item(
+                workspace, normalized_scope, kind, identity
+            )
+            if 'fields' in request:
+                workspace.edit_preference_fields(
+                    normalized_scope,
+                    kind,
+                    identity,
+                    list(request.get('fields') or ()),
+                )
+            if request.get('name') is not None:
+                workspace.rename_preference_item(
+                    normalized_scope, kind, identity, request['name']
+                )
+            _apply_filter_operations(
+                workspace,
+                normalized_scope,
+                kind,
+                identity,
+                request.get('filters'),
+            )
+            publication = _commit_external_once(
+                workspace, ldap_backend, context
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result.update(_preference_detail(
+                workspace, normalized_scope, kind, identity
+            ))
+            result['publication'] = publication
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_preference_delete(_GpoEditorCommand):
+    __doc__ = _('Atomically delete a Group Policy Preference item.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Preference scope')),
+        Str('kind', label=_('Preference document kind')),
+    )
+    takes_options = (
+        Dict('request', label=_('Preference item identity request')),
+    )
+
+    def execute(self, displayname, scope, kind, request, **options):
+        def operation():
+            normalized_scope = _validated_scope(scope)
+            identity = _identity(request)
+            context = self._context(displayname, write=True)
+            ldap_backend = self.api.Backend.ldap2
+            workspace, runtime = _open_workspace(
+                context, load_preferences=True
+            )
+            _recover_before_mutation(workspace, ldap_backend, context)
+            _find_preference_item(
+                workspace, normalized_scope, kind, identity
+            )
+            workspace.remove_preference_item(
+                normalized_scope, kind, identity
+            )
+            publication = _commit_external_once(
+                workspace, ldap_backend, context
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result['deleted_identity'] = identity
+            result['publication'] = publication
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_scripts_show(_GpoEditorCommand):
+    __doc__ = _('Display one high-level Group Policy Scripts event.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+
+    def execute(self, displayname, scope, event, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(context, with_catalog=False)
+            return _scripts_response(
+                context, runtime, workspace, normalized_scope, normalized_event
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_files(_GpoEditorCommand):
+    __doc__ = _('List managed files for one Group Policy Scripts event.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+
+    def execute(self, displayname, scope, event, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(context, with_catalog=False)
+            return _scripts_response(
+                context, runtime, workspace, normalized_scope, normalized_event
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_entry_add(_GpoEditorCommand):
+    __doc__ = _('Atomically add a Group Policy Scripts entry.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script entry request')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request,
+                ('mode', 'executable_group', 'snapshot', 'name',
+                 'command_line', 'parameters'),
+                ('mode', 'executable_group', 'snapshot', 'parameters'),
+            )
+            group = _script_group(request_data)
+            snapshot = _script_identity(request_data, 'snapshot')
+            parameters = _script_text(
+                request_data, 'parameters', allow_empty=True
+            )
+            mode = _script_text(request_data, 'mode', maximum=32)
+            if mode == 'existing_asset':
+                name = _script_asset_name(request_data)
+                command_line = name
+            elif mode == 'external_command':
+                command_line = _script_text(request_data, 'command_line')
+            else:
+                raise EditorFailure(
+                    'validation', 'The script entry mode is invalid.',
+                    field='mode',
+                )
+
+            def mutate(workspace):
+                if mode == 'existing_asset':
+                    assets = _script_assets_public(
+                        workspace.list_script_assets(
+                            normalized_scope, normalized_event
+                        )
+                    )
+                    matches = [
+                        asset['name'] for asset in assets
+                        if asset['name'].casefold() == name.casefold()
+                    ]
+                    if not matches:
+                        raise EditorFailure(
+                            'not_found', 'The managed script asset was not found.',
+                            field='name',
+                        )
+                    command = matches[0]
                 else:
-                    escaped_item = cls._escape_backslashes(item) if isinstance(item, str) else item
-                    lines.append(f'{spaces}- {escaped_item}')
-        else:
-            escaped_data = cls._escape_backslashes(data) if isinstance(data, str) else data
-            lines.append(f'{spaces}{escaped_data}')
-
-        return '\n'.join(lines)
-
-    def execute(self, path, **options):
-        """
-        Get policy value from GPO.
-        """
-        try:
-            logger.debug(f'gpo_get_policy called with path: {path}')
-
-            # Call GPUIService get method
-            result_json = self.api.Object.gpo._call_gpuiservice_method('get', path)
-
-            if result_json:
-                raw_result = json.loads(result_json)
-            else:
-                raw_result = {}
-
-            logger.debug(f'gpo_get_policy returning result: {raw_result}')
-
-            # Format summary based on content
-            if path == '/':
-                # Root path - show meta information
-                meta_info = raw_result.get('meta', {})
-                categories = meta_info.get('Total categories', 0)
-                policies = meta_info.get('Total policies', 0)
-                base_dir = meta_info.get('baseDir', '')
-                locale = meta_info.get('localeUsed', '')
-                summary = 'GPO structure at root: {} categories, {} policies, base dir: {}, locale: {}'.format(
-                    categories, policies, base_dir, locale
+                    command = command_line
+                workspace.add_script_entry(
+                    normalized_scope, group, normalized_event, snapshot,
+                    command, parameters,
                 )
-            elif 'meta' in raw_result and len(raw_result) == 1:
-                # Only meta information
-                meta_info = raw_result.get('meta', {})
-                categories = meta_info.get('Total categories', 0)
-                policies = meta_info.get('Total policies', 0)
-                summary = 'Meta information: {} categories, {} policies'.format(categories, policies)
-            elif 'displayName' in raw_result:
-                # Policy with display name and header - output full nested structure
-                summary = self._format_dict_as_kv(raw_result)
-            elif 'category' in raw_result:
-                # Category information
-                category_name = raw_result.get('category', '')
-                policies_dict = raw_result.get('policies', {})
-                inherited_list = raw_result.get('inherited', [])
 
-                policy_count = len(policies_dict) if isinstance(policies_dict, dict) else 0
-                inherited_count = len(inherited_list) if isinstance(inherited_list, list) else 0
-
-                summary_lines = []
-                summary_lines.append('Category: {}'.format(category_name))
-                if policy_count > 0:
-                    summary_lines.append('Direct policies: {}'.format(policy_count))
-                if inherited_count > 0:
-                    summary_lines.append('Inherited subcategories: {}'.format(inherited_count))
-
-                summary = '\n'.join(summary_lines)
-            else:
-                # Generic summary
-                summary = 'Policy value retrieved for path: {}'.format(path)
-
-            return {
-                'summary': summary,
-                'result': raw_result
-            }
-
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_get_policy")
-            raise
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event, mutate
+            )
+        return self._run(operation)
 
 
 @register()
-class gpo_list_children(Command):
-    __doc__ = _("List child policies under a parent path.")
+class gpo_editor_script_entry_update(_GpoEditorCommand):
+    __doc__ = _('Atomically update a Group Policy Scripts entry.')
 
     takes_args = (
-        Str('parent_path',
-            cli_name='parent_path',
-            label=_('Parent path'),
-            doc=_('Parent path in GPO structure'),
-        ),
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script entry update')),
     )
 
-    has_output_params = (
-        Str('name', label=_('Name')),
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request,
+                ('executable_group', 'identity', 'command_line', 'parameters'),
+                ('executable_group', 'identity', 'command_line', 'parameters'),
+            )
+            group = _script_group(request_data)
+            identity = _script_identity(request_data)
+            command_line = _script_text(request_data, 'command_line')
+            parameters = _script_text(
+                request_data, 'parameters', allow_empty=True
+            )
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event,
+                lambda workspace: workspace.update_script_entry(
+                    normalized_scope, group, normalized_event, identity,
+                    command_line, parameters,
+                ),
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_entry_remove(_GpoEditorCommand):
+    __doc__ = _('Atomically remove a Group Policy Scripts entry.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script entry removal')),
     )
 
-    has_output = (
-        output.summary,
-        output.ListOfEntries('result', doc=_('Child policies'), flags=['no_display']),
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request,
+                ('executable_group', 'identity', 'delete_asset',
+                 'asset_revision'),
+                ('executable_group', 'identity'),
+            )
+            group = _script_group(request_data)
+            identity = _script_identity(request_data)
+            delete_asset = request_data.get('delete_asset', False)
+            if not isinstance(delete_asset, bool):
+                raise EditorFailure(
+                    'validation', 'The script asset deletion mode is invalid.',
+                    field='delete_asset',
+                )
+            revision = None
+            if delete_asset:
+                revision = _script_identity(request_data, 'asset_revision')
+
+            def mutate(workspace):
+                asset_name = None
+                if delete_asset:
+                    document = workspace.show_script_group(normalized_scope, group)
+                    selected = next(
+                        (
+                            entry for entry in document.get('entries') or ()
+                            if entry.get('event') == normalized_event
+                            and entry.get('identity') == identity
+                        ),
+                        None,
+                    )
+                    candidate = selected and selected.get('managed_asset_name')
+                    if not isinstance(candidate, str):
+                        raise EditorFailure(
+                            'validation',
+                            'Only a managed script entry can delete an asset.',
+                            field='delete_asset',
+                        )
+                    assets = _script_assets_public(
+                        workspace.list_script_assets(
+                            normalized_scope, normalized_event
+                        )
+                    )
+                    asset_name = next(
+                        (
+                            asset['name'] for asset in assets
+                            if asset['name'].casefold() == candidate.casefold()
+                        ),
+                        None,
+                    )
+                    if asset_name is None:
+                        raise EditorFailure(
+                            'not_found', 'The managed script asset was not found.',
+                            field='identity',
+                        )
+                workspace.remove_script_entry(
+                    normalized_scope, group, normalized_event, identity
+                )
+                if asset_name is not None:
+                    workspace.delete_script_asset(
+                        normalized_scope, normalized_event, asset_name, revision
+                    )
+
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event, mutate
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_entries_reorder(_GpoEditorCommand):
+    __doc__ = _('Atomically reorder a Group Policy Scripts event list.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script reorder request')),
     )
 
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request, ('executable_group', 'snapshot', 'identities'),
+                ('executable_group', 'snapshot', 'identities'),
+            )
+            group = _script_group(request_data)
+            snapshot = _script_identity(request_data, 'snapshot')
+            identities = request_data.get('identities')
+            if not isinstance(identities, list) or not all(
+                isinstance(identity, str) and identity and '\x00' not in identity
+                for identity in identities
+            ):
+                raise EditorFailure(
+                    'validation', 'The script entry order is invalid.',
+                    field='identities',
+                )
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event,
+                lambda workspace: workspace.reorder_script_entries(
+                    normalized_scope, group, normalized_event, snapshot,
+                    identities,
+                ),
+            )
+        return self._run(operation)
 
-    def execute(self, parent_path, **options):
-        """
-        List child policies under a parent path.
-        """
-        try:
-            if isinstance(parent_path, str) and parent_path.startswith('parent_path='):
-                parent_path = parent_path[len('parent_path='):]
 
-            # Handle empty path - treat as root
-            if parent_path == '':
-                parent_path = '/'
+@register()
+class gpo_editor_script_order_update(_GpoEditorCommand):
+    __doc__ = _('Atomically set Group Policy Scripts execution order.')
 
-            logger.debug(f'gpo_list_children called with parent_path: {parent_path}')
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script order request')),
+    )
 
-            # Call GPUIService list_children method
-            result_json = self.api.Object.gpo._call_gpuiservice_method('list_children', parent_path)
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request, ('snapshot', 'execution_order'),
+                ('snapshot', 'execution_order'),
+            )
+            snapshot = _script_identity(request_data, 'snapshot')
+            order = _script_order(request_data)
 
-            if result_json:
-                # GPUIService returns JSON string, parse it
-                raw_result = json.loads(result_json)
-                logger.debug(f'raw_result type: {type(raw_result)}, value: {raw_result}')
-                # Convert to list of dicts for CLI output
-                if isinstance(raw_result, (tuple, list)):
-                    result = []
-                    for item in raw_result:
-                        if not item:
-                            continue
-                        if isinstance(item, dict) and 'name' in item:
-                            # New format with name and help
-                            entry = {'name': str(item['name'])}
-                            if 'help' in item:
-                                entry['help'] = str(item['help'])
-                            result.append(entry)
-                        else:
-                            # Legacy string format
-                            result.append({'name': str(item)})
-                elif isinstance(raw_result, dict):
-                    result = [{'name': k, 'value': str(v)} for k, v in raw_result.items()]
+            def mutate(workspace):
+                powershell = workspace.show_script_group(
+                    normalized_scope, 'powershell'
+                )
+                current = dict(powershell.get('execution_order') or {})
+                value = {
+                    'unspecified': None,
+                    'classic_first': False,
+                    'powershell_first': True,
+                }[order]
+                start = current.get('start_execute_ps_first')
+                end = current.get('end_execute_ps_first')
+                if normalized_event in ('startup', 'logon'):
+                    start = value
                 else:
-                    result = [{'name': str(raw_result)}]
-            else:
-                result = []
-
-            count = len(result)
-            if count == 0:
-                summary = 'No child policies found'
-            elif count == 1:
-                summary = '1 child policy found'
-            else:
-                summary = '%d child policies found' % count
-
-            logger.debug(f'gpo_list_children returning summary: {summary}, result: {result}')
-
-            return {
-                'summary': summary,
-                'result': result,
-            }
-
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_list_children")
-            raise
-
-@register()
-class gpo_set_policy(Command):
-    __doc__ = _("Set policy value in GPO.")
-
-    takes_args = (
-        Str('name_gpt',
-            cli_name='name_gpt',
-            label=_('GPO name'),
-            doc=_('GPO path (relative to sysvol)'),
-        ),
-        Str('target',
-            cli_name='target',
-            label=_('Target'),
-            doc=_('Policy type (Machine or User)'),
-        ),
-        Str('path',
-            cli_name='path',
-            label=_('Policy path'),
-            doc=_('Path to the policy in GPO structure'),
-        ),
-        Str('value',
-            cli_name='value',
-            label=_('Value'),
-            doc=_('Value to set'),
-        ),
-        Str('metadata?',
-            label=_('Metadata'),
-            doc=_('ADMX metadata path'),
-        ),
-    )
-
-    has_output = (
-        output.summary,
-        output.Output('success', type=bool, doc=_('Operation success')),
-    )
-
-    def execute(self, name_gpt, target, path, value, metadata=None, **options):
-        """
-        Set policy value in GPO.
-        """
-        try:
-            logger.debug(f'gpo_set_policy called with name_gpt: {name_gpt}, target: {target}, path: {path}, value: {value}, metadata: {metadata}')
-
-            # Strip parameter names if present (IPA bug)
-            if isinstance(target, str) and target.startswith('target='):
-                target = target[len('target='):]
-            if isinstance(path, str) and path.startswith('path='):
-                path = path[len('path='):]
-            if isinstance(value, str) and value.startswith('value='):
-                value = value[len('value='):]
-            if isinstance(metadata, str) and metadata.startswith('metadata='):
-                metadata = metadata[len('metadata='):]
-
-            # Call GPUIService set method
-            if metadata is None:
-                metadata = ""
-
-            success = self.api.Object.gpo._call_gpuiservice_method('set', name_gpt, target, path, value, metadata)
-
-            logger.debug(f'gpo_set_policy returning result: {success}')
-            new_version = int(success) if success is not None else -1
-            if new_version >= 0:
-                guid = _extract_guid(name_gpt)
-                _update_ldap_version(self.api, guid, new_version)
-                summary = 'Policy set successfully: {} = "{}"'.format(escape_backslashes(path), escape_backslashes(value))
-            else:
-                summary = 'Failed to set policy: {} = "{}"'.format(escape_backslashes(path), escape_backslashes(value))
-            return {
-                'summary': summary,
-                'success': new_version >= 0
-            }
-
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_set_policy")
-            raise
-
-
-@register()
-class gpo_get_current_value(Command):
-    __doc__ = _("Get current value from GPO policy file.")
-
-    takes_args = (
-        Str('name_gpt',
-            cli_name='name_gpt',
-            label=_('GPO name'),
-            doc=_('GPO path (relative to sysvol)'),
-        ),
-        Str('target',
-            cli_name='target',
-            label=_('Target'),
-            doc=_('Policy type (Machine or User)'),
-        ),
-        Str('path',
-            cli_name='path',
-            label=_('Policy path'),
-            doc=_('Registry key path'),
-        ),
-    )
-
-    has_output = (
-        output.summary,
-        output.Output('result', type=dict, doc=_('Current value')),
-    )
-
-    def execute(self, name_gpt, target, path, **options):
-        """
-        Get current value from GPO policy file.
-        """
-        try:
-            logger.debug(f'gpo_get_current_value called with name_gpt: {name_gpt}, target: {target}, path: {path}')
-
-            # Strip parameter names if present (IPA bug)
-            if isinstance(target, str) and target.startswith('target='):
-                target = target[len('target='):]
-            if isinstance(path, str) and path.startswith('path='):
-                path = path[len('path='):]
-
-            # Call GPUIService get_current_value method
-            result_json = self.api.Object.gpo._call_gpuiservice_method('get_current_value', name_gpt, target, path)
-
-            if result_json:
-                raw_result = json.loads(result_json)
-            else:
-                raw_result = {}
-
-            logger.debug(f'gpo_get_current_value returning result: {raw_result}')
-
-            if raw_result and 'value_data' in raw_result:
-                value_data = raw_result.get('value_data', '')
-                value_type = raw_result.get('value_type', '')
-                summary = 'Current value: "{}" (type: {}) for GPO {}, target {}, path: {}'.format(
-                    escape_backslashes(str(value_data)), value_type, name_gpt, target, escape_backslashes(path)
+                    end = value
+                workspace.set_script_execution_order(
+                    normalized_scope, snapshot, start, end
                 )
-            else:
-                summary = 'Current value retrieved for GPO {}, target {}, path: {}'.format(name_gpt, target, escape_backslashes(path))
 
-            return {
-                'summary': summary,
-                'result': raw_result
-            }
-
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_get_current_value")
-            raise
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event, mutate
+            )
+        return self._run(operation)
 
 
 @register()
-class gpo_delete_policy(Command):
-    __doc__ = _("Delete a policy value from GPO Registry.pol file.")
+class gpo_editor_script_asset_upload(_GpoEditorCommand):
+    __doc__ = _('Atomically upload an unreferenced Group Policy script asset.')
 
     takes_args = (
-        Str('name_gpt',
-            cli_name='name_gpt',
-            label=_('GPO name'),
-            doc=_('GPO path (relative to sysvol)'),
-        ),
-        Str('target',
-            cli_name='target',
-            label=_('Target'),
-            doc=_('Policy type (Machine or User)'),
-        ),
-        Str('path',
-            cli_name='path',
-            label=_('Policy path'),
-            doc=_('Registry key path to delete'),
-        ),
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script upload request')),
     )
 
-    has_output = (
-        output.summary,
-        output.Output('success', type=bool, doc=_('Operation success')),
-    )
-
-    def execute(self, name_gpt, target, path, **options):
-        """
-        Delete a policy value from GPO Registry.pol file.
-        """
-        try:
-            logger.debug(
-                'gpo_delete_policy called with name_gpt: %s, target: %s, path: %s',
-                name_gpt, target, path
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
             )
-
-            if isinstance(target, str) and target.startswith('target='):
-                target = target[len('target='):]
-            if isinstance(path, str) and path.startswith('path='):
-                path = path[len('path='):]
-
-            result = self.api.Object.gpo._call_gpuiservice_method(
-                'delete_policy_value', name_gpt, target, path
+            request_data = _script_request(
+                request, ('name', 'content_base64'),
+                ('name', 'content_base64'),
             )
+            name = _script_asset_name(request_data)
+            payload = _decode_script_upload(request_data)
 
-            new_version = int(result) if result is not None else -1
-            logger.debug('gpo_delete_policy returning version: %s', new_version)
-            if new_version >= 0:
-                guid = _extract_guid(name_gpt)
-                _update_ldap_version(self.api, guid, new_version)
-                summary = 'Policy deleted: {} for GPO {}, target {}'.format(
-                    path, name_gpt, target
+            def mutate(workspace):
+                _script_asset_collision(
+                    workspace, normalized_scope, normalized_event, name
                 )
-            else:
-                summary = 'Failed to delete policy: {} for GPO {}, target {}'.format(
-                    path, name_gpt, target
+                workspace.upload_script_asset(
+                    normalized_scope, normalized_event, name, payload
                 )
-            return {
-                'summary': summary,
-                'success': new_version >= 0,
-            }
 
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_delete_policy")
-            raise
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event, mutate
+            )
+        return self._run(operation)
 
 
 @register()
-class gpo_save_preference(Command):
-    __doc__ = _("Save a Group Policy Preference item.")
+class gpo_editor_script_upload_and_add(_GpoEditorCommand):
+    __doc__ = _('Atomically upload and attach a Group Policy script asset.')
 
     takes_args = (
-        Str('name_gpt',
-            cli_name='name_gpt',
-            label=_('GPO name'),
-            doc=_('GPO path (relative to sysvol)'),
-        ),
-        Str('target',
-            cli_name='target',
-            label=_('Target'),
-            doc=_('Policy type (Machine or User)'),
-        ),
-        Str('pref_type',
-            cli_name='pref_type',
-            label=_('Preference type'),
-            doc=_('Preference type (Files, Folders, Shortcuts, Environment, IniFiles, Drives, Printers, Services, ScheduledTasks, NetworkShares)'),
-        ),
-        Str('value',
-            cli_name='value',
-            label=_('Value'),
-            doc=_('JSON string with type-specific properties'),
-        ),
-        Str('uid?',
-            cli_name='uid',
-            label=_('UID'),
-            doc=_('UID of existing preference to update (empty for new)'),
-        ),
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script upload-and-add request')),
     )
 
-    has_output = (
-        output.summary,
-        output.Output('result', type=dict, doc=_('Operation result')),
-    )
-
-    def execute(self, name_gpt, target, pref_type, value, uid=None, **options):
-        """
-        Save a Group Policy Preference item.
-        """
-        try:
-            logger.debug(
-                'gpo_save_preference called with name_gpt: %s, target: %s, '
-                'pref_type: %s, uid: %s',
-                name_gpt, target, pref_type, uid
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request,
+                ('executable_group', 'snapshot', 'name', 'content_base64',
+                 'parameters'),
+                ('executable_group', 'snapshot', 'name', 'content_base64',
+                 'parameters'),
+            )
+            group = _script_group(request_data)
+            snapshot = _script_identity(request_data, 'snapshot')
+            name = _script_asset_name(request_data)
+            payload = _decode_script_upload(request_data)
+            parameters = _script_text(
+                request_data, 'parameters', allow_empty=True
             )
 
-            if uid is None:
-                uid = ""
-
-            result_json = self.api.Object.gpo._call_gpuiservice_method(
-                'save_preference', name_gpt, target, pref_type, value, uid
-            )
-
-            if result_json:
-                raw_result = json.loads(str(result_json))
-            else:
-                raw_result = {'success': False, 'message': 'Empty response', 'uid': uid}
-
-            if raw_result.get('success') and 'new_version' in raw_result:
-                guid = _extract_guid(name_gpt)
-                _update_ldap_version(self.api, guid, raw_result['new_version'])
-
-            logger.debug('gpo_save_preference returning result: %s', raw_result)
-
-            summary = json.dumps(raw_result, ensure_ascii=False)
-
-            return {
-                'summary': summary,
-                'result': raw_result,
-            }
-
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_save_preference")
-            raise
-
-
-@register()
-class gpo_get_preferences(Command):
-    __doc__ = _("Read Group Policy Preferences from GPO.")
-
-    takes_args = (
-        Str('name_gpt',
-            cli_name='name_gpt',
-            label=_('GPO name'),
-            doc=_('GPO path (relative to sysvol)'),
-        ),
-        Str('target',
-            cli_name='target',
-            label=_('Target'),
-            doc=_('Policy type (Machine or User)'),
-        ),
-        Str('pref_type?',
-            cli_name='pref_type',
-            label=_('Preference type'),
-            doc=_('Preference type to read (empty for all types)'),
-        ),
-    )
-
-    has_output = (
-        output.summary,
-        output.Output('result', type=dict, doc=_('Preferences data')),
-    )
-
-    def execute(self, name_gpt, target, pref_type=None, **options):
-        """
-        Read Group Policy Preferences from GPO.
-        """
-        try:
-            logger.debug(
-                'gpo_get_preferences called with name_gpt: %s, target: %s, pref_type: %s',
-                name_gpt, target, pref_type
-            )
-
-            if pref_type is None:
-                pref_type = ""
-
-            result_json = self.api.Object.gpo._call_gpuiservice_method(
-                'get_preferences', name_gpt, target, pref_type
-            )
-
-            if result_json:
-                raw_result = json.loads(str(result_json))
-            else:
-                raw_result = {}
-
-            logger.debug('gpo_get_preferences returning result for %s', name_gpt)
-
-            summary = json.dumps(raw_result, ensure_ascii=False)
-
-            return {
-                'summary': summary,
-                'result': raw_result,
-            }
-
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_get_preferences")
-            raise
-
-
-@register()
-class gpo_delete_preference(Command):
-    __doc__ = _("Delete a Group Policy Preference item by UID.")
-
-    takes_args = (
-        Str('name_gpt',
-            cli_name='name_gpt',
-            label=_('GPO name'),
-            doc=_('GPO path (relative to sysvol)'),
-        ),
-        Str('target',
-            cli_name='target',
-            label=_('Target'),
-            doc=_('Policy type (Machine or User)'),
-        ),
-        Str('pref_type',
-            cli_name='pref_type',
-            label=_('Preference type'),
-            doc=_('Preference type (Files, Folders, etc.)'),
-        ),
-        Str('uid',
-            cli_name='uid',
-            label=_('UID'),
-            doc=_('UID of the preference to delete'),
-        ),
-    )
-
-    has_output = (
-        output.summary,
-        output.Output('success', type=bool, doc=_('Operation success')),
-    )
-
-    def execute(self, name_gpt, target, pref_type, uid, **options):
-        """
-        Delete a Group Policy Preference item by UID.
-        """
-        try:
-            logger.debug(
-                'gpo_delete_preference called with name_gpt: %s, target: %s, '
-                'pref_type: %s, uid: %s',
-                name_gpt, target, pref_type, uid
-            )
-
-            result_json = self.api.Object.gpo._call_gpuiservice_method(
-                'delete_preference', name_gpt, target, pref_type, uid
-            )
-
-            if isinstance(result_json, str):
-                raw_result = json.loads(result_json)
-            elif isinstance(result_json, dict):
-                raw_result = result_json
-            else:
-                raw_result = {'success': bool(result_json), 'new_version': -1}
-
-            if raw_result.get('success') and raw_result.get('new_version', -1) >= 0:
-                guid = _extract_guid(name_gpt)
-                _update_ldap_version(self.api, guid, raw_result['new_version'])
-
-            logger.debug('gpo_delete_preference returning result: %s', raw_result)
-            if raw_result.get('success'):
-                summary = 'Preference deleted: {} {} (uid: {})'.format(
-                    pref_type, name_gpt, uid
+            def mutate(workspace):
+                _script_asset_collision(
+                    workspace, normalized_scope, normalized_event, name
                 )
-            else:
-                summary = 'Failed to delete preference: {} {} (uid: {})'.format(
-                    pref_type, name_gpt, uid
+                workspace.upload_and_add_script_entry(
+                    normalized_scope, group, normalized_event, snapshot,
+                    name, payload, parameters,
                 )
-            return {
-                'summary': summary,
-                'success': raw_result.get('success', False),
-            }
 
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_delete_preference")
-            raise
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event, mutate
+            )
+        return self._run(operation)
 
 
 @register()
-class gpo_get_locale(Command):
-    __doc__ = _("Get current locale of GPUIService.")
-
-    takes_args = ()
-
-    has_output = (
-        output.summary,
-        output.Output('result', type=str, doc=_('Current locale')),
-    )
-
-    def execute(self, **options):
-        try:
-            locale = self.api.Object.gpo._call_gpuiservice_method('get_locale')
-            logger.debug('gpo_get_locale returning: %s', locale)
-            return {
-                'summary': 'Current locale: {}'.format(locale),
-                'result': str(locale),
-            }
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_get_locale")
-            raise
-
-
-@register()
-class gpo_set_locale(Command):
-    __doc__ = _("Set locale for GPUIService and reload ADMX data.")
+class gpo_editor_script_asset_replace(_GpoEditorCommand):
+    __doc__ = _('Atomically replace a managed Group Policy script asset.')
 
     takes_args = (
-        Str('locale',
-            cli_name='locale',
-            label=_('Locale'),
-            doc=_('Locale string (e.g. en-US, ru-RU)'),
-        ),
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script replacement request')),
     )
 
-    has_output = (
-        output.summary,
-        output.Output('result', type=bool, doc=_('Success')),
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request, ('name', 'revision', 'content_base64'),
+                ('name', 'revision', 'content_base64'),
+            )
+            name = _script_asset_name(request_data)
+            revision = _script_identity(request_data, 'revision')
+            payload = _decode_script_upload(request_data)
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event,
+                lambda workspace: workspace.replace_script_asset(
+                    normalized_scope, normalized_event, name, revision, payload
+                ),
+            )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_asset_delete(_GpoEditorCommand):
+    __doc__ = _('Atomically delete an unreferenced Group Policy script asset.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script asset deletion request')),
     )
 
-    def execute(self, locale, **options):
-        try:
-            logger.debug('gpo_set_locale called with locale: %s', locale)
-            success = self.api.Object.gpo._call_gpuiservice_method('set_locale', locale)
-            logger.debug('gpo_set_locale result: %s', success)
-            return {
-                'summary': 'Locale set to: {}'.format(locale),
-                'result': bool(success),
-            }
-        except Exception as e:
-            logger.exception("Unexpected error in gpo_set_locale")
-            raise
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request, ('name', 'revision'), ('name', 'revision')
+            )
+            name = _script_asset_name(request_data)
+            revision = _script_identity(request_data, 'revision')
+            return _run_scripts_mutation(
+                self, displayname, normalized_scope, normalized_event,
+                lambda workspace: workspace.delete_script_asset(
+                    normalized_scope, normalized_event, name, revision
+                ),
+            )
+        return self._run(operation)

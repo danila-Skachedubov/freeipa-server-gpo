@@ -5,15 +5,18 @@ import os
 import logging
 import gettext
 import locale
-import shutil
 from pathlib import Path
 
 from ipalib import api
 from ipapython import ipautil
 from .config import (
-    LOCALE_DIR, FREEIPA_BASE_PATH, get_domain_sysvol_path,
+    LOCALE_DIR, FREEIPA_BASE_PATH, get_domain_sysvol_path, get_policies_path,
     TARGET_PYTHON_PLUGINS, TARGET_UI_PLUGINS, TARGET_SCHEMA_DIR,
     TARGET_UPDATE_DIR, TARGET_DBUS_CONFIG_DIR, TARGET_DBUS_HANDLERS_DIR
+)
+from .filesystem import (
+    ensure_editor_state_directory,
+    ensure_policies_root_acl,
 )
 
 try:
@@ -121,6 +124,25 @@ class IPAActions:
         self.logger.info(_("Successfully set default ACLs on {}").format(path))
         return True
 
+    def configure_editor_filesystem(self):
+        """Provision private editor state and the fresh Policies root."""
+        try:
+            policies_path = Path(get_policies_path(self.api.env.domain))
+            self.logger.info(_("Configuring private GPO editor state"))
+            ensure_editor_state_directory()
+
+            self.logger.info(
+                _("Configuring GPO editor ACLs on {}").format(policies_path)
+            )
+            ensure_policies_root_acl(policies_path)
+            self.logger.info(_("GPO editor filesystem configured successfully"))
+            return True
+        except Exception as exc:
+            self.logger.error(
+                _("Error configuring GPO editor filesystem: {}").format(exc)
+            )
+            return False
+
     def create_sysvol_share(self):
         """
         Create SYSVOL Samba share
@@ -210,37 +232,6 @@ class IPAActions:
 
         except Exception as e:
             self.logger.error(_("Error restarting oddjob service: {}").format(e))
-            return False
-
-    def start_gpuiservice(self):
-        """
-        Start GPUIService if not already running and enable it for autostart.
-
-        Returns:
-            True if service is running and enabled after operation, False otherwise.
-        """
-        try:
-            self.logger.info(_("Enabling and starting gpuiservice"))
-
-            result = ipautil.run(
-                ["systemctl", "enable", "--now", "gpuiservice"],
-                raiseonerr=False
-            )
-            if result.returncode != 0:
-                stderr = (result.error_output or b"").decode("utf-8", errors="replace").strip()
-                self.logger.error(_("Failed to enable/start gpuiservice: %s"), stderr or "unknown error")
-                return False
-
-            check = ipautil.run(["systemctl", "is-active", "gpuiservice"], raiseonerr=False)
-            if check.returncode != 0:
-                self.logger.error(_("gpuiservice is not active after start"))
-                return False
-
-            self.logger.info(_("gpuiservice is enabled and running"))
-            return True
-
-        except Exception as e:
-            self.logger.error(_("Unexpected error managing gpuiservice: %s"), e, exc_info=True)
             return False
 
     def are_plugins_activated(self):

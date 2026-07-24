@@ -1,6 +1,3 @@
-%add_python3_req_skip parse_admx_structure
-%add_python3_req_skip utils
-
 Name:           freeipa-server-gpo
 Version:        0.0.8
 Release:        alt1
@@ -16,9 +13,18 @@ BuildRequires: gettext-tools
 
 Requires: python3-module-freeipa
 Requires: python3-module-ipaserver
+Requires: freeipa-server-core
 Requires: freeipa-server-trust-ad
 Requires: samba-common-tools
 Requires: admx-basealt
+Requires: python3-module-admix >= 0.1.0
+Requires: python3-module-admix < 0.2.0
+Requires: acl
+Requires: coreutils
+Requires: libgio
+Requires: oddjob
+Requires: systemd
+Requires: util-linux
 Source0: %name-%version.tar
 
 %description
@@ -40,13 +46,10 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 %doc README.md
 %doc README.ru.md
 %_bindir/ipa-gpo-install
-%_bindir/ipa-gpo-update-paths
 %python3_sitelibdir/ipa_gpo_install/
 %python3_sitelibdir/ipaserver/plugins/gpo.py*
 %python3_sitelibdir/ipaserver/plugins/chain.py*
 %python3_sitelibdir/ipaserver/plugins/gpmaster.py*
-%python3_sitelibdir/ipaclient/plugins/gpo_client.py*
-%python3_sitelibdir/ipaclient/plugins/__pycache__/gpo_client.*
 %python3_sitelibdir/ipaserver/plugins/__pycache__/gpo.*
 %python3_sitelibdir/ipaserver/plugins/__pycache__/chain.*
 %python3_sitelibdir/ipaserver/plugins/__pycache__/gpmaster.*
@@ -63,14 +66,6 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 %_mandir/man8/ipa-gpo-install.8*
 %_mandir/ru/man8/ipa-gpo-install.8*
 %_datadir/bash-completion/completions/ipa-gpo-install
-%python3_sitelibdir/gpui_service/
-%_prefix/sbin/gpuiservice
-%_prefix/lib/systemd/system/gpuiservice.service
-%config(noreplace) %_sysconfdir/dbus-1/system.d/org.altlinux.gpuiservice.conf
-%_datadir/dbus-1/system-services/org.altlinux.gpuiservice.service
-%_datadir/glib-2.0/schemas/org.altlinux.gpuiservice.gschema.xml
-
-
 %changelog
 * Mon Jun 15 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.0.8-alt1
 - feat: add unsaved changes confirmation modal on tree navigation (thx vladimirovicp)

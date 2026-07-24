@@ -4,20 +4,12 @@ define([
     './components/footer/footer',
     './util/resizable',
     './components/templates/default-template',
-    './components/templates/scripts-template',
     './components/templates/admx-template',
     './components/templates/folder-template',
-    './components/templates/preference/templates-shortcuts',
-    './components/templates/preference/templates-environment',
-    './components/templates/preference/templates-folders',
-    './components/templates/preference/templates-registry',
-    './components/templates/preference/templates-driveMaps',
-    './components/templates/preference/templates-networkShares',
-    './components/templates/preference/templates-files',
-    './components/templates/preference/templates-iniFiles',
+    './components/templates/preference/preferences-view-template',
     './components/tree-view/tree-view-list',
     './util/element-creator',
-    './util/mainLocalStorage/shortcuts',
+    './components/editor-status',
     './locales/translations',
     './util/API'
 ], function(
@@ -26,20 +18,12 @@ define([
     footerModule,
     resizableModule,
     defaultTemplateModule,
-    scriptsTemplateModule,
     admxTemplateModule,
     folderTemplateModule,
-    shortcutsTemplateModule,
-    environmentTemplateModule,
-    foldersTemplateModule,
-    registryTemplateModule,
-    driveMapsTemplateModule,
-    networkSharesTemplateModule,
-    filesTemplateModule,
-    iniFilesTemplateModule,
+    preferencesTemplateModule,
     treeViewListModule,
     elementCreatorModule,
-    shortcutsStorageModule,
+    editorStatusModule,
     translationsModule,
     APIModule
 ) {
@@ -48,22 +32,14 @@ define([
     var renderFooter = footerModule.renderFooter;
     var resizable = resizableModule.resizable;
     var renderDefaultTemplate = defaultTemplateModule.renderDefaultTemplate;
-    var renderScriptsTemplate = scriptsTemplateModule.renderScriptsTemplate;
     var renderAdmxTemplate = admxTemplateModule.renderAdmxTemplate;
     var renderFolderTemplate = folderTemplateModule.renderFolderTemplate;
     var renderHelpBlock = folderTemplateModule.renderHelpBlock;
-    var renderShortcutsTemplate = shortcutsTemplateModule.renderShortcutsTemplate;
-    var renderEnvironmentTemplate = environmentTemplateModule.renderEnvironmentTemplate;
-    var renderFoldersTemplate = foldersTemplateModule.renderFoldersTemplate;
-    var renderRegistryTemplate = registryTemplateModule.renderRegistryTemplate;
-    var renderDriveMapsTemplate = driveMapsTemplateModule.renderDriveMapsTemplate;
-    var renderNetworkSharesTemplate = networkSharesTemplateModule.renderNetworkSharesTemplate;
-    var renderFilesTemplate = filesTemplateModule.renderFilesTemplate;
-    var renderIniFilesTemplate = iniFilesTemplateModule.renderIniFilesTemplate;
+    var renderPreferencesTemplate = preferencesTemplateModule.renderPreferencesTemplate;
     var setTreeItemActive = treeViewListModule.setTreeItemActive;
     var setFolderOpenedState = treeViewListModule.setFolderOpenedState;
+    var ensureLazyChildren = treeViewListModule.ensureLazyChildren;
     var createElement = elementCreatorModule.createElement;
-    var initShortcutsStorage = shortcutsStorageModule.initShortcutsStorage;
     var t = translationsModule.t;
 
     function createTreeViewState() {
@@ -75,6 +51,7 @@ define([
             isHelpOpen: false,
             currentViewCleanup: null,
             renderRequestId: 0,
+            navigationRequestId: 0,
             treeData: [],
             treeItemElements: new WeakMap(),
             treeListItemElements: new WeakMap(),
@@ -306,6 +283,12 @@ define([
 
                 this.cleanupCurrentView();
 
+                var headerElement = this.header && this.header.getElement ? this.header.getElement() : null;
+                var preferenceControls = headerElement ? headerElement.querySelector('.gp__control') : null;
+                var editorActions = headerElement ? headerElement.querySelector('.gp__control-actions') : null;
+                if (preferenceControls) preferenceControls.style.display = 'none';
+                if (editorActions) editorActions.style.display = 'none';
+
                 if (this.workspace) {
                     this.workspace.clear();
                 }
@@ -331,42 +314,29 @@ define([
                     });
                     renderedWorkspaceView = templateResult;
                 } else if (item && item.type === 'file') {
-                    if (item.template === 'scripts') {
-                        if (item.header && item.header.class === 'Machine') {
-                            templateResult = renderScriptsTemplate();
-                        } else {
-                            templateResult = renderDefaultTemplate();
-                        }
-                    } else if (item.template === 'admx') {
+                    if (item.template === 'admx') {
                         templateResult = await renderAdmxTemplate({
                             isHelpOpen: this.isHelpOpen,
                             header: this.header,
                             item: item,
-                            admxTreePath: item ? item.admxTreePath : null,
                             isCurrent: function() {
                                 return renderRequestId === this.renderRequestId
                                     && this.selectedItem
                                     && this.selectedItem.item === item;
                             }.bind(this)
                         });
-                    } else if (item.template !== 'preferences') {
-                        templateResult = renderDefaultTemplate();
-                    } else if (!item.header || item.header.class !== 'Machine') {
-                        templateResult = renderDefaultTemplate();
+                    } else if (item.template === 'preferences') {
+                        templateResult = await renderPreferencesTemplate({
+                            header: this.header,
+                            item: item,
+                            isCurrent: function() {
+                                return renderRequestId === this.renderRequestId
+                                    && this.selectedItem
+                                    && this.selectedItem.item === item;
+                            }.bind(this)
+                        });
                     } else {
-                        var preferenceTemplateMap = {
-                            shortcuts: renderShortcutsTemplate,
-                            environment: renderEnvironmentTemplate,
-                            folders: renderFoldersTemplate,
-                            registry: renderRegistryTemplate,
-                            driveMaps: renderDriveMapsTemplate,
-                            networkShares: renderNetworkSharesTemplate,
-                            files: renderFilesTemplate,
-                            iniFiles: renderIniFilesTemplate
-                        };
-
-                        var renderTemplate = preferenceTemplateMap[item.name] || renderDefaultTemplate;
-                        templateResult = renderTemplate({ header: this.header });
+                        templateResult = renderDefaultTemplate();
                     }
 
                     renderedWorkspaceView = templateResult;
@@ -389,29 +359,63 @@ define([
             },
 
             navigateToNode: function(item, options) {
-                var config = options || {};
-
                 if (this.pendingNavigation) {
-                    return;
+                    return false;
+                }
+
+                var config = Object.assign({}, options || {}, {
+                    navigationRequestId: ++this.navigationRequestId
+                });
+
+                return this.guardNavigation(item, config);
+            },
+
+            guardNavigation: function(item, config) {
+                if (!config || config.navigationRequestId !== this.navigationRequestId) {
+                    return false;
                 }
 
                 var currentView = this.currentView;
                 if (currentView && typeof currentView.hasUnsavedChanges === 'function' && currentView.hasUnsavedChanges()) {
                     this.pendingNavigation = { item: item, options: config };
                     this.showPolicyChangedModal();
-                    return;
+                    return false;
                 }
 
-                this.proceedWithNavigation(item, config);
+                return this.proceedWithNavigation(item, config);
             },
 
             proceedWithNavigation: function(item, config) {
+                config = config || {};
+                if (config.navigationRequestId !== this.navigationRequestId) {
+                    return false;
+                }
                 var treeItemElement = config.treeItemElement || null;
                 var openPath = config.openPath !== undefined ? config.openPath : true;
                 var openCurrentFolder = config.openCurrentFolder;
 
                 if (!item) {
-                    return;
+                    return false;
+                }
+
+                if (item.type === 'folder' && item.lazy && !item.loaded && !config.lazyLoadComplete) {
+                    var listItemElement = this.treeListItemElements.get(item) || null;
+                    if (!listItemElement) {
+                        return Promise.resolve(false);
+                    }
+
+                    return ensureLazyChildren(item, listItemElement, this).then(function() {
+                        if (config.navigationRequestId !== this.navigationRequestId) {
+                            return false;
+                        }
+                        var nextConfig = Object.assign({}, config, { lazyLoadComplete: true });
+                        if (nextConfig.openCurrentFolder === undefined) {
+                            nextConfig.openCurrentFolder = true;
+                        }
+                        return this.guardNavigation(item, nextConfig);
+                    }.bind(this)).catch(function() {
+                        return false;
+                    });
                 }
 
                 if (openPath) {
@@ -423,7 +427,7 @@ define([
                 }
 
                 var activeTreeItemElement = this.activateTreeItem(item, treeItemElement);
-                this.renderSelectedItem(item, activeTreeItemElement);
+                return this.renderSelectedItem(item, activeTreeItemElement);
             },
 
             showPolicyChangedModal: function() {
@@ -453,8 +457,9 @@ define([
                 var nav = this.pendingNavigation;
                 this.pendingNavigation = null;
                 if (nav) {
-                    this.proceedWithNavigation(nav.item, nav.options);
+                    return this.guardNavigation(nav.item, nav.options);
                 }
+                return false;
             },
 
             handlePolicyChangedNo: function() {
@@ -462,14 +467,18 @@ define([
 
                 var currentView = this.currentView;
                 if (currentView && typeof currentView.cancelChanges === 'function') {
-                    currentView.cancelChanges();
+                    if (currentView.cancelChanges() === false) {
+                        this.pendingNavigation = null;
+                        return false;
+                    }
                 }
 
                 var nav = this.pendingNavigation;
                 this.pendingNavigation = null;
                 if (nav) {
-                    this.proceedWithNavigation(nav.item, nav.options);
+                    return this.guardNavigation(nav.item, nav.options);
                 }
+                return false;
             },
 
             initializeSelection: function() {
@@ -500,14 +509,6 @@ define([
         return document.getElementById(containerId);
     }
 
-    function mapBrowserToServiceLocale(browserLang) {
-        var lang = (browserLang || 'en').slice(0, 2).toLowerCase();
-        if (lang === 'ru') {
-            return 'ru-RU';
-        }
-        return 'en-US';
-    }
-
     function init(options) {
         var container = resolveContainer(options || {});
 
@@ -519,24 +520,49 @@ define([
 
         var policyName = (options || {}).policyName;
 
-        APIModule.initNameGpt(policyName).then(function() {
-            var browserLang = (navigator.language || 'en').slice(0, 2).toLowerCase();
-            var targetLocale = mapBrowserToServiceLocale(browserLang);
+        var browserLang = (navigator.language || 'en').slice(0, 2).toLowerCase();
+        translationsModule.setLanguage(browserLang);
 
-            translationsModule.setLanguage(browserLang);
-
-            return APIModule.getLocale().then(function(serviceLocale) {
-                if (serviceLocale !== targetLocale) {
-                    return APIModule.setLocale(targetLocale);
-                }
-            });
-        }).then(function() {
-            initShortcutsStorage();
-
+        APIModule.initialize(policyName).then(function(openResult) {
             var treeViewState = createTreeViewState();
             var header = renderHeader(container);
+            var headerElement = header.getElement();
+            var initialPreferenceControls = headerElement.querySelector('.gp__control');
+            var initialEditorActions = headerElement.querySelector('.gp__control-actions');
+            if (initialPreferenceControls) initialPreferenceControls.style.display = 'none';
+            if (initialEditorActions) initialEditorActions.style.display = 'none';
             treeViewState.setHeader(header);
             treeViewState.initHelpControls();
+
+            function reconcilePending(event) {
+                    var button = event.currentTarget;
+                    button.disabled = true;
+                    APIModule.reconcile().then(function(result) {
+                        var recovery = result.recovery || result.result || result;
+                        if (recovery && recovery.kind === 'conflict') {
+                            throw new APIModule.EditorError('Publication reconciliation found a third state.', {
+                                category: 'publication_conflict',
+                                conflict: recovery.conflict
+                            });
+                        }
+                        var notice = button.closest('.gpo-editor-status');
+                        if (notice) notice.remove();
+                    }).catch(function(error) {
+                        var notice = button.closest('.gpo-editor-status');
+                        if (notice) {
+                            notice.replaceWith(editorStatusModule.renderError(error, {
+                                onReconcile: reconcilePending
+                            }).getElement());
+                        }
+                    }).finally(function() {
+                        button.disabled = false;
+                    });
+            }
+            var pendingNotice = editorStatusModule.renderPending(
+                openResult && openResult.pending_publication,
+                reconcilePending
+            );
+            if (pendingNotice) container.appendChild(pendingNotice.getElement());
 
             var renderedMain = renderMain(container, treeViewState);
             renderFooter(container);
@@ -591,6 +617,11 @@ define([
                 renderedMain.treeView.getElement(),
                 renderedMain.main.getElement()
             );
+        }).catch(function(error) {
+            container.innerHTML = '';
+            container.appendChild(editorStatusModule.renderError(error, {
+                onRefresh: function() { init(options); }
+            }).getElement());
         });
 
         return {
@@ -599,6 +630,9 @@ define([
     }
 
     return {
-        init: init
+        init: init,
+        _test: {
+            createTreeViewState: createTreeViewState
+        }
     };
 });

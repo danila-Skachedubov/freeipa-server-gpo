@@ -1,4 +1,18 @@
 define([], function() {
+function classTokens(className) {
+    const values = Array.isArray(className) ? className : [className];
+    const tokens = [];
+
+    values.forEach(value => {
+        if (typeof value !== 'string') return;
+        value.split(/\s+/).forEach(token => {
+            if (token) tokens.push(token);
+        });
+    });
+
+    return tokens;
+}
+
 /**
  * Универсальный класс для создания DOM элементов
  * Поддерживает создание элементов с атрибутами, классами, событиями и вложенными элементами
@@ -44,9 +58,9 @@ class ElementCreator {
         }
 
         // Применение классов
-        if (className) {
-            const classes = Array.isArray(className) ? className : [className];
-            this.element.classList.add(...classes.filter(Boolean));
+        const classes = classTokens(className);
+        if (classes.length > 0) {
+            this.element.classList.add(...classes);
         }
 
         // Применение дополнительных атрибутов
@@ -92,8 +106,8 @@ class ElementCreator {
      * @returns {ElementCreator} - Возвращает this для цепочки вызовов
      */
     addClass(className) {
-        const classes = Array.isArray(className) ? className : [className];
-        this.element.classList.add(...classes.filter(Boolean));
+        const classes = classTokens(className);
+        if (classes.length > 0) this.element.classList.add(...classes);
         return this;
     }
 
@@ -103,8 +117,8 @@ class ElementCreator {
      * @returns {ElementCreator} - Возвращает this для цепочки вызовов
      */
     removeClass(className) {
-        const classes = Array.isArray(className) ? className : [className];
-        this.element.classList.remove(...classes.filter(Boolean));
+        const classes = classTokens(className);
+        if (classes.length > 0) this.element.classList.remove(...classes);
         return this;
     }
 

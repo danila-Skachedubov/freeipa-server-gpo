@@ -466,11 +466,6 @@ define(
                                 sortable: false
                             },
                             {
-                                name: 'gpcfilesyspath',
-                                label: 'File System Path',
-                                sortable: false
-                            },
-                            {
                                 name: 'versionnumber',
                                 label: 'Version',
                                 sortable: false

@@ -4,6 +4,5 @@ line-length = 140
 select = ["E", "F", "W", "I"]
 
 [lint.per-file-ignores]
-"gpui_service/gpuiservice.py" = ["E402"]
 "tests/conftest.py" = ["E402", "F401"]
 "tests/test_*.py" = ["F401"]
