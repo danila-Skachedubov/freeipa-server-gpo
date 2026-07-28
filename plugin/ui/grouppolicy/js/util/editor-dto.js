@@ -234,6 +234,17 @@ define([], function() {
         if (!field || !value || typeof value !== 'object' || typeof value.kind !== 'string') {
             return 'invalid_value';
         }
+        if (field.control === 'choice') {
+            if (!Array.isArray(field.choices)
+                    || !field.choices.every(function(choice) {
+                        return choice && typeof choice.key === 'string' && choice.key !== ''
+                            && typeof choice.label === 'string';
+                    })
+                    || value.kind !== 'text'
+                    || !field.choices.some(function(choice) { return choice.key === value.value; })) {
+                return 'invalid_value';
+            }
+        }
         if (field.required && preferenceValueIsEmpty(value)) return 'required';
         if (value.kind === 'integer' || value.kind === 'unsigned_byte'
                 || value.kind === 'optional_unsigned_byte') {

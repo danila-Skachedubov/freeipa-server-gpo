@@ -1173,6 +1173,24 @@ test('preference validation distinguishes optional absence, invalid numbers and 
     assert.equal(dto.validatePreferenceField(
         { required: true }, { kind: 'boolean', value: false }
     ), null);
+    const choice = {
+        required: true,
+        control: 'choice',
+        choices: [
+            { key: 'unknown', label: 'Unknown' },
+            { key: 'ru-MD', label: 'Russian (Moldova)' }
+        ]
+    };
+    assert.equal(dto.validatePreferenceField(
+        choice, { kind: 'text', value: 'unknown' }
+    ), null);
+    assert.equal(dto.validatePreferenceField(
+        choice, { kind: 'text', value: 'not-a-locale' }
+    ), 'invalid_value');
+    assert.equal(dto.validatePreferenceField(
+        { required: true, control: 'choice', choices: [{ key: '', label: 'Broken' }] },
+        { kind: 'text', value: '' }
+    ), 'invalid_value');
 });
 
 test('targeting-filter lifecycle keeps opaque paths and typed fields unchanged', () => {
@@ -1712,6 +1730,73 @@ test('editable preference update submits rename and one changed typed field exac
     }]);
     assert.equal(itemLoads, 2);
     assert.equal(root.querySelector('.preference__modal'), null);
+});
+
+test('generic preference choice controls keep Unknown unchanged and submit selected keys', async () => {
+    const updates = [];
+    const API = {
+        preferenceItems: async () => ({
+            items: [{ identity: ['opaque', 'choice'], label: 'Choice item', has_filters: false }]
+        }),
+        preferenceShow: async () => ({
+            item: { identity: ['opaque', 'choice'], label: 'Choice item' },
+            fields: [{
+                id: 'filter.languageLocale', label: 'Language', required: true, editable: true,
+                control: 'choice',
+                value: { kind: 'text', value: 'unknown' },
+                choices: [
+                    { key: 'unknown', label: 'Unknown' },
+                    { key: 'en-US', label: 'English (United States)' },
+                    { key: 'ru-MD', label: 'Russian (Moldova)' }
+                ]
+            }],
+            filters: [], filter_fields: [], filter_kinds: []
+        }),
+        preferenceUpdate: async (scope, kind, request) => {
+            updates.push({ scope, kind, request: plain(request) });
+            return {};
+        },
+        reconcile: async () => ({ recovery: { kind: 'clean' } })
+    };
+    const renderer = loadPreferenceRenderer(API);
+    const view = await renderer.renderPreferencesTemplate({
+        header: preferenceTestHeader(),
+        item: {
+            scope: 'computer', preferenceKind: 'ini_files',
+            document: { label: 'Ini Files', editable: true }
+        },
+        isCurrent: () => true
+    });
+    const root = view.getElement();
+
+    root.querySelector('.gpo-editor-preference-table__actions').querySelector('button').click();
+    await flushPreferenceRenderer();
+    let select = root.querySelector('[data-field-id="filter.languageLocale"]').querySelector('select');
+    assert.equal(select.value, 'unknown');
+    assert.deepEqual(select.children.map((option) => [option.value, option.textContent]), [
+        ['unknown', 'Unknown'],
+        ['en-US', 'English (United States)'],
+        ['ru-MD', 'Russian (Moldova)']
+    ]);
+    root.querySelector('.btn-ok').click();
+    await flushPreferenceRenderer();
+    assert.deepEqual(updates, []);
+
+    root.querySelector('.gpo-editor-preference-table__actions').querySelector('button').click();
+    await flushPreferenceRenderer();
+    select = root.querySelector('[data-field-id="filter.languageLocale"]').querySelector('select');
+    select.value = 'ru-MD';
+    select.dispatchEvent(new TestEvent('change'));
+    root.querySelector('.btn-ok').click();
+    await flushPreferenceRenderer();
+    assert.deepEqual(updates, [{
+        scope: 'computer',
+        kind: 'ini_files',
+        request: {
+            identity: ['opaque', 'choice'],
+            fields: [{ id: 'filter.languageLocale', value: { kind: 'text', value: 'ru-MD' } }]
+        }
+    }]);
 });
 
 test('failed preference save keeps the complete draft and form available for retry', async () => {
