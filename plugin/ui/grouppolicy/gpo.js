@@ -64,7 +64,7 @@ define([
                     $type: 'details',
                     name: 'details',
                     check_rights: false,
-                    actions: ['gpo_save', 'revert', 'refresh'],
+                    actions: ['gpo_save', 'revert', 'refresh', 'gpui'],
                     sections: [
                         {
                             name: 'identity',
@@ -95,6 +95,13 @@ define([
                                     label: 'Flags'
                                 }
                             ]
+                        }
+                    ],
+                    control_buttons: [
+                        {
+                            name: 'gpui',
+                            label: 'GPUI',
+                            icon: 'fa-external-link'
                         }
                     ]
                 }
@@ -189,19 +196,40 @@ define([
         spec = spec || {};
         spec.name = spec.name || 'gpui';
         spec.label = spec.label || 'GPUI';
-        spec.enable_cond = spec.enable_cond || ['item-selected'];
+        spec.enable_cond = spec.enable_cond || [];
 
         var that = IPA.action(spec);
 
         that.execute_action = function(facet) {
-            var selected = facet.get_selected_values();
+            var policyName;
 
-            if (selected.length !== 1) {
-                IPA.notify('Please select exactly one GPO to edit', 'error');
-                return;
+            if (typeof facet.get_selected_values === 'function') {
+                var selected = facet.get_selected_values();
+                if (selected && selected.length === 1) {
+                    policyName = selected[0];
+                }
             }
 
-            var policyName = selected[0];
+            if (!policyName && typeof facet.get_original_values === 'function') {
+                var values = facet.get_original_values();
+                if (values) {
+                    policyName = values.displayname || facet.entity.get_primary_key(values);
+                }
+            }
+
+            if (!policyName) {
+                var hash = window.location.hash;
+                var parts = hash.split('/');
+                var idx = parts.indexOf('gpo');
+                if (idx >= 0 && parts[idx + 2]) {
+                    policyName = decodeURIComponent(parts[idx + 2]);
+                }
+            }
+
+            if (!policyName) {
+                IPA.notify('Cannot determine GPO name', 'error');
+                return;
+            }
 
             var backdrop = $('<div class="modal-backdrop fade in"></div>');
             var modal = $(
