@@ -30,4 +30,4 @@ objectClasses: ( 1.3.6.1.4.1.9999.2.1.3
   SUP top
   STRUCTURAL
   MUST ( cn )
-  MAY ( userGroup $ computerGroup $ gpLink $ displayName ) )
+  MAY ( userGroup $ computerGroup $ gpLink $ description ) )

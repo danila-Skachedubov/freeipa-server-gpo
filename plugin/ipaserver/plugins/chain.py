@@ -138,7 +138,7 @@ class chain(LDAPObject):
     object_name_plural = _('Group Policy Chains')
     object_class = ['groupPolicyChain']
     permission_filter_objectclasses = ['groupPolicyChain']
-    default_attributes = ['cn', 'displayName', 'userGroup', 'computerGroup', 'gpLink']
+    default_attributes = ['cn', 'description', 'userGroup', 'computerGroup', 'gpLink']
     attribute_members = {'gplink': ['gpo']}
     allow_rename = True
     label = _('Group Policy Chains')
@@ -150,7 +150,7 @@ class chain(LDAPObject):
             'ipapermbindruletype': 'all',
             'ipapermright': {'read', 'search', 'compare'},
             'ipapermdefaultattr': {
-                'cn', 'objectclass', 'displayname', 'usergroup',
+                'cn', 'objectclass', 'description', 'usergroup',
                 'computergroup', 'gplink'
             },
         },
@@ -165,7 +165,7 @@ class chain(LDAPObject):
         'System: Modify Group Policy Chains': {
             'ipapermright': {'write'},
             'ipapermdefaultattr': {
-                'cn', 'displayname', 'usergroup', 'computergroup', 'gplink'
+                'cn', 'description', 'usergroup', 'computergroup', 'gplink'
             },
             'default_privileges': {'Group Policy Administrators'},
         },
@@ -176,9 +176,9 @@ class chain(LDAPObject):
             doc=_('Group Policy Chain name'), primary_key=True,
             autofill=False, pattern=constants.PATTERN_GROUPUSER_NAME,
             pattern_errmsg=constants.ERRMSG_GROUPUSER_NAME.format('chain')),
-        Str('displayname?', cli_name='display_name',
-            label=_('Display name'),
-            doc=_('Display name for the chain')),
+        Str('description?', cli_name='desc',
+            label=_('Description'),
+            doc=_('Description for the chain')),
         Str('usergroup?', cli_name='user_group', label=_('User group'),
             doc=_('User group name for this chain')),
         Str('computergroup?', cli_name='computer_group',
