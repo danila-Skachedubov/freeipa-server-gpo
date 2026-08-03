@@ -81,6 +81,10 @@ define(['../../util/element-creator'], function(elementCreator) {
             className: 'tree-item',
             children: [
                 isFolder ? createElement('span', { className: 'icon-switcher' }) : null,
+                isFolder ? createElement('span', {
+                    className: 'tree-view__status-spinner',
+                    attrs: { 'aria-hidden': 'true' }
+                }) : null,
                 item.icon ? createElement('span', { className: ['icon', item.icon] }) : null,
                 createElement('span', { className: 'tree-item__title', text: item.title })
             ]
