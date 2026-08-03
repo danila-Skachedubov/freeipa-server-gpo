@@ -356,6 +356,10 @@ define(
                     read_only: true
                 },
                 {
+                    name: 'description',
+                    label: 'Description'
+                },
+                {
                     $type: 'entity_select',
                     name: 'usergroup',
                     other_entity: 'group',
@@ -391,6 +395,11 @@ define(
                             {
                                 name: 'cn',
                                 label: 'Chain Name',
+                                sortable: false
+                            },
+                            {
+                                name: 'description',
+                                label: 'Description',
                                 sortable: false
                             },
                             {
@@ -508,6 +517,13 @@ define(
                             label: 'Chain Name',
                             doc: 'Unique name for the Group Policy Chain',
                             required: true,
+                            width: '400px'
+                        },
+                        {
+                            name: 'description',
+                            label: 'Description',
+                            doc: 'Human-readable description for the chain (optional)',
+                            required: false,
                             width: '400px'
                         },
                         {
