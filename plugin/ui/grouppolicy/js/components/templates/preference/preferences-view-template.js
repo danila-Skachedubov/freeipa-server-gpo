@@ -116,6 +116,17 @@ define([
                 })
             });
             input.getElement().value = value.value;
+        } else if (controlKind === 'choice') {
+            input = createElement('select', {
+                attrs: { disabled: disabled ? 'disabled' : null },
+                children: (Array.isArray(field.choices) ? field.choices : []).map(function(choice) {
+                    return createElement('option', {
+                        attrs: { value: choice.key },
+                        text: choice.label
+                    });
+                })
+            });
+            input.getElement().value = value.value;
         } else if (value.kind === 'text_list') {
             input = createElement('textarea', {
                 attrs: { disabled: disabled ? 'disabled' : null },
