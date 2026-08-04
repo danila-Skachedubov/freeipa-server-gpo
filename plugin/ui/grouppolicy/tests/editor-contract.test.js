@@ -2259,7 +2259,7 @@ test('tree navigation loads returned category ids lazily and uses server documen
         children(scope, categoryId) {
             childCalls.push([scope, categoryId]);
             return Promise.resolve({ children: [
-                { kind: 'category', id: 'opaque-child', label: 'Child' },
+                { kind: 'category', id: 'opaque-child', label: 'Child', explain_text: 'Child category help' },
                 { kind: 'policy', id: 'opaque-policy', label: 'Policy setting' }
             ] });
         }
@@ -2276,10 +2276,14 @@ test('tree navigation loads returned category ids lazily and uses server documen
         ]
     });
     const computerTemplates = roots[0].children[0].children[0];
+    const userTemplates = roots[0].children[1].children[0];
     assert.equal(childCalls.length, 0);
+    assert.equal(computerTemplates.help, 'policies.machineAdminTemplates');
+    assert.equal(userTemplates.help, 'policies.userAdminTemplates');
     const children = await computerTemplates.loadChildren();
     assert.deepEqual(childCalls, [['computer', null]]);
     assert.equal(children[0].categoryId, 'opaque-child');
+    assert.equal(children[0].help, 'Child category help');
     assert.equal(children[1].policyId, 'opaque-policy');
     const computerPreferences = roots[0].children[0].children[1].children;
     const userPreferences = roots[0].children[1].children[1].children;

@@ -288,6 +288,10 @@ define([
                 var editorActions = headerElement ? headerElement.querySelector('.gp__control-actions') : null;
                 if (preferenceControls) preferenceControls.style.display = 'none';
                 if (editorActions) editorActions.style.display = 'none';
+                var admxActions = headerElement ? headerElement.querySelector('.gp__control-admx') : null;
+                var helpSeparator = headerElement ? headerElement.querySelector('.gp__control-separator') : null;
+                if (admxActions) admxActions.style.display = '';
+                if (helpSeparator) helpSeparator.style.display = '';
 
                 if (this.workspace) {
                     this.workspace.clear();
@@ -301,6 +305,9 @@ define([
                 var renderedWorkspaceView = null;
 
                 if (item && item.type === 'folder') {
+                    if (editorActions) editorActions.style.display = 'flex';
+                    if (admxActions) admxActions.style.display = 'none';
+                    if (helpSeparator) helpSeparator.style.display = 'none';
                     templateResult = renderFolderTemplate({
                         children: item.children || [],
                         help: item.help,

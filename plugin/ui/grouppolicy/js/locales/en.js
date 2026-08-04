@@ -18,6 +18,7 @@ define([], function() {
       userLevelPolicies: 'User level policies',
       adminTemplates: 'Administrative Templates',
       machineAdminTemplates: 'Machine administrative templates',
+      userAdminTemplates: 'User administrative templates',
       localGroupPolicies: 'Local group policies templates',
       policy: 'Policy:',
       policyState: 'Policy State',

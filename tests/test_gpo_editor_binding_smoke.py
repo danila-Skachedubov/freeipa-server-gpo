@@ -373,6 +373,29 @@ def test_real_catalog_omits_recursively_empty_categories(catalog):
     }
 
 
+def test_real_category_nodes_carry_localized_explain_text(catalog):
+    api = HighLevelApi(
+        str(_kde_fixture_root()),
+        template_catalog=catalog,
+        locales=["en-US"],
+        load_preferences=True,
+    )
+
+    machine_root = api.list_policies("computer", None, ["en-US"])
+
+    # Contract: every tree node exposes the localized explain_text field (nullable).
+    assert all("explain_text" in item for item in machine_root)
+
+    # Category explain text is sourced from the ADMX explainText attribute and
+    # localized through ADML, exactly like policy explain text.
+    category_explanations = [
+        item["explain_text"]
+        for item in machine_root
+        if item["kind"] == "category" and item["explain_text"]
+    ]
+    assert category_explanations, "expected at least one category with localized explain text"
+
+
 def test_real_new_preference_fields_have_scope_and_checkbox_defaults(catalog):
     api = HighLevelApi(
         str(_kde_fixture_root()),
