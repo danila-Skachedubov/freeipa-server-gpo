@@ -2276,8 +2276,10 @@ test('tree navigation loads returned category ids lazily and uses server documen
         ]
     });
     const computerTemplates = roots[0].children[0].children[0];
+    const userTemplates = roots[0].children[1].children[0];
     assert.equal(childCalls.length, 0);
-    assert.equal(computerTemplates.help, 'policies.adminTemplatesHelp');
+    assert.equal(computerTemplates.help, 'policies.machineAdminTemplates');
+    assert.equal(userTemplates.help, 'policies.userAdminTemplates');
     const children = await computerTemplates.loadChildren();
     assert.deepEqual(childCalls, [['computer', null]]);
     assert.equal(children[0].categoryId, 'opaque-child');

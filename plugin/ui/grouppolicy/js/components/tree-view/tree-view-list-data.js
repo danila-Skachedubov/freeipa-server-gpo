@@ -48,7 +48,7 @@ define(['../../locales/translations', '../../util/API'], function(translations, 
             icon: 'ico-folder',
             scope: scope,
             lazy: true,
-            help: t('policies.adminTemplatesHelp'),
+            help: t(scope === 'computer' ? 'policies.machineAdminTemplates' : 'policies.userAdminTemplates'),
             children: [],
             loadChildren: function() {
                 return API.children(scope, null).then(function(result) {
