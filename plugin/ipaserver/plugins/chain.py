@@ -138,7 +138,7 @@ class chain(LDAPObject):
     object_name_plural = _('Group Policy Chains')
     object_class = ['groupPolicyChain']
     permission_filter_objectclasses = ['groupPolicyChain']
-    default_attributes = ['cn', 'displayName', 'userGroup', 'computerGroup', 'gpLink', 'active']
+    default_attributes = ['cn', 'displayName', 'userGroup', 'computerGroup', 'gpLink']
     attribute_members = {'gplink': ['gpo']}
     allow_rename = True
     label = _('Group Policy Chains')
@@ -151,7 +151,7 @@ class chain(LDAPObject):
             'ipapermright': {'read', 'search', 'compare'},
             'ipapermdefaultattr': {
                 'cn', 'objectclass', 'displayname', 'usergroup',
-                'computergroup', 'gplink', 'active'
+                'computergroup', 'gplink'
             },
         },
         'System: Add Group Policy Chains': {
@@ -165,7 +165,7 @@ class chain(LDAPObject):
         'System: Modify Group Policy Chains': {
             'ipapermright': {'write'},
             'ipapermdefaultattr': {
-                'cn', 'displayname', 'usergroup', 'computergroup', 'gplink', 'active'
+                'cn', 'displayname', 'usergroup', 'computergroup', 'gplink'
             },
             'default_privileges': {'Group Policy Administrators'},
         },
@@ -186,8 +186,10 @@ class chain(LDAPObject):
             doc=_('Computer group name for this chain')),
         Str('gplink*', cli_name='gp_link', label=_('Group Policy links'),
             doc=_('List of Group Policy Container names')),
-        Bool('active?', cli_name='active', label=_('Active'),
-             doc=_('Whether this chain is active'), default=False),
+        Bool('active?',
+            cli_name='active', label=_('Active'),
+            doc=_('Whether this chain is active (computed from chainList)'),
+            flags=['no_create', 'no_update']),
     )
 
     def __json__(self):
@@ -243,21 +245,6 @@ class chain(LDAPObject):
         """Convert attribute members for display."""
         try:
             ldap = self.api.Backend.ldap2
-
-            active_value = entry_attrs.get('active', [])
-            if active_value:
-                if isinstance(active_value, list):
-                    is_true = (active_value[0].upper() == 'TRUE'
-                            if isinstance(active_value[0], str)
-                            else bool(active_value[0]))
-                    entry_attrs['active'] = [is_true]
-                else:
-                    is_true = (active_value.upper() == 'TRUE'
-                              if isinstance(active_value, str)
-                              else bool(active_value))
-                    entry_attrs['active'] = [is_true]
-            else:
-                entry_attrs['active'] = [False]
 
             self._convert_groups([entry_attrs], ldap)
             self._convert_gpos([entry_attrs], ldap)
@@ -343,17 +330,6 @@ class chain(LDAPObject):
 
         return converted
 
-    def update_chain_active_status(self, chain_dn, active):
-        """Update active status of chain in LDAP."""
-        try:
-            ldap = self.api.Backend.ldap2
-            entry = ldap.get_entry(chain_dn, attrs_list=['active'])
-            entry['active'] = ['TRUE' if active else 'FALSE']
-            ldap.update_entry(entry)
-        except Exception as e:
-            logger.error("Failed to update chain '%s' active status: %s", chain_dn, str(e))
-            raise
-
 @register()
 class chain_show(LDAPRetrieve):
     """Display information about a Group Policy Chain."""
@@ -361,27 +337,35 @@ class chain_show(LDAPRetrieve):
     def post_callback(self, ldap, dn, entry_attrs, *keys, **options):
         if not options.get('raw', False):
             self.obj.convert_attribute_members(entry_attrs, *keys, **options)
+
+        chain_name = keys[0] if keys else None
+        if chain_name:
+            try:
+                gpmaster_result = api.Command.gpmaster_show()
+                active_chains = gpmaster_result['result'].get('chainlist', [])
+                entry_attrs['active'] = [chain_name in active_chains]
+            except Exception:
+                entry_attrs['active'] = [False]
+
         return dn
 
 class chain_toggle_base(Command):
     def _toggle_chain(self, cn, enable=True):
         try:
-            chain_result = api.Command.chain_show(cn)
-            current_active = chain_result['result'].get('active', [False])[0]
+            gpmaster_result = api.Command.gpmaster_show()
+            current_chains = gpmaster_result['result'].get('chainlist', [])
+            is_active = cn in current_chains
 
-            if enable and current_active:
+            if enable and is_active:
                 raise errors.ValidationError(
                     name='chain',
                     error=_("Chain '{}' is already enabled").format(cn)
                 )
-            if not enable and not current_active:
+            if not enable and not is_active:
                 raise errors.ValidationError(
                     name='chain',
                     error=_("Chain '{}' is already disabled").format(cn)
                 )
-
-            chain_dn = api.Object.chain.get_dn(cn)
-            api.Object.chain.update_chain_active_status(chain_dn, enable)
 
             if enable:
                 try:
@@ -448,7 +432,6 @@ class chain_add(LDAPCreate):
             )
         converted = self.obj.convert_names_to_dns(options, strict=True)
         entry_attrs.update(converted)
-        entry_attrs['active'] = 'TRUE'
         return dn
 
     def post_callback(self, ldap, dn, entry_attrs, *keys, **options):
