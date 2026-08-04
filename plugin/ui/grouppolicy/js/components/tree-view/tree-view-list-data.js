@@ -18,6 +18,7 @@ define(['../../locales/translations', '../../util/API'], function(translations, 
                 scope: scope,
                 categoryId: node.id,
                 lazy: true,
+                help: node.explain_text || undefined,
                 children: [],
                 loadChildren: function() {
                     return API.children(scope, node.id).then(function(result) {
@@ -47,6 +48,7 @@ define(['../../locales/translations', '../../util/API'], function(translations, 
             icon: 'ico-folder',
             scope: scope,
             lazy: true,
+            help: t('policies.adminTemplatesHelp'),
             children: [],
             loadChildren: function() {
                 return API.children(scope, null).then(function(result) {

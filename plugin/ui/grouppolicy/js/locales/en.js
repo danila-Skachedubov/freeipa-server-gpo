@@ -17,6 +17,7 @@ define([], function() {
       user: 'User',
       userLevelPolicies: 'User level policies',
       adminTemplates: 'Administrative Templates',
+      adminTemplatesHelp: 'Registry-based settings that extend Group Policy capabilities of the operating system.',
       machineAdminTemplates: 'Machine administrative templates',
       localGroupPolicies: 'Local group policies templates',
       policy: 'Policy:',
