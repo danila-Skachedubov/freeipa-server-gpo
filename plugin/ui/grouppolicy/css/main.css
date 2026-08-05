@@ -797,6 +797,7 @@
   border: 1px solid #d1d1d1;
   height: 100px;
   width: 100%;
+  overflow-y: auto;
 }
 .gp__admx-comment {
   width: 392px;
