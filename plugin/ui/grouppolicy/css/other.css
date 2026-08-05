@@ -212,3 +212,7 @@
 .gp__container .policy-changed__modal-footer .btn-yes {
   margin-left: auto;
 }
+
+.gp__container .tree-view ul .tree-view__list{
+  padding-left: 22px;
+}
