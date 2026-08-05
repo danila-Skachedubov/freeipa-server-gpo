@@ -167,8 +167,8 @@
 .gp__container .workspace .workspace-list-item {
   display: flex;
   align-items: center;
-  height: 16px;
   cursor: pointer;
+  min-height: 16px;
 }
 .gp__container .workspace .icon {
   width: 16px;
