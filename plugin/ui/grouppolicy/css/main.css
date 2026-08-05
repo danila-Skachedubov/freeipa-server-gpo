@@ -102,6 +102,7 @@
   flex-shrink: 0;
   transition: transform 0.3s ease;
 }
+
 .gp__container .tree-view .tree-item .tree-view__status-spinner {
   display: none;
   width: 12px;
@@ -119,6 +120,7 @@
   display: inline-flex;
   animation: tree-view-spinner 0.8s linear infinite;
 }
+
 .gp__container .tree-view .icon {
   width: 16px;
   height: 16px;

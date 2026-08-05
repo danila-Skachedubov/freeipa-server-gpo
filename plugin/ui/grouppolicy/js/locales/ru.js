@@ -18,6 +18,7 @@ define([], function() {
       userLevelPolicies: 'Политики настройки пользователей',
       adminTemplates: 'Административные шаблоны',
       machineAdminTemplates: 'Административные шаблоны компьютера',
+      userAdminTemplates: 'Пользовательские административные шаблоны',
       localGroupPolicies: 'Шаблон локальных групповых политик',
       policy: 'Политика:',
       policyState: 'Состояние политики:',
