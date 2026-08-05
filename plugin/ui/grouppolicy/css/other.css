@@ -219,6 +219,10 @@
 }
 
 
+.gp__admx{
+  height: 100%;
+}
+
 .modal.modal-gpui{
   overflow: auto;
 }
