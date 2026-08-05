@@ -9,6 +9,7 @@
 
 .modal-gpui .modal-dialog{
     width: 90%;
+    min-width: 1210px;
 }
 
 .modal-gpui .modal-dialog .modal-content{
@@ -215,4 +216,9 @@
 
 .gp__container .tree-view ul .tree-view__list{
   padding-left: 22px;
+}
+
+
+.modal.modal-gpui{
+  overflow: auto;
 }
