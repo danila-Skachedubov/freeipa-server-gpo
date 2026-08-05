@@ -690,6 +690,7 @@
 .workspace .gp__list-children {
   flex: 1;
   padding: 20px;
+  overflow-y: auto;
 }
 .workspace .gp__list-children__list {
   list-style-type: none;
