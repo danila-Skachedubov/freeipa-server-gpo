@@ -102,6 +102,25 @@
   flex-shrink: 0;
   transition: transform 0.3s ease;
 }
+
+.gp__container .tree-view .tree-item .tree-view__status-spinner {
+  display: none;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  border: 2px solid #d1d1d1;
+  border-top-color: #297FB0;
+  border-radius: 50%;
+}
+.gp__container .tree-view .view.loading > .tree-item .icon-switcher {
+  display: none;
+}
+.gp__container .tree-view .view.loading > .tree-item .tree-view__status-spinner {
+  display: inline-flex;
+  animation: tree-view-spinner 0.8s linear infinite;
+}
+
 .gp__container .tree-view .icon {
   width: 16px;
   height: 16px;
@@ -148,8 +167,8 @@
 .gp__container .workspace .workspace-list-item {
   display: flex;
   align-items: center;
-  height: 16px;
   cursor: pointer;
+  min-height: 16px;
 }
 .gp__container .workspace .icon {
   width: 16px;
@@ -671,6 +690,7 @@
 .workspace .gp__list-children {
   flex: 1;
   padding: 20px;
+  overflow-y: auto;
 }
 .workspace .gp__list-children__list {
   list-style-type: none;
@@ -778,6 +798,7 @@
   border: 1px solid #d1d1d1;
   height: 100px;
   width: 100%;
+  overflow-y: auto;
 }
 .gp__admx-comment {
   width: 392px;
@@ -799,6 +820,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  overflow: auto;
 }
 .gp__admx-text-help .title {
   padding-bottom: 5px;
@@ -1105,9 +1127,6 @@
   .gpo-editor-filters__toolbar > * {
     flex: 1 1 100%;
   }
-}
-.tree-view .view.loading > .tree-item .icon-switcher {
-  animation: tree-view-spinner 0.8s linear infinite;
 }
 .tree-view__lazy-error {
   color: #8c2b2b;
