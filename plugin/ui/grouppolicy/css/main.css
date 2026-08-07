@@ -774,6 +774,7 @@
 .gp__admx-help {
   padding-top: 20px;
   width: 0;
+  height: 100%;
   border-left: 1px solid #d1d1d1;
   display: flex;
   flex-direction: column;
