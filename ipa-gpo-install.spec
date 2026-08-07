@@ -1,5 +1,5 @@
 Name:           freeipa-server-gpo
-Version:        0.0.9
+Version:        0.1.0
 Release:        alt1
 
 Summary:        Prepare FreeIPA for Group Policy Management
@@ -70,6 +70,20 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 %_datadir/bash-completion/completions/ipa-gpo-install
 
 %changelog
+* Fri Aug 07 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.1.0-alt1
+- feat: fix info help (thx vladimirovicp)
+- chore(web): temporarily hide Preferences from tree (thx Korney Gedert)
+- packaging: include ARCHITECTURE.md in RPM docs
+- docs: add technical architecture documentation (en + ru)
+- fix:list of children files, if the name is long and the infowindow
+  is open , the information merges (thx vladimirovicp)
+- feat: list of children, added scrolling for large lists (thx vladimirovicp)
+  text than a block (thx vladimirovicp)
+  is now at a9afdf0 fix:admx window height 100% (thx vladimirovicp)
+- fix:indents in the tree structure (thx vladimirovicp)
+- feat(ui): show chain description in web interface
+- refactor: replace displayName with description for chain entity
+
 * Fri Jul 24 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.0.9-alt1
 - feat: migrate to libadmix editor API, remove gpuiservice (thx Korney Gedert)
 - feat: add structured GPUI editor UI and script editor API (thx Korney Gedert)
