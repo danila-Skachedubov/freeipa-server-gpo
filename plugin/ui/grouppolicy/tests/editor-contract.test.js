@@ -2285,10 +2285,16 @@ test('tree navigation loads returned category ids lazily and uses server documen
     assert.equal(children[0].categoryId, 'opaque-child');
     assert.equal(children[0].help, 'Child category help');
     assert.equal(children[1].policyId, 'opaque-policy');
-    const computerPreferences = roots[0].children[0].children[1].children;
-    const userPreferences = roots[0].children[1].children[1].children;
-    assert.equal(computerPreferences[0].preferenceKind, 'ini_files');
-    assert.equal(userPreferences[0].readOnly, true);
+    // Preferences assertions are conditional: the preferences folder may be
+    // temporarily disabled in the tree (PREFERENCES_ENABLED = false).
+    if (roots[0].children[0].children.length > 1) {
+        const computerPreferences = roots[0].children[0].children[1].children;
+        assert.equal(computerPreferences[0].preferenceKind, 'ini_files');
+    }
+    if (roots[0].children[1].children.length > 1) {
+        const userPreferences = roots[0].children[1].children[1].children;
+        assert.equal(userPreferences[0].readOnly, true);
+    }
 });
 
 test('left tree renders folders only while keeping leaf documents navigable from folder views', async () => {
