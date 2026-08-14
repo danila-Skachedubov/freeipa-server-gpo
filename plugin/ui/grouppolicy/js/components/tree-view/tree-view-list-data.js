@@ -3,8 +3,6 @@ define(['../../locales/translations', '../../util/API'], function(translations, 
 
     var t = translations.t;
 
-    var PREFERENCES_ENABLED = false;
-
     function payloadList(result, key) {
         if (Array.isArray(result)) return result;
         return result && Array.isArray(result[key]) ? result[key] : [];
@@ -82,7 +80,7 @@ define(['../../locales/translations', '../../util/API'], function(translations, 
             .map(preferenceNode);
         var children = [administrativeTemplates(scope)];
 
-        if (PREFERENCES_ENABLED && preferenceChildren.length) {
+        if (preferenceChildren.length) {
             children.push({
                 title: t('preferences.title'),
                 type: 'folder',
