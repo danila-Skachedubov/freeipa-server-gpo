@@ -598,6 +598,18 @@
   border-radius: 3px;
   overflow: hidden;
 }
+
+.gp__preference .preference__modal .button{
+  all: unset;
+  border: 1px solid #d1d1d1;
+  width: 80px;
+  height: 25px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
 .gpo-editor-preferences__modal-host:not(:empty) {
   position: fixed;
   inset: 0;
