@@ -3,14 +3,18 @@ define([
     '../../../util/API',
     '../../../util/editor-dto',
     '../../editor-status',
-    '../../../locales/translations'
-], function(elementCreator, API, dto, editorStatus, translations) {
+    '../../../locales/translations',
+    './layouts/shortcuts'
+], function(elementCreator, API, dto, editorStatus, translations, shortcutsLayout) {
     "use strict";
 
     var createElement = elementCreator.createElement;
     var t = translations.t;
     var nextHeaderOwnerId = 1;
     var nextFieldControlId = 1;
+    var PREFERENCE_LAYOUTS = {
+        shortcuts: shortcutsLayout
+    };
 
     function pt(key) {
         return t('preferences.editor.' + key);
@@ -47,6 +51,41 @@ define([
         return result;
     }
 
+    function actionLabel(value) {
+        var key = ({ create: 'actionCreate', replace: 'actionReplace',
+            update: 'actionUpdate', delete: 'actionDelete' })[value];
+        return key ? pt(key) : (value === null || value === undefined ? '' : String(value));
+    }
+
+    function itemFieldValue(item, fieldId) {
+        if (!item || !fieldId) return '';
+        if (Array.isArray(item.fields)) {
+            for (var index = 0; index < item.fields.length; index++) {
+                if (item.fields[index] && item.fields[index].id === fieldId) {
+                    return dto.valuePayload(item.fields[index].value);
+                }
+            }
+        }
+        if (item.properties && typeof item.properties === 'object') {
+            var key = String(fieldId).indexOf('properties.') === 0
+                ? String(fieldId).slice('properties.'.length) : String(fieldId);
+            if (Object.prototype.hasOwnProperty.call(item.properties, key)) {
+                var raw = item.properties[key];
+                if (raw && typeof raw === 'object' && 'kind' in raw) return dto.valuePayload(raw);
+                return raw === null || raw === undefined ? '' : String(raw);
+            }
+        }
+        return '';
+    }
+
+    function tableColumns(kind) {
+        var layout = PREFERENCE_LAYOUTS[kind];
+        if (layout && Array.isArray(layout.columns) && layout.columns.length) {
+            return layout.columns;
+        }
+        return null;
+    }
+
     function hiddenFieldControl(field) {
         return {
             id: field.id,
@@ -57,7 +96,7 @@ define([
         };
     }
 
-    function fieldControl(field, forceReadonly, materializeOptionalDefault) {
+    function buildControlInput(field, forceReadonly, materializeOptionalDefault, textarea) {
         var value = dto.clone(field.value || { kind: 'text', value: '' });
         var disabled = Boolean(forceReadonly || field.editable === false);
         var controlKind = field.control || '';
@@ -127,10 +166,11 @@ define([
                 })
             });
             input.getElement().value = value.value;
-        } else if (value.kind === 'text_list') {
+        } else if (value.kind === 'text_list' || textarea) {
             input = createElement('textarea', {
                 attrs: { disabled: disabled ? 'disabled' : null },
-                text: Array.isArray(value.value) ? value.value.join('\n') : ''
+                text: Array.isArray(value.value) ? value.value.join('\n')
+                    : (value.value === null || value.value === undefined ? '' : String(value.value))
             });
         } else if (value.kind === 'optional_text') {
             input = createElement('input', {
@@ -155,30 +195,13 @@ define([
         }
         if (!inputElement) inputElement = input.getElement();
         var errorElement = createElement('span', { className: 'gpo-editor-field__error' });
-        var element = createElement('div', {
-                className: ['gpo-editor-field', disabled ? 'gpo-editor-field--readonly' : null],
-                attrs: { 'data-field-id': field.id },
-                children: [
-                    createElement('span', {
-                        className: 'gpo-editor-field__label',
-                        children: [
-                            createElement('span', { text: field.label || field.id }),
-                            field.required ? createElement('span', {
-                                className: 'gpo-editor-field__required', text: '*'
-                            }) : null
-                        ]
-                    }),
-                    input,
-                    disabled ? createElement('span', {
-                        className: 'gpo-editor-field__hint', text: pt('readonly')
-                    }) : null,
-                    errorElement
-                ]
-            });
         return {
-            id: field.id,
-            field: field,
-            element: element,
+            value: value,
+            disabled: disabled,
+            controlKind: controlKind,
+            input: input,
+            inputElement: inputElement,
+            errorElement: errorElement,
             read: function() {
                 if (disabled || controlKind.indexOf('generated_') === 0) return dto.clone(value);
                 if (checkboxValueKind && value.value === null
@@ -193,8 +216,7 @@ define([
                 }
                 return dto.preferenceValueFromInput(value, inputElement.value, inputElement.checked);
             },
-            setError: function(message) {
-                element.getElement().classList.toggle('gpo-editor-field--error', Boolean(message));
+            setInputError: function(message) {
                 if (inputElement && typeof inputElement.setAttribute === 'function') {
                     if (message) inputElement.setAttribute('aria-invalid', 'true');
                     else inputElement.removeAttribute('aria-invalid');
@@ -205,6 +227,291 @@ define([
                 if (inputElement && typeof inputElement.focus === 'function') inputElement.focus();
             }
         };
+    }
+
+    function fieldControl(field, forceReadonly, materializeOptionalDefault) {
+        var builder = buildControlInput(field, forceReadonly, materializeOptionalDefault, false);
+        var element = createElement('div', {
+                className: ['gpo-editor-field', builder.disabled ? 'gpo-editor-field--readonly' : null],
+                attrs: { 'data-field-id': field.id },
+                children: [
+                    createElement('span', {
+                        className: 'gpo-editor-field__label',
+                        children: [
+                            createElement('span', { text: field.label || field.id }),
+                            field.required ? createElement('span', {
+                                className: 'gpo-editor-field__required', text: '*'
+                            }) : null
+                        ]
+                    }),
+                    builder.input,
+                    builder.disabled ? createElement('span', {
+                        className: 'gpo-editor-field__hint', text: pt('readonly')
+                    }) : null,
+                    builder.errorElement
+                ]
+            });
+        return {
+            id: field.id,
+            field: field,
+            element: element,
+            read: builder.read,
+            setError: function(message) {
+                element.getElement().classList.toggle('gpo-editor-field--error', Boolean(message));
+                builder.setInputError(message);
+            },
+            focus: builder.focus
+        };
+    }
+
+    function mockupFieldControl(field, forceReadonly, materializeOptionalDefault, options) {
+        var opts = options || {};
+        var builder = buildControlInput(field, forceReadonly, materializeOptionalDefault, Boolean(opts.textarea));
+        var checkboxLike = builder.value.kind === 'boolean'
+            || builder.value.kind === 'optional_boolean'
+            || builder.controlKind === 'optional_boolean_u8';
+        var element;
+        if (checkboxLike) {
+            element = createElement('div', {
+                className: ['field', 'field__checkbox', builder.disabled ? 'field--readonly' : null],
+                attrs: { 'data-field-id': field.id },
+                children: [
+                    createElement('label', {
+                        children: [
+                            builder.input,
+                            createElement('span', {
+                                className: 'field__label-checkbox',
+                                text: field.label || field.id
+                            })
+                        ]
+                    }),
+                    builder.errorElement
+                ]
+            });
+        } else {
+            var fieldClasses = ['field', 'field__input'];
+            if (opts.textarea) {
+                fieldClasses.push('field__description', 'h-auto');
+            } else if (builder.controlKind === 'directory_path' || builder.controlKind === 'file_path') {
+                fieldClasses.push('field__input--path');
+            } else if (valueKindIsSelect(builder)) {
+                fieldClasses.push('select');
+            }
+            element = createElement('div', {
+                className: fieldClasses,
+                attrs: { 'data-field-id': field.id },
+                children: [
+                    createElement('div', {
+                        className: 'field__label',
+                        children: [
+                            createElement('span', { text: field.label || field.id }),
+                            field.required ? createElement('span', {
+                                className: 'gpo-editor-field__required', text: '*'
+                            }) : null
+                        ]
+                    }),
+                    createElement('div', {
+                        className: 'field__element',
+                        children: [builder.input, builder.errorElement]
+                    })
+                ]
+            });
+        }
+        return {
+            id: field.id,
+            field: field,
+            element: element,
+            read: builder.read,
+            setError: function(message) {
+                element.getElement().classList.toggle('gpo-editor-field--error', Boolean(message));
+                builder.setInputError(message);
+            },
+            focus: builder.focus
+        };
+    }
+
+    function valueKindIsSelect(builder) {
+        return builder.value.kind === 'action'
+            || builder.value.kind === 'filter_combine'
+            || builder.controlKind === 'choice';
+    }
+
+    function buildPlaceholderCheckbox(entry) {
+        var label = (entry && entry.label)
+            || (entry && entry.labelKey ? pt(entry.labelKey) : '');
+        var controlId = 'gpo-preference-field-' + nextFieldControlId++;
+        var checkbox = createElement('input', {
+            attrs: {
+                id: controlId,
+                type: 'checkbox',
+                disabled: 'disabled'
+            }
+        });
+        return createElement('div', {
+            className: ['field', 'field__checkbox', 'field--readonly'],
+            children: [
+                createElement('label', {
+                    children: [
+                        createElement('span', {
+                            className: 'gpo-editor-boolean',
+                            children: [
+                                checkbox,
+                                createElement('label', {
+                                    attrs: { 'for': controlId, 'aria-label': label }
+                                })
+                            ]
+                        }),
+                        createElement('span', {
+                            className: 'field__label-checkbox',
+                            text: label
+                        })
+                    ]
+                })
+            ]
+        });
+    }
+
+    function isMetadataField(field) {
+        return String(field && field.id || '').indexOf('metadata.') === 0;
+    }
+
+    function isGeneralTabField(field) {
+        return isMetadataField(field)
+            || (Boolean(field) && field.id === 'properties.disabled');
+    }
+
+    function isBasicTabField(field) {
+        return !isGeneralTabField(field);
+    }
+
+    function orderedTabEntries(fields, layoutEntries, predicate) {
+        var layout = Array.isArray(layoutEntries) ? layoutEntries : [];
+        var belongs = typeof predicate === 'function' ? predicate : function() { return true; };
+        var result = [];
+        var placed = {};
+        layout.forEach(function(entry) {
+            var item = dto.clone(entry || {});
+            if (!item.field) {
+                if (item.line) result.push({ line: true });
+                if (item.placeholder) result.push(item);
+                return;
+            }
+            var field = fields.find(function(candidate) { return candidate.id === item.field; });
+            if (!field || !belongs(field)) return;
+            placed[item.field] = true;
+            result.push(item);
+        });
+        fields.forEach(function(field) {
+            if (placed[field.id] || !belongs(field)) return;
+            result.push({ field: field.id });
+        });
+        return result;
+    }
+
+    function buildFieldTabs(fields, options) {
+        var opts = options || {};
+        var layout = opts.layout || null;
+        var fieldsById = new Map();
+        fields.forEach(function(field) { fieldsById.set(field.id, field); });
+        var basicEntries = orderedTabEntries(fields, layout ? layout.basic : null, isBasicTabField);
+        var generalEntries = orderedTabEntries(fields, layout ? layout.general : null, isGeneralTabField);
+        var fieldOptions = {};
+        basicEntries.concat(generalEntries).forEach(function(entry) {
+            if (entry && entry.field && !fieldOptions[entry.field]) fieldOptions[entry.field] = entry;
+        });
+
+        fields.forEach(function(field) {
+            var control;
+            if (field.hidden) {
+                control = hiddenFieldControl(field);
+            } else if (layout) {
+                control = mockupFieldControl(field, opts.readonly, opts.creating, fieldOptions[field.id] || {});
+            } else {
+                control = fieldControl(field, opts.readonly, opts.creating);
+            }
+            opts.controls.push(control);
+            if (!opts.controlsById.has(field.id)) opts.controlsById.set(field.id, []);
+            opts.controlsById.get(field.id).push(control);
+        });
+
+        function renderable(entries) {
+            return entries.some(function(entry) {
+                if (entry.placeholder) return true;
+                if (!entry.field) return false;
+                var field = fieldsById.get(entry.field);
+                return Boolean(field && !field.hidden);
+            });
+        }
+
+        var basicHasFields = renderable(basicEntries);
+        var generalHasFields = renderable(generalEntries);
+        if (!basicHasFields && !generalHasFields) return null;
+
+        function buildContent(entries) {
+            var content = createElement('div', { className: 'tab-content' });
+            entries.forEach(function(entry) {
+                if (entry.line) {
+                    content.append(createElement('div', { className: 'field__line' }));
+                    return;
+                }
+                if (entry.placeholder) {
+                    content.append(buildPlaceholderCheckbox(entry));
+                    return;
+                }
+                if (!entry.field) return;
+                (opts.controlsById.get(entry.field) || []).forEach(function(control) {
+                    if (control.element) content.append(control.element);
+                });
+            });
+            return content;
+        }
+
+        var basicContent = buildContent(basicEntries);
+        var generalContent = buildContent(generalEntries);
+        basicContent.getElement().id = 'tab-basic';
+        generalContent.getElement().id = 'tab-general';
+        var activeTab = basicHasFields ? 'tab-basic' : 'tab-general';
+        if (activeTab === 'tab-basic') basicContent.getElement().classList.add('active');
+        else generalContent.getElement().classList.add('active');
+
+        var tabs = createElement('div', { className: 'preference__modal-tabs' });
+        var buttons = createElement('div', { className: 'tab-buttons' });
+        [
+            { id: 'tab-basic', enabled: basicHasFields, label: pt('tabBasic') },
+            { id: 'tab-general', enabled: generalHasFields, label: pt('tabGeneral') }
+        ].forEach(function(spec) {
+            if (!spec.enabled) return;
+            buttons.append(createElement('div', {
+                className: ['preference__tab-button', activeTab === spec.id ? 'active' : null],
+                attrs: { 'data-tab': spec.id },
+                text: spec.label,
+                events: { click: function() { activateTab(spec.id); } }
+            }));
+        });
+        tabs.append(buttons);
+        tabs.append(basicContent);
+        tabs.append(generalContent);
+
+        var filtersTab = opts.layout
+            ? (opts.layout.filters === 'basic' ? 'tab-basic'
+                : opts.layout.filters === 'general' ? 'tab-general' : null)
+            : null;
+        tabs.filtersSlot = filtersTab === 'tab-basic' && basicHasFields ? basicContent
+            : filtersTab === 'tab-general' && generalHasFields ? generalContent
+            : null;
+
+        function activateTab(id) {
+            Array.prototype.forEach.call(tabs.getElement().querySelectorAll('.preference__tab-button'),
+                function(button) {
+                    button.classList.toggle('active', button.getAttribute('data-tab') === id);
+                });
+            Array.prototype.forEach.call(tabs.getElement().querySelectorAll('.tab-content'),
+                function(content) {
+                    content.classList.toggle('active', content.id === id);
+                });
+        }
+
+        return tabs;
     }
 
     function editableFields(controls, baseline, changedOnly) {
@@ -274,6 +581,10 @@ define([
         var cleanups = [];
         var formRequestId = 0;
         var itemsRequestId = 0;
+        var infoRequestId = 0;
+        var itemFieldsCache = new Map();
+        var fieldsRequestId = 0;
+        var tableRefreshScheduled = false;
 
         if (headerControls) {
             headerControls.setAttribute('data-preference-owner', headerOwner);
@@ -359,65 +670,161 @@ define([
                 }).getElement());
                 return;
             }
+            var columns = tableColumns(item.preferenceKind);
+            var useTemplate = Boolean(columns);
+            var headerCells = useTemplate
+                ? columns.map(function(column) {
+                    return createElement('th', { text: pt(column.labelKey) });
+                })
+                : [
+                    createElement('th', { text: pt('itemColumn') }),
+                    createElement('th', { text: pt('filtersColumn') }),
+                    createElement('th', { text: pt('actionsColumn') })
+                ];
+
+            function buildDataCells(preferenceItem, index) {
+                if (!useTemplate) {
+                    return [
+                        createElement('td', { text: preferenceItem.label }),
+                        createElement('td', { text: preferenceItem.has_filters ? pt('yes') : pt('no') })
+                    ];
+                }
+                return columns.map(function(column) {
+                    var text = '';
+                    if (column.source === 'name') {
+                        text = preferenceItem.label;
+                    } else if (column.source === 'order') {
+                        text = String(index + 1);
+                    } else if (column.source === 'field') {
+                        var value = cachedFieldValue(preferenceItem.identity, column.field);
+                        text = column.format === 'action'
+                            ? actionLabel(value)
+                            : (value === null || value === undefined ? '' : String(value));
+                    }
+                    return createElement('td', { text: text });
+                });
+            }
+
+            function buildActionsCell(preferenceItem) {
+                return createElement('td', {
+                    className: 'gpo-editor-preference-table__actions',
+                    children: [createElement('button', {
+                        className: 'button',
+                        attrs: {
+                            type: 'button',
+                            disabled: opening ? 'disabled' : null
+                        },
+                        text: documentDto.editable ? t('header.edit') : pt('viewTitle'),
+                        events: { click: function(event) {
+                            event.stopPropagation();
+                            selectedIdentity = dto.clone(preferenceItem.identity);
+                            renderTable();
+                            setHeaderState();
+                            void openForm(selectedIdentity);
+                        } }
+                    })]
+                });
+            }
+
+            var bodyRows = items.map(function(preferenceItem, index) {
+                var selected = selectedIdentity !== null && dto.equal(selectedIdentity, preferenceItem.identity);
+                var cells = buildDataCells(preferenceItem, index);
+                if (!useTemplate) cells.push(buildActionsCell(preferenceItem));
+                return createElement('tr', {
+                    className: selected ? 'active' : null,
+                    attrs: { tabindex: '0' },
+                    children: cells,
+                    events: {
+                        click: function() {
+                            selectedIdentity = dto.clone(preferenceItem.identity);
+                            renderTable();
+                            setHeaderState();
+                            void requestInfoPanel(selectedIdentity);
+                        },
+                        dblclick: function() {
+                            selectedIdentity = dto.clone(preferenceItem.identity);
+                            void openForm(selectedIdentity);
+                        },
+                        keydown: function(event) {
+                            if (event.key !== 'Enter' && event.key !== ' ') return;
+                            event.preventDefault();
+                            selectedIdentity = dto.clone(preferenceItem.identity);
+                            renderTable();
+                            setHeaderState();
+                            void openForm(selectedIdentity);
+                        }
+                    }
+                });
+            });
+
             var table = createElement('table', {
                 className: 'preference__table',
                 children: [
-                    createElement('thead', { children: [createElement('tr', { children: [
-                        createElement('th', { text: pt('itemColumn') }),
-                        createElement('th', { text: pt('filtersColumn') }),
-                        createElement('th', { text: pt('actionsColumn') })
-                    ] })] }),
-                    createElement('tbody', { children: items.map(function(preferenceItem) {
-                        var selected = selectedIdentity !== null && dto.equal(selectedIdentity, preferenceItem.identity);
-                        return createElement('tr', {
-                            className: selected ? 'active' : null,
-                            attrs: { tabindex: '0' },
-                            children: [
-                                createElement('td', { text: preferenceItem.label }),
-                                createElement('td', { text: preferenceItem.has_filters ? pt('yes') : pt('no') }),
-                                createElement('td', {
-                                    className: 'gpo-editor-preference-table__actions',
-                                    children: [createElement('button', {
-                                        className: 'button',
-                                        attrs: {
-                                            type: 'button',
-                                            disabled: opening ? 'disabled' : null
-                                        },
-                                        text: documentDto.editable ? t('header.edit') : pt('viewTitle'),
-                                        events: { click: function(event) {
-                                            event.stopPropagation();
-                                            selectedIdentity = dto.clone(preferenceItem.identity);
-                                            renderTable();
-                                            setHeaderState();
-                                            void openForm(selectedIdentity);
-                                        } }
-                                    })]
-                                })
-                            ],
-                            events: {
-                                click: function() {
-                                    selectedIdentity = dto.clone(preferenceItem.identity);
-                                    renderTable();
-                                    setHeaderState();
-                                },
-                                dblclick: function() {
-                                    selectedIdentity = dto.clone(preferenceItem.identity);
-                                    void openForm(selectedIdentity);
-                                },
-                                keydown: function(event) {
-                                    if (event.key !== 'Enter' && event.key !== ' ') return;
-                                    event.preventDefault();
-                                    selectedIdentity = dto.clone(preferenceItem.identity);
-                                    renderTable();
-                                    setHeaderState();
-                                    void openForm(selectedIdentity);
-                                }
-                            }
-                        });
-                    }) })
+                    createElement('thead', { children: [createElement('tr', { children: headerCells })] }),
+                    createElement('tbody', { children: bodyRows })
                 ]
             });
             tableSlot.appendChild(table.getElement());
+        }
+
+        function cacheKey(identity) {
+            return JSON.stringify(identity);
+        }
+
+        function cachedFieldValue(identity, fieldId) {
+            var fields = itemFieldsCache.get(cacheKey(identity));
+            if (!fields) return '';
+            return itemFieldValue({ fields: fields }, fieldId);
+        }
+
+        function scheduleTableRefresh() {
+            if (tableRefreshScheduled) return;
+            tableRefreshScheduled = true;
+            var run = function() {
+                tableRefreshScheduled = false;
+                if (typeof config.isCurrent === 'function' && !config.isCurrent()) return;
+                renderTable();
+            };
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(run);
+            } else {
+                setTimeout(run, 16);
+            }
+        }
+
+        function ensureItemFields(identity) {
+            var key = cacheKey(identity);
+            if (itemFieldsCache.has(key)) {
+                return Promise.resolve(itemFieldsCache.get(key));
+            }
+            var startedGeneration = fieldsRequestId;
+            return API.preferenceShow(item.scope, item.preferenceKind, dto.clone(identity)).then(function(response) {
+                if (startedGeneration !== fieldsRequestId) return null;
+                var fields = dto.clone(response.fields || response.new_item_fields || []).map(function(field) {
+                    return scopeField(field, item.scope);
+                });
+                itemFieldsCache.set(key, fields);
+                return fields;
+            });
+        }
+
+        function prefetchTableFields() {
+            var generation = ++fieldsRequestId;
+            items.forEach(function(preferenceItem) {
+                if (preferenceItem.identity === null || preferenceItem.identity === undefined) return;
+                if (itemFieldsCache.has(cacheKey(preferenceItem.identity))) return;
+                void ensureItemFields(preferenceItem.identity).then(function(fields) {
+                    if (!fields) return;
+                    if (generation !== fieldsRequestId) return;
+                    if (typeof config.isCurrent === 'function' && !config.isCurrent()) return;
+                    scheduleTableRefresh();
+                });
+            });
+        }
+
+        function invalidateCachedFields(identity) {
+            itemFieldsCache.delete(cacheKey(identity));
+            fieldsRequestId += 1;
         }
 
         async function loadItems() {
@@ -434,6 +841,12 @@ define([
                 if (errorSlot) errorSlot.innerHTML = '';
                 renderTable();
                 setHeaderState();
+                void prefetchTableFields();
+                if (selectedIdentity !== null) {
+                    void requestInfoPanel(selectedIdentity);
+                } else {
+                    resetInfoPanel();
+                }
             } catch (error) {
                 if (requestId !== itemsRequestId
                         || typeof config.isCurrent === 'function' && !config.isCurrent()) return;
@@ -441,9 +854,112 @@ define([
             }
         }
 
+        function buildInfoPanel() {
+            var info = createElement('div', { className: 'preference__info' });
+            var settings = createElement('div', { className: 'preference__settings' });
+            settings.append(createElement('div', {
+                className: 'preference__settings-title',
+                text: pt('settingsTitle')
+            }));
+            settings.append(createElement('div', { className: 'preference__settings-data' }));
+            info.append(settings);
+            var description = createElement('div', { className: 'preference__description' });
+            description.append(createElement('div', {
+                className: 'preference__description-title',
+                text: pt('descriptionTitle')
+            }));
+            description.append(createElement('div', {
+                className: ['preference__description-data', 'empty'],
+                text: pt('noDescription')
+            }));
+            info.append(description);
+            return info;
+        }
+
+        function settingsItems() {
+            return [
+                { id: 'metadata.bypassErrors', label: pt('settingBypassErrors') },
+                { id: 'metadata.removePolicy', label: pt('settingRemovePolicy') },
+                { id: 'properties.disabled', label: pt('settingDisabled') }
+            ];
+        }
+
+        function fieldChecked(field) {
+            var v = field && field.value;
+            if (v && typeof v === 'object') {
+                return v.value === true || v.value === 1;
+            }
+            return Boolean(v);
+        }
+
+        function fieldText(field) {
+            var v = field && field.value;
+            var raw = v && typeof v === 'object' ? v.value : v;
+            if (Array.isArray(raw)) return raw.join('\n');
+            return raw === null || raw === undefined ? '' : String(raw);
+        }
+
+        function renderInfoPanel(fields) {
+            var dataSlot = rootElement.querySelector('.preference__settings-data');
+            var descSlot = rootElement.querySelector('.preference__description-data');
+            if (!dataSlot || !descSlot) return;
+            var byId = new Map();
+            (Array.isArray(fields) ? fields : []).forEach(function(field) {
+                if (field && field.id !== undefined && !byId.has(field.id)) byId.set(field.id, field);
+            });
+            dataSlot.innerHTML = '';
+            settingsItems().forEach(function(spec) {
+                var field = byId.get(spec.id);
+                var label = (field && field.label) || spec.label;
+                var value = fieldChecked(field);
+                dataSlot.appendChild(createElement('div', {
+                    className: 'preference__settings-item',
+                    children: [
+                        createElement('div', { className: 'preference__settings-name', text: label + ':' }),
+                        createElement('div', { className: 'preference__settings-value', text: value ? pt('yes') : pt('no') })
+                    ]
+                }).getElement());
+            });
+            var descField = byId.get('metadata.desc');
+            var descText = fieldText(descField);
+            descSlot.innerHTML = '';
+            if (descText) {
+                descSlot.classList.remove('empty');
+                descSlot.textContent = descText;
+            } else {
+                descSlot.classList.add('empty');
+                descSlot.textContent = pt('noDescription');
+            }
+        }
+
+        function resetInfoPanel() {
+            renderInfoPanel([]);
+        }
+
+        async function requestInfoPanel(identity) {
+            var requestId = ++infoRequestId;
+            try {
+                var fields = await ensureItemFields(identity);
+                if (requestId !== infoRequestId
+                        || typeof config.isCurrent === 'function' && !config.isCurrent()) return;
+                if (fields) renderInfoPanel(fields);
+                else resetInfoPanel();
+            } catch (error) {
+                if (requestId !== infoRequestId
+                        || typeof config.isCurrent === 'function' && !config.isCurrent()) return;
+                resetInfoPanel();
+            }
+        }
+
         function renderShell() {
             rootElement.innerHTML = '';
+            rootElement.appendChild(buildInfoPanel().getElement());
             rootElement.appendChild(createElement('div', {
+                className: 'preference__divider',
+                children: [createElement('div', { className: 'divider__line' })]
+            }).getElement());
+            var dataTable = createElement('div', { className: 'preference__data-table' });
+            dataTable.append(createElement('div', {
                 className: 'gpo-editor-preferences__header',
                 children: [
                     createElement('h2', { text: documentDto.label || item.preferenceKind }),
@@ -452,10 +968,12 @@ define([
                         text: documentDto.editable ? pt('documentEditable') : pt('documentReadOnly')
                     })
                 ]
-            }).getElement());
-            rootElement.appendChild(createElement('div', { className: 'gpo-editor-preferences__error' }).getElement());
-            rootElement.appendChild(createElement('div', { className: 'gpo-editor-preferences__table' }).getElement());
-            rootElement.appendChild(createElement('div', { className: 'gpo-editor-preferences__modal-host' }).getElement());
+            }));
+            dataTable.append(createElement('div', { className: 'gpo-editor-preferences__error' }));
+            dataTable.append(createElement('div', { className: 'gpo-editor-preferences__table' }));
+            dataTable.append(createElement('div', { className: 'gpo-editor-preferences__modal-host' }));
+            rootElement.appendChild(dataTable.getElement());
+            resetInfoPanel();
         }
 
         function buildFilterEditor(showResult, formState, readonly) {
@@ -829,10 +1347,21 @@ define([
                     : (response.fields || [])).map(function(field) {
                         return scopeField(field, item.scope);
                     });
+                if (!creating) {
+                    infoRequestId += 1;
+                    renderInfoPanel(fields);
+                }
                 var parentCandidates = creating && Array.isArray(response.parent_candidates)
                     ? dto.clone(response.parent_candidates) : [];
                 var controls = [];
                 var controlsById = new Map();
+                var fieldTabs = buildFieldTabs(fields, {
+                    controls: controls,
+                    controlsById: controlsById,
+                    readonly: readonly,
+                    creating: creating,
+                    layout: PREFERENCE_LAYOUTS[item.preferenceKind] || null
+                });
                 var formState = {
                     dirty: false,
                     busy: false,
@@ -860,22 +1389,21 @@ define([
                         }
                     });
                     nameError = createElement('span', { className: 'gpo-editor-field__error' });
-                    nameField = createElement('label', {
-                        className: ['gpo-editor-field', readonly ? 'gpo-editor-field--readonly' : null],
+                    nameField = createElement('div', {
+                        className: ['field', 'field__input', readonly ? 'field--readonly' : null],
                         attrs: { 'data-field-id': 'name' },
                         children: [
-                            createElement('span', {
-                                className: 'gpo-editor-field__label',
+                            createElement('div', {
+                                className: 'field__label',
                                 children: [
                                     createElement('span', { text: pt('rename') }),
                                     createElement('span', { className: 'gpo-editor-field__required', text: '*' })
                                 ]
                             }),
-                            nameInput,
-                            readonly ? createElement('span', {
-                                className: 'gpo-editor-field__hint', text: pt('readonly')
-                            }) : null,
-                            nameError
+                            createElement('div', {
+                                className: 'field__element',
+                                children: [nameInput, nameError]
+                            })
                         ]
                     });
                 }
@@ -915,6 +1443,24 @@ define([
                 });
                 var closeAction = function() { closeForm(false, 'close'); };
                 var cancelAction = function() { closeForm(false, 'cancel'); };
+                var buildModalContent = function() {
+                    var content = createElement('div', { className: 'preference__modal-content' });
+                    content.append(validationSlot);
+                    content.append(errorSlot);
+                    content.append(createElement('div', { className: 'gpo-editor-fields' }));
+                    var filterSection = createElement('div', { className: 'preference__modal-filters' });
+                    filterSection.append(createElement('h3', { text: pt('filtersHeading') }));
+                    filterSection.append(buildFilterEditor(response, formState, readonly));
+                    if (fieldTabs) {
+                        content.append(fieldTabs);
+                        if (fieldTabs.filtersSlot) {
+                            fieldTabs.filtersSlot.append(filterSection);
+                            filterSection = null;
+                        }
+                    }
+                    if (filterSection) content.append(filterSection);
+                    return content;
+                };
                 var form = createElement('div', {
                     className: [
                         'preference__modal', 'active', 'gpo-editor-preference-form',
@@ -938,16 +1484,7 @@ define([
                                     })
                                 ]
                             }),
-                            createElement('div', {
-                                className: 'preference__modal-content',
-                                children: [
-                                    validationSlot,
-                                    errorSlot,
-                                    createElement('div', { className: 'gpo-editor-fields' }),
-                                    createElement('h3', { text: pt('filtersHeading') }),
-                                    buildFilterEditor(response, formState, readonly)
-                                ]
-                            }),
+                            buildModalContent(),
                             createElement('div', {
                                 className: 'preference__modal-footer',
                                 children: readonly ? [
@@ -971,17 +1508,20 @@ define([
                     })]
                 });
                 var fieldSlot = form.getElement().querySelector('.gpo-editor-fields');
-                if (nameField) fieldSlot.appendChild(nameField.getElement());
-                if (parentField) fieldSlot.appendChild(parentField.getElement());
-                fields.forEach(function(field) {
-                    var control = field.hidden
-                        ? hiddenFieldControl(field)
-                        : fieldControl(field, readonly, creating);
-                    controls.push(control);
-                    if (!controlsById.has(field.id)) controlsById.set(field.id, []);
-                    controlsById.get(field.id).push(control);
-                    if (control.element) fieldSlot.appendChild(control.element.getElement());
-                });
+                if (nameField) {
+                    var basicTab = form.getElement().querySelector('#tab-basic');
+                    var targetTypeField = basicTab
+                        && basicTab.querySelector('[data-field-id="properties.targetType"]');
+                    if (targetTypeField && targetTypeField.parentNode) {
+                        targetTypeField.parentNode.insertBefore(
+                            nameField.getElement(), targetTypeField);
+                    } else if (basicTab) {
+                        basicTab.insertBefore(nameField.getElement(), basicTab.firstChild);
+                    } else if (fieldSlot) {
+                        fieldSlot.appendChild(nameField.getElement());
+                    }
+                }
+                if (parentField && fieldSlot) fieldSlot.appendChild(parentField.getElement());
                 if (!readonly) {
                     form.getElement().addEventListener('input', function() {
                         if (!formState.busy) formState.dirty = true;
@@ -1261,6 +1801,7 @@ define([
                     : await API.preferenceUpdate(item.scope, item.preferenceKind, result.request);
                 var conflict = recoveryConflict(response);
                 if (conflict) throw conflict;
+                if (!state.creating) invalidateCachedFields(state.identity);
                 closeForm(true, 'saved');
                 await loadItems();
                 return true;
@@ -1283,6 +1824,7 @@ define([
             if (deleteButton) deleteButton.disabled = true;
             try {
                 await API.preferenceDelete(item.scope, item.preferenceKind, identity);
+                invalidateCachedFields(identity);
                 if (dto.equal(selectedIdentity, identity)) selectedIdentity = null;
                 await loadItems();
             } catch (error) {
@@ -1334,6 +1876,14 @@ define([
 
     return {
         renderPreferencesTemplate: renderPreferencesTemplate,
-        _test: { fieldControl: fieldControl, filterKey: filterKey, editableFields: editableFields }
+        _test: {
+            fieldControl: fieldControl,
+            mockupFieldControl: mockupFieldControl,
+            buildFieldTabs: buildFieldTabs,
+            orderedTabEntries: orderedTabEntries,
+            isMetadataField: isMetadataField,
+            filterKey: filterKey,
+            editableFields: editableFields
+        }
     };
 });

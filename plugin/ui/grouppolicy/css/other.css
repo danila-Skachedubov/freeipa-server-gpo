@@ -226,3 +226,22 @@
 .modal.modal-gpui{
   overflow: auto;
 }
+
+
+
+/* .preference__modal-tabs .field__checkbox[data-field-id="properties.disabled"],
+.preference__modal-tabs .field__checkbox[data-field-id="metadata.bypassErrors"],
+.preference__modal-tabs .field__checkbox[data-field-id="metadata.removePolicy"]
+{
+  display: none;
+}
+*/
+.preference__modal-tabs .preference__modal-filters,
+.preference__modal-tabs #tab-general .field__input[data-field-id="metadata.name"],
+.preference__modal-tabs #tab-general .field__input[data-field-id="metadata.changed"],
+.preference__modal-tabs #tab-general .field__input[data-field-id="metadata.status"],
+.preference__modal-tabs #tab-general .field__input[data-field-id="metadata.image"]
+ {
+  display: none;
+} 
+
