@@ -7,13 +7,9 @@ define([], function() {
             { line: true },
             { field: 'properties.path' },
             { line: true },
-            { field: 'properties.readOnly' },
-            { field: 'properties.archive' },
-            { field: 'properties.hidden' },
-            { line: true },
-            { field: 'properties.deleteReadOnly' },
-            { field: 'properties.deleteAll' },
-            { field: 'properties.deleteSubFolders' }
+            { field: 'properties.section' },
+            { field: 'properties.property' },
+            { field: 'properties.value' }
         ],
         general: [
             { field: 'metadata.bypassErrors' },

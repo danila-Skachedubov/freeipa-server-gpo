@@ -5,21 +5,16 @@ define([], function() {
         basic: [
             { field: 'properties.action' },
             { line: true },
-            { field: 'properties.path' },
+            { field: 'properties.systemLocale' },
+            { field: 'properties.userLocale' },
             { line: true },
-            { field: 'properties.readOnly' },
-            { field: 'properties.archive' },
-            { field: 'properties.hidden' },
-            { line: true },
-            { field: 'properties.deleteReadOnly' },
-            { field: 'properties.deleteAll' },
-            { field: 'properties.deleteSubFolders' }
+            { field: 'properties.inputLocale' },
+            { field: 'properties.userInputLocale' }
         ],
         general: [
             { field: 'metadata.bypassErrors' },
             { field: 'metadata.userContext' },
             { field: 'metadata.removePolicy' },
-            { field: 'properties.disabled' },
             { field: 'metadata.desc', textarea: true }
         ],
         filters: 'general'

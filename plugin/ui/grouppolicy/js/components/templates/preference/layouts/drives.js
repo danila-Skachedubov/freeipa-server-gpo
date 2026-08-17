@@ -6,14 +6,15 @@ define([], function() {
             { field: 'properties.action' },
             { line: true },
             { field: 'properties.path' },
+            { field: 'properties.thisDrive' },
+            { field: 'properties.allDrives' },
             { line: true },
-            { field: 'properties.readOnly' },
-            { field: 'properties.archive' },
-            { field: 'properties.hidden' },
+            { field: 'properties.userName' },
+            { field: 'properties.label' },
             { line: true },
-            { field: 'properties.deleteReadOnly' },
-            { field: 'properties.deleteAll' },
-            { field: 'properties.deleteSubFolders' }
+            { field: 'properties.persistent' },
+            { field: 'properties.useLetter' },
+            { field: 'properties.letter' }
         ],
         general: [
             { field: 'metadata.bypassErrors' },

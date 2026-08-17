@@ -5,17 +5,19 @@ define([], function() {
         basic: [
             { field: 'properties.action' },
             { line: true },
+            { field: 'properties.name' },
             { field: 'properties.path' },
             { line: true },
-            { field: 'properties.readOnly' },
-            { field: 'properties.archive' },
-            { field: 'properties.hidden' },
+            { field: 'properties.allRegular' },
+            { field: 'properties.allHidden' },
+            { field: 'properties.allAdminDrive' },
             { line: true },
-            { field: 'properties.deleteReadOnly' },
-            { field: 'properties.deleteAll' },
-            { field: 'properties.deleteSubFolders' }
+            { field: 'properties.limitUsers' },
+            { field: 'properties.userLimit' },
+            { field: 'properties.abe' }
         ],
         general: [
+            { field: 'properties.comment', textarea: true },
             { field: 'metadata.bypassErrors' },
             { field: 'metadata.userContext' },
             { field: 'metadata.removePolicy' },

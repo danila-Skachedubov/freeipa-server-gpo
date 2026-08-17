@@ -3,19 +3,17 @@ define([], function() {
 
     return {
         basic: [
+            { field: 'properties.element' },
             { field: 'properties.action' },
             { line: true },
             { field: 'properties.path' },
+            { field: 'properties.location' },
             { line: true },
-            { field: 'properties.readOnly' },
-            { field: 'properties.archive' },
-            { field: 'properties.hidden' },
-            { line: true },
-            { field: 'properties.deleteReadOnly' },
-            { field: 'properties.deleteAll' },
-            { field: 'properties.deleteSubFolders' }
+            { field: 'properties.default' },
+            { field: 'properties.deleteAll' }
         ],
         general: [
+            { field: 'properties.comment', textarea: true },
             { field: 'metadata.bypassErrors' },
             { field: 'metadata.userContext' },
             { field: 'metadata.removePolicy' },

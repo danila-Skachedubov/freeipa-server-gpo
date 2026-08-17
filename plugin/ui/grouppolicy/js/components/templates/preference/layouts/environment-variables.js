@@ -5,15 +5,11 @@ define([], function() {
         basic: [
             { field: 'properties.action' },
             { line: true },
-            { field: 'properties.path' },
+            { field: 'properties.name' },
+            { field: 'properties.value' },
             { line: true },
-            { field: 'properties.readOnly' },
-            { field: 'properties.archive' },
-            { field: 'properties.hidden' },
-            { line: true },
-            { field: 'properties.deleteReadOnly' },
-            { field: 'properties.deleteAll' },
-            { field: 'properties.deleteSubFolders' }
+            { field: 'properties.user' },
+            { field: 'properties.partial' }
         ],
         general: [
             { field: 'metadata.bypassErrors' },

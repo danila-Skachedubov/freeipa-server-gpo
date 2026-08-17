@@ -4,19 +4,15 @@ define([
     '../../../util/editor-dto',
     '../../editor-status',
     '../../../locales/translations',
-    './layouts/shortcuts',
-    './layouts/folders'
-], function(elementCreator, API, dto, editorStatus, translations, shortcutsLayout, foldersLayout) {
+    './layouts/index'
+], function(elementCreator, API, dto, editorStatus, translations, preferenceLayouts) {
     "use strict";
 
     var createElement = elementCreator.createElement;
     var t = translations.t;
     var nextHeaderOwnerId = 1;
     var nextFieldControlId = 1;
-    var PREFERENCE_LAYOUTS = {
-        shortcuts: shortcutsLayout,
-        folders: foldersLayout
-    };
+    var PREFERENCE_LAYOUTS = preferenceLayouts;
 
     function pt(key) {
         return t('preferences.editor.' + key);
