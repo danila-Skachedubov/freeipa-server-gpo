@@ -4,8 +4,9 @@ define([
     '../../../util/editor-dto',
     '../../editor-status',
     '../../../locales/translations',
-    './layouts/shortcuts'
-], function(elementCreator, API, dto, editorStatus, translations, shortcutsLayout) {
+    './layouts/shortcuts',
+    './layouts/folders'
+], function(elementCreator, API, dto, editorStatus, translations, shortcutsLayout, foldersLayout) {
     "use strict";
 
     var createElement = elementCreator.createElement;
@@ -13,7 +14,8 @@ define([
     var nextHeaderOwnerId = 1;
     var nextFieldControlId = 1;
     var PREFERENCE_LAYOUTS = {
-        shortcuts: shortcutsLayout
+        shortcuts: shortcutsLayout,
+        folders: foldersLayout
     };
 
     function pt(key) {
