@@ -31,7 +31,7 @@ define([], function() {
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },
             { source: 'field', field: 'properties.action', labelKey: 'columnAction', format: 'action' },
-            { source: 'field', field: 'properties.shortcutPath', labelKey: 'columnTarget' }
+            { source: 'field', field: 'properties.shortcutPath', labelKey: 'columnShortcutPath' }
         ]
     };
 });
