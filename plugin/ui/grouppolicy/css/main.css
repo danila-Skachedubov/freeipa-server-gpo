@@ -163,6 +163,7 @@
 }
 .gp__container .workspace {
   flex: 1 1 0px;
+  overflow: auto;
 }
 .gp__container .workspace .workspace-list-item {
   display: flex;
@@ -556,6 +557,11 @@
   padding: 0 15px;
   flex: 1 1 0px;
 }
+
+.gpo-editor-preferences__table{
+  overflow: auto;
+}
+
 .gp__preference .preference__data-empty .preference__data-message {
   text-align: center;
   padding: 26px 10px;
@@ -566,6 +572,9 @@
   border-collapse: separate;
   border-spacing: 0;
 }
+
+
+
 .gp__preference .preference__table th {
   font-weight: 400;
   font-size: 12px;
@@ -578,6 +587,11 @@
 }
 .gp__preference .preference__table td {
   padding: 4px 20px;
+  
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .gp__preference .preference__table tr {
   cursor: pointer;
@@ -597,6 +611,9 @@
   background-color: #fff;
   border-radius: 3px;
   overflow: hidden;
+
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
 }
 
 .gp__preference .preference__modal .button{
