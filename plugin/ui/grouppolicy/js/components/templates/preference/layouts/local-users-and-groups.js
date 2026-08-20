@@ -23,6 +23,12 @@ define([], function() {
             { field: 'metadata.removePolicy' },
             { field: 'metadata.desc', textarea: true }
         ],
-        filters: 'general'
+        filters: 'general',
+        columns: [
+            { source: 'name',  labelKey: 'columnName' },
+            { source: 'order', labelKey: 'columnOrder' },
+            { source: 'field', field: 'properties.action', labelKey: 'columnAction', format: 'action' },
+            { source: 'field', field: 'properties.userName', labelKey: 'columnUserName' }
+        ]
     };
 });

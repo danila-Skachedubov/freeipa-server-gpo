@@ -21,6 +21,14 @@ define([], function() {
             { field: 'properties.disabled' },
             { field: 'metadata.desc', textarea: true }
         ],
-        filters: 'general'
+        filters: 'general',
+        columns: [
+            { source: 'name',  labelKey: 'columnName' },
+            { source: 'order', labelKey: 'columnOrder' },
+            { source: 'field', field: 'properties.action', labelKey: 'columnAction', format: 'action' },
+            { source: 'field', field: 'properties.driver',   labelKey: 'columnDriver' },
+            { source: 'field', field: 'properties.server',   labelKey: 'columnServer' },
+            { source: 'field', field: 'properties.database', labelKey: 'columnDatabase' }
+        ]
     };
 });

@@ -9,6 +9,11 @@ define([], function() {
             { field: 'properties.name' }
         ],
         general: [],
-        filters: 'basic'
+        filters: 'basic',
+        columns: [
+            { source: 'name',  labelKey: 'columnName' },
+            { source: 'order', labelKey: 'columnOrder' },
+            { source: 'field', field: 'properties.action', labelKey: 'columnAction', format: 'action' }
+        ]
     };
 });
