@@ -2393,6 +2393,45 @@ def test_chain_remove_gpo_pre_callback_resolves_linked_policy(monkeypatch):
     schema_check.assert_called_once_with(ldap, subject.api)
 
 
+def test_chain_remove_gpo_reports_resolved_but_unlinked_policy(monkeypatch):
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", MagicMock())
+    subject = _association_subject()
+    subject._extract_displayname_from_value = lambda value: str(value)
+    subject.obj.find_gp_by_displayname.return_value = SECOND_GPO_DN
+    ldap = MagicMock()
+
+    def get_entry(dn, attrs_list=None):
+        if dn == FIRST_DN:
+            return Entry(FIRST_DN, cn=["primary"], gplink=[GPO_DN])
+        if dn == GPO_DN:
+            return Entry(GPO_DN, displayName=["Policy A"])
+        raise AssertionError("unexpected LDAP lookup")
+
+    ldap.get_entry.side_effect = get_entry
+    found = {"gplink": {"gpo": ["Policy B"]}}
+    not_found = {}
+
+    result = CHAIN.chain_remove_gpo.pre_callback(
+        subject,
+        ldap,
+        FIRST_DN,
+        found,
+        not_found,
+        "primary",
+    )
+
+    assert result == FIRST_DN
+    assert found == {"gplink": {"gpo": []}}
+    assert not_found == {
+        "gplink": {"gpo": [("Policy B", "GPO not found in chain")]}
+    }
+    subject.obj.find_gp_by_displayname.assert_called_once_with("Policy B")
+    assert ldap.method_calls == [
+        call.get_entry(FIRST_DN, ["cn", "gplink"]),
+        call.get_entry(GPO_DN, attrs_list=CHAIN.GP_LOOKUP_ATTRIBUTES),
+    ]
+
+
 def test_chain_remove_gpo_falls_back_to_cn_for_empty_display_name(
     monkeypatch,
 ):
