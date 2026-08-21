@@ -77,8 +77,10 @@ def verify_gpo_schema(ldap, api):
                         'Please run the ipa-gpo-install command to extend the schema.'
                     )
                 )
+        raise
     except Exception as e:
         logger.debug("GPO schema check error: %s", str(e))
+        raise
 
 
 GPO_TEMPLATE_ROOT = Path('/usr/share/PolicyDefinitions')
