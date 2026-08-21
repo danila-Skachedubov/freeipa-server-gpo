@@ -389,18 +389,19 @@ test('resizable enforces live bounds and removes every listener on cleanup', () 
     assert.equal(document.listeners.size, 0);
 });
 
-test('app destroy cleans the active view and resize lifecycle exactly once', async () => {
-    const container = new TestElement('div');
+test('app handles destroy only their own lifecycle exactly once', async () => {
     const header = preferenceTestHeader();
-    const resizeCleanup = { calls: 0 };
-    const viewCleanup = { calls: 0 };
+    const resizeCleanups = [];
+    const viewCleanups = [];
     const element = () => ({ getElement: () => new TestElement('div') });
     const app = loadAmd('js/app.js', {
         './components/header/header': { renderHeader: () => header },
         './components/main/main': {
             renderMain(_container, state) {
+                const cleanup = { calls: 0 };
+                viewCleanups.push(cleanup);
                 state.setCurrentView({
-                    cleanup() { viewCleanup.calls += 1; }
+                    cleanup() { cleanup.calls += 1; }
                 });
                 return {
                     divider: element(),
@@ -412,7 +413,9 @@ test('app destroy cleans the active view and resize lifecycle exactly once', asy
         './components/footer/footer': { renderFooter() {} },
         './util/resizable': {
             resizable() {
-                return () => { resizeCleanup.calls += 1; };
+                const cleanup = { calls: 0 };
+                resizeCleanups.push(cleanup);
+                return () => { cleanup.calls += 1; };
             }
         },
         './components/templates/default-template': {},
@@ -436,15 +439,29 @@ test('app destroy cleans the active view and resize lifecycle exactly once', asy
         Element: TestElement
     });
 
-    const handle = app.init({ container, policyName: 'Policy' });
+    const first = app.init({
+        container: new TestElement('div'), policyName: 'First'
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    const second = app.init({
+        container: new TestElement('div'), policyName: 'Second'
+    });
     await Promise.resolve();
     await Promise.resolve();
 
-    handle.destroy();
+    assert.deepEqual(viewCleanups.map((cleanup) => cleanup.calls), [1, 0]);
+    assert.deepEqual(resizeCleanups.map((cleanup) => cleanup.calls), [1, 0]);
+
+    first.destroy();
+    assert.deepEqual(viewCleanups.map((cleanup) => cleanup.calls), [1, 0]);
+    assert.deepEqual(resizeCleanups.map((cleanup) => cleanup.calls), [1, 0]);
+
+    second.destroy();
     app.destroy();
 
-    assert.equal(viewCleanup.calls, 1);
-    assert.equal(resizeCleanup.calls, 1);
+    assert.deepEqual(viewCleanups.map((cleanup) => cleanup.calls), [1, 1]);
+    assert.deepEqual(resizeCleanups.map((cleanup) => cleanup.calls), [1, 1]);
 });
 
 test('app destroy invalidates an editor initialization that resolves later', async () => {

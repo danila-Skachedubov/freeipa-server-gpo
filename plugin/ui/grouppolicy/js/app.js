@@ -44,11 +44,13 @@ define([
     var lifecycleGeneration = 0;
     var activeLifecycle = null;
 
-    function destroy() {
-        lifecycleGeneration += 1;
-        var lifecycle = activeLifecycle;
-        activeLifecycle = null;
-        if (!lifecycle) return;
+    function destroyLifecycle(lifecycle) {
+        if (!lifecycle || lifecycle.destroyed) return;
+        lifecycle.destroyed = true;
+        if (activeLifecycle === lifecycle) {
+            lifecycleGeneration += 1;
+            activeLifecycle = null;
+        }
 
         if (lifecycle.treeViewState) {
             lifecycle.treeViewState.renderRequestId += 1;
@@ -71,6 +73,10 @@ define([
                 }
             }
         }
+    }
+
+    function destroy() {
+        destroyLifecycle(activeLifecycle);
     }
 
     function createTreeViewState() {
@@ -567,7 +573,8 @@ define([
         var lifecycle = {
             container: container,
             treeViewState: null,
-            resizeCleanup: null
+            resizeCleanup: null,
+            destroyed: false
         };
         activeLifecycle = lifecycle;
 
@@ -694,7 +701,7 @@ define([
 
         return {
             container: container,
-            destroy: destroy
+            destroy: function() { destroyLifecycle(lifecycle); }
         };
     }
 
