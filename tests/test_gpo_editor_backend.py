@@ -1467,6 +1467,120 @@ def test_editor_command_success_envelope_uses_eager_string_summary():
     assert envelope["result"] == {"ok": True}
 
 
+def test_editor_open_returns_documents_from_one_preference_workspace(
+    monkeypatch,
+):
+    workspace = PreferenceWorkspace()
+    workspace.list_preference_documents = lambda: [{
+        "scope": "computer",
+        "kind": "files",
+        "label": "Files",
+        "path": "Machine/Preferences/Files/Files.xml",
+        "editable": True,
+        "item_count": 1,
+    }]
+    context = editor_context()
+    opened = []
+
+    def open_workspace(*args, **kwargs):
+        opened.append((args, kwargs))
+        return workspace, runtime()
+
+    monkeypatch.setattr(GPO, "_open_workspace", open_workspace)
+
+    result = GPO.gpo_editor_open.execute(
+        CommandHarness(context),
+        "Test GPO",
+        locales=["ru-RU"],
+    )
+
+    assert opened == [
+        ((context, ["ru-RU"]), {"load_preferences": True})
+    ]
+    assert result["preference_documents"] == [{
+        "scope": "computer",
+        "kind": "files",
+        "label": "Files",
+        "editable": True,
+        "item_count": 1,
+    }]
+
+
+def test_editor_reconcile_uses_write_context_and_public_result(monkeypatch):
+    workspace = SimpleNamespace(
+        pending_external_publication=lambda: None,
+        diagnostics=lambda: [],
+    )
+    context = editor_context()
+    ldap_backend = object()
+    harness = CommandHarness(context, ldap_backend=ldap_backend)
+    context_calls = []
+
+    def resolve_context(displayname, write=False):
+        context_calls.append((displayname, write))
+        return context
+
+    harness._context = resolve_context
+    opened = []
+    monkeypatch.setattr(
+        GPO,
+        "_open_workspace",
+        lambda *args, **kwargs: (
+            opened.append((args, kwargs)) or (workspace, runtime())
+        ),
+    )
+    reconciled = []
+    monkeypatch.setattr(
+        GPO,
+        "_reconcile_workspace",
+        lambda *args, **kwargs: (
+            reconciled.append((args, kwargs)) or ({"kind": "clean"}, snapshot())
+        ),
+    )
+
+    result = GPO.gpo_editor_reconcile.execute(harness, "Test GPO")
+
+    assert context_calls == [("Test GPO", True)]
+    assert opened == [(
+        (context,),
+        {"load_preferences": False, "with_catalog": False},
+    )]
+    assert reconciled == [(
+        (workspace, ldap_backend, context),
+        {"reject_conflict": False},
+    )]
+    assert result["recovery"] == {
+        "kind": "clean",
+        "plan": None,
+        "conflict": None,
+    }
+    assert result["snapshot"]["version_number"] == 0
+
+
+def test_preference_items_normalizes_machine_scope(monkeypatch):
+    workspace = PreferenceWorkspace()
+    item_calls = []
+    workspace.list_preference_items = lambda scope, kind: (
+        item_calls.append((scope, kind)) or list(workspace.items)
+    )
+    context = editor_context()
+    monkeypatch.setattr(
+        GPO,
+        "_open_workspace",
+        lambda *args, **kwargs: (workspace, runtime()),
+    )
+
+    result = GPO.gpo_editor_preference_items.execute(
+        CommandHarness(context),
+        "Test GPO",
+        "machine",
+        "files",
+    )
+
+    assert result["items"] == workspace.items
+    assert item_calls == [("computer", "files")]
+
+
 def test_policy_form_update_is_one_workspace_and_one_commit(monkeypatch):
     workspace = PolicyWorkspace()
     context = editor_context()
