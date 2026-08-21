@@ -102,3 +102,67 @@ def test_identity_access_stops_after_first_denied_permission(
 
     assert IPAChecker._identity_can_access(tmp_path, "rwx") is False
     assert run.call_count == 2
+
+
+def test_editor_directory_rejects_unreadable_acl(monkeypatch, tmp_path):
+    checker = _checker()
+    monkeypatch.setattr(checker, "_acl_entries", lambda _path: None)
+    access = MagicMock(return_value=True)
+    monkeypatch.setattr(checker, "_identity_can_access", access)
+
+    assert checker._check_editor_directory(tmp_path) is False
+    access.assert_not_called()
+
+
+def test_editor_directory_rejects_incomplete_acl(monkeypatch, tmp_path):
+    checker = _checker()
+    monkeypatch.setattr(
+        checker,
+        "_acl_entries",
+        lambda _path: {"user:ipaapi:rwx"},
+    )
+    access = MagicMock(return_value=True)
+    monkeypatch.setattr(checker, "_identity_can_access", access)
+
+    assert checker._check_editor_directory(tmp_path) is False
+    access.assert_not_called()
+
+
+def test_editor_directory_rejects_inaccessible_identity(
+    monkeypatch, tmp_path
+):
+    checker = _checker()
+    monkeypatch.setattr(
+        checker,
+        "_acl_entries",
+        lambda _path: {
+            "user:ipaapi:rwx",
+            "default:user:ipaapi:rwx",
+        },
+    )
+    access = MagicMock(return_value=False)
+    monkeypatch.setattr(checker, "_identity_can_access", access)
+
+    assert checker._check_editor_directory(tmp_path) is False
+    access.assert_called_once_with(tmp_path, "rwx")
+
+
+def test_editor_directory_accepts_acl_without_default_when_optional(
+    monkeypatch, tmp_path
+):
+    checker = _checker()
+    monkeypatch.setattr(
+        checker,
+        "_acl_entries",
+        lambda _path: {"user:ipaapi:r-x"},
+    )
+    access = MagicMock(return_value=True)
+    monkeypatch.setattr(checker, "_identity_can_access", access)
+
+    assert checker._check_editor_directory(
+        tmp_path,
+        access_permissions="r-x",
+        identity_permissions="rx",
+        require_default=False,
+    ) is True
+    access.assert_called_once_with(tmp_path, "rx")
