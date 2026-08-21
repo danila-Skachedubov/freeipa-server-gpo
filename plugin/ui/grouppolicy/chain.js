@@ -139,7 +139,10 @@ define(
                         if (on_success) on_success(data);
                     },
                     on_error: function(xhr, text_status, error_thrown) {
-                        IPA.notify('Failed to move chain up: ' + (error_thrown.message || text_status), 'error');
+                        var detail = error_thrown && error_thrown.message || text_status;
+                        var msg = 'Failed to move chain up';
+                        if (detail) msg += ': ' + detail;
+                        IPA.notify(msg, 'error');
                         if (on_error) on_error(xhr, text_status, error_thrown);
                     }
                 });
@@ -182,7 +185,10 @@ define(
                         if (on_success) on_success(data);
                     },
                     on_error: function(xhr, text_status, error_thrown) {
-                        IPA.notify('Failed to move chain down: ' + (error_thrown.message || text_status), 'error');
+                        var detail = error_thrown && error_thrown.message || text_status;
+                        var msg = 'Failed to move chain down';
+                        if (detail) msg += ': ' + detail;
+                        IPA.notify(msg, 'error');
                         if (on_error) on_error(xhr, text_status, error_thrown);
                     }
                 });

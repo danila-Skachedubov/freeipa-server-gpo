@@ -227,6 +227,62 @@ for (const operation of [
     });
 }
 
+for (const operation of [
+    { factory: 'move_up_action', option: 'moveup_chain', direction: 'up' },
+    { factory: 'move_down_action', option: 'movedown_chain', direction: 'down' }
+]) {
+    test(`chain move ${operation.direction} handles RPC success and missing error details`, () => {
+        const environment = pluginEnvironment();
+        const chain = loadChain(environment);
+        const action = chain[operation.factory]();
+        const facet = {
+            selected: [],
+            refreshes: 0,
+            get_selected_values() {
+                return this.selected;
+            },
+            refresh() {
+                this.refreshes += 1;
+            }
+        };
+
+        action.execute_action(facet);
+        assert.equal(environment.calls.commands.length, 0);
+        assert.match(environment.calls.notifications[0][1], /exactly one chain/);
+
+        facet.selected = ['primary'];
+        let successValue;
+        let errorValue;
+        action.execute_action(
+            facet,
+            (value) => { successValue = value; },
+            (...args) => { errorValue = args; }
+        );
+
+        const command = environment.calls.commands[0];
+        assert.equal(environment.calls.executions, 1);
+        assert.deepEqual(plain({
+            entity: command.entity,
+            method: command.method,
+            options: command.options
+        }), {
+            entity: 'gpmaster',
+            method: 'mod',
+            options: { [operation.option]: 'primary', version: '2.0' }
+        });
+
+        command.on_success({ moved: true });
+        assert.deepEqual(successValue, { moved: true });
+        assert.equal(facet.refreshes, 1);
+
+        assert.doesNotThrow(() => command.on_error('xhr', 'timeout', undefined));
+        assert.deepEqual(errorValue, ['xhr', 'timeout', undefined]);
+        assert.deepEqual(environment.calls.notifications.at(-1), [
+            'notify', `Failed to move chain ${operation.direction}: timeout`, 'error'
+        ]);
+    });
+}
+
 test('GPO plugin loads styles and registers entity and actions', () => {
     const environment = pluginEnvironment();
     const { exported: gpo, links } = loadGpo(environment);
