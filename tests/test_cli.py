@@ -276,6 +276,29 @@ class TestExecuteRequiredActions:
         }
         assert cli.execute_required_actions(actions, check_results) is False
 
+    def test_editor_filesystem_health_check_failure_stops_later_actions(self):
+        actions = _make_actions()
+        actions.configure_editor_filesystem.return_value = True
+        checker = _make_checker()
+        checker.check_editor_filesystem.return_value = False
+        check_results = {
+            'adtrust_enabled': True,
+            'sysvol_directory': True,
+            'sysvol_share': True,
+            'schema_complete': False,
+        }
+
+        assert cli.execute_required_actions(
+            actions, check_results, checker
+        ) is False
+
+        actions.configure_editor_filesystem.assert_called_once_with()
+        checker.check_editor_filesystem.assert_called_once_with()
+        actions.are_plugins_activated.assert_not_called()
+        actions.activate_plugins.assert_not_called()
+        actions.restart_oddjob.assert_not_called()
+        actions.run_ipa_server_upgrade.assert_not_called()
+
     def test_upgrade_failure_stops(self):
         actions = _make_actions()
         actions.are_plugins_activated.return_value = True
