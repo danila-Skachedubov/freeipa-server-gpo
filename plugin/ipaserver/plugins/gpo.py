@@ -1090,6 +1090,11 @@ def _reconcile_workspace(workspace, ldap_backend, context, reject_conflict=False
         snapshot, _ = _read_gpc_snapshot(ldap_backend, context)
         context.snapshot = snapshot
         return {'kind': 'clean'}, snapshot
+    if not isinstance(pending, dict):
+        raise EditorFailure(
+            'recovery_operator_action',
+            'Publication recovery has no complete pending state.',
+        )
 
     if pending.get('phase') != 'awaiting_directory_publication':
         original_plan = pending.get('plan')
@@ -1115,6 +1120,16 @@ def _reconcile_workspace(workspace, ldap_backend, context, reject_conflict=False
     observed, observed_presence = _read_gpc_snapshot(ldap_backend, context)
     action = workspace.reconcile_external(observed)
     kind = action.get('kind')
+    if kind in ('apply', 'acknowledge'):
+        original_plan = pending.get('plan')
+        if (
+            not isinstance(original_plan, dict)
+            or action.get('plan') != original_plan
+        ):
+            raise EditorFailure(
+                'recovery_operator_action',
+                'Publication recovery does not match the original plan.',
+            )
     if kind == 'apply':
         plan = action.get('plan')
         precondition = pending.get('precondition')

@@ -809,6 +809,69 @@ def test_recovery_acknowledge_is_idempotent_and_does_not_apply(monkeypatch):
     assert workspace.acks == [("token", after)]
 
 
+@pytest.mark.parametrize("kind", ["apply", "acknowledge"])
+def test_recovery_rejects_action_for_different_publication_plan(
+    monkeypatch,
+    kind,
+):
+    before = snapshot()
+    original_plan = plan()
+    replacement_plan = {**original_plan, "target_version": 2}
+    pending = {
+        "phase": "awaiting_directory_publication",
+        "plan": original_plan,
+        "precondition": before,
+    }
+    workspace = RecoveryWorkspace(
+        pending,
+        {"kind": kind, "plan": replacement_plan, "conflict": None},
+    )
+    monkeypatch.setattr(
+        GPO, "_read_gpc_snapshot", lambda *args: (before, {})
+    )
+    applied = []
+    monkeypatch.setattr(
+        GPO,
+        "_apply_publication_plan",
+        lambda *args: applied.append(args),
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._reconcile_workspace(
+            workspace,
+            object(),
+            editor_context(before),
+        )
+
+    assert failure.value.category == "recovery_operator_action"
+    assert "original plan" in failure.value.message
+    assert applied == []
+    assert workspace.acks == []
+
+
+def test_recovery_rejects_malformed_pending_state_before_ldap(monkeypatch):
+    workspace = RecoveryWorkspace(
+        ["not", "a", "mapping"],
+        {"kind": "apply", "plan": plan(), "conflict": None},
+    )
+    reads = []
+    monkeypatch.setattr(
+        GPO,
+        "_read_gpc_snapshot",
+        lambda *args: reads.append(args),
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._reconcile_workspace(
+            workspace,
+            object(),
+            editor_context(),
+        )
+
+    assert failure.value.category == "recovery_operator_action"
+    assert reads == []
+
+
 def test_recovery_third_state_is_retained_and_rejects_new_mutation(monkeypatch):
     observed = snapshot(version=8)
     conflict = {
