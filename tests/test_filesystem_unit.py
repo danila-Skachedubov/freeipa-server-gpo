@@ -4,14 +4,19 @@ import grp
 import os
 import pwd
 import subprocess
+from types import SimpleNamespace
 
 import pytest
 
 from ipa_gpo_install.filesystem import (
     FilesystemConfigurationError,
     _run_checked,
+    _set_directory_acls,
     editor_state_directory_status,
+    ensure_directory_editor_acl,
     ensure_editor_state_directory,
+    ensure_new_gpo_acls,
+    ensure_policies_root_acl,
 )
 
 
@@ -100,3 +105,91 @@ def test_state_directory_status_rejects_wrong_mode(tmp_path):
 
     assert healthy is False
     assert reason == "mode is not 0700"
+
+
+@pytest.mark.parametrize(
+    "provisioner",
+    [ensure_directory_editor_acl, ensure_policies_root_acl],
+)
+def test_acl_provisioner_rejects_regular_file(tmp_path, provisioner):
+    target = tmp_path / "not-a-directory"
+    target.write_text("data", encoding="utf-8")
+
+    with pytest.raises(
+        FilesystemConfigurationError,
+        match="not a real directory",
+    ):
+        provisioner(target, runner=lambda *_args, **_kwargs: None)
+
+
+def test_new_gpo_acls_reject_missing_policy_directory(tmp_path):
+    policies = tmp_path / "Policies"
+    policies.mkdir()
+
+    with pytest.raises(
+        FilesystemConfigurationError,
+        match="GPO path is not a real directory",
+    ):
+        ensure_new_gpo_acls(
+            policies,
+            policies / "missing-gpo",
+            runner=lambda command, **_kwargs: subprocess.CompletedProcess(
+                command, 0
+            ),
+        )
+
+
+@pytest.mark.parametrize("missing_name", ["Machine", "User"])
+def test_new_gpo_acls_require_scope_directories(tmp_path, missing_name):
+    policies = tmp_path / "Policies"
+    policy = policies / "gpo"
+    policy.mkdir(parents=True)
+    for name in {"Machine", "User"} - {missing_name}:
+        (policy / name).mkdir()
+
+    with pytest.raises(
+        FilesystemConfigurationError,
+        match="new GPO directory is not a real directory",
+    ):
+        ensure_new_gpo_acls(
+            policies,
+            policy,
+            runner=lambda command, **_kwargs: subprocess.CompletedProcess(
+                command, 0
+            ),
+        )
+
+
+def test_directory_acls_are_split_into_bounded_batches():
+    directories = ["directory-{}".format(index) for index in range(257)]
+    calls = []
+
+    def runner(command, **_kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    _set_directory_acls(directories, "ipaapi", runner=runner)
+
+    assert [len(command[4:]) for command in calls] == [128, 128, 1]
+    assert [path for command in calls for path in command[4:]] == directories
+
+
+def test_state_directory_status_rejects_wrong_owner(tmp_path, monkeypatch):
+    state = tmp_path / "state"
+    state.mkdir(mode=0o700)
+    os.chmod(state, 0o700)
+    info = state.stat()
+
+    monkeypatch.setattr(
+        "ipa_gpo_install.filesystem.pwd.getpwnam",
+        lambda _name: SimpleNamespace(pw_uid=info.st_uid + 1),
+    )
+    monkeypatch.setattr(
+        "ipa_gpo_install.filesystem.grp.getgrnam",
+        lambda _name: SimpleNamespace(gr_gid=info.st_gid + 1),
+    )
+
+    healthy, reason = editor_state_directory_status(state, "ipaapi", "ipaapi")
+
+    assert healthy is False
+    assert reason == "owner is not ipaapi:ipaapi"
