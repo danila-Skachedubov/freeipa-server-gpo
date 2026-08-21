@@ -112,6 +112,10 @@ def test_normalize_to_list(value, expected):
 def _resolver(chain_object=None, ldap=None):
     chain = chain_object or MagicMock()
     backend = ldap or MagicMock()
+    backend.get_entry.return_value = {
+        "cn": ["primary"],
+        "objectclass": ["top", "groupPolicyChain"],
+    }
     subject = SimpleNamespace(
         api=SimpleNamespace(
             Object=SimpleNamespace(chain=chain),
@@ -148,7 +152,30 @@ def test_strict_explicit_dn_verifies_ldap_entry():
 
     assert result == str(CHAIN_DN)
     chain.get_dn.assert_not_called()
-    ldap.get_entry.assert_called_once_with(CHAIN_DN, attrs_list=["cn"])
+    ldap.get_entry.assert_called_once_with(
+        CHAIN_DN, attrs_list=["cn", "objectclass"]
+    )
+
+
+@pytest.mark.parametrize(
+    "objectclasses",
+    [[], ["top", "groupOfNames"]],
+)
+def test_strict_explicit_dn_rejects_non_chain_object(objectclasses):
+    subject, chain, ldap = _resolver()
+    ldap.get_entry.return_value = {
+        "cn": ["ordinary-group"],
+        "objectclass": objectclasses,
+    }
+
+    with pytest.raises(errors.ValidationError) as failure:
+        GPMASTER.gpmaster.resolve_chain_name(
+            subject, str(CHAIN_DN), strict=True
+        )
+
+    assert failure.value.name == "chain"
+    assert "not a Group Policy Chain" in failure.value.error
+    chain.get_dn.assert_not_called()
 
 
 def test_strict_explicit_dn_reports_missing_chain():
@@ -181,7 +208,9 @@ def test_strict_chain_resolution_verifies_ldap_entry():
     )
 
     assert result == str(CHAIN_DN)
-    ldap.get_entry.assert_called_once_with(CHAIN_DN, attrs_list=["cn"])
+    ldap.get_entry.assert_called_once_with(
+        CHAIN_DN, attrs_list=["cn", "objectclass"]
+    )
 
 
 def test_non_strict_chain_resolution_preserves_unknown_name():

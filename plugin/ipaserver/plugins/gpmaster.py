@@ -17,6 +17,11 @@ PLUGIN_CONFIG = (
     ('container_gpmaster', DN(('cn', 'etc'))),
 )
 
+
+def _has_object_class(entry, expected):
+    values = entry.get('objectclass') or entry.get('objectClass') or []
+    return any(str(value).lower() == expected.lower() for value in values)
+
 @register()
 class gpmaster(LDAPObject):
     """Group Policy Master object."""
@@ -109,14 +114,23 @@ class gpmaster(LDAPObject):
                 return chain_name
             try:
                 chain_dn = DN(chain_name)
-                self.api.Backend.ldap2.get_entry(
-                    chain_dn, attrs_list=['cn']
+                entry = self.api.Backend.ldap2.get_entry(
+                    chain_dn, attrs_list=['cn', 'objectclass']
                 )
+                if not _has_object_class(entry, 'groupPolicyChain'):
+                    raise errors.ValidationError(
+                        name='chain',
+                        error=_("Object '{}' is not a Group Policy Chain").format(
+                            chain_name
+                        ),
+                    )
                 return chain_name
             except errors.NotFound:
                 raise errors.NotFound(
                     reason=_("Chain '{}' not found").format(chain_name)
                 )
+            except errors.ValidationError:
+                raise
             except Exception as e:
                 raise errors.ValidationError(
                     name='chain',
@@ -130,7 +144,16 @@ class gpmaster(LDAPObject):
 
             if strict:
                 ldap = self.api.Backend.ldap2
-                ldap.get_entry(chain_dn, attrs_list=['cn'])
+                entry = ldap.get_entry(
+                    chain_dn, attrs_list=['cn', 'objectclass']
+                )
+                if not _has_object_class(entry, 'groupPolicyChain'):
+                    raise errors.ValidationError(
+                        name='chain',
+                        error=_("Object '{}' is not a Group Policy Chain").format(
+                            chain_name
+                        ),
+                    )
 
             return str(chain_dn)
 
@@ -140,6 +163,8 @@ class gpmaster(LDAPObject):
                     reason=_("Chain '{}' not found").format(chain_name)
                 )
             return chain_name
+        except errors.ValidationError:
+            raise
         except Exception as e:
             if strict:
                 raise errors.ValidationError(
