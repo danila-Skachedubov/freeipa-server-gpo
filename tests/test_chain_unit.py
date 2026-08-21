@@ -2346,3 +2346,133 @@ def test_gpo_association_post_callback_defers_conversion_to_base(
 
     assert result == (1, FIRST_DN)
     subject.obj.convert_attribute_members.assert_not_called()
+
+
+@pytest.mark.parametrize("active", [True, False])
+def test_chain_delete_cleans_active_master_reference(monkeypatch, active):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": ["primary"] if active else ["fallback"]}
+    }
+
+    result = CHAIN.chain_del.post_callback(
+        SimpleNamespace(),
+        MagicMock(),
+        FIRST_DN,
+        "primary",
+    )
+
+    assert result is True
+    if active:
+        commands.gpmaster_mod.assert_called_once_with(
+            remove_chain=["primary"]
+        )
+    else:
+        commands.gpmaster_mod.assert_not_called()
+
+
+@pytest.mark.parametrize("failing_command", ["gpmaster_show", "gpmaster_mod"])
+def test_chain_delete_logs_master_cleanup_failure(
+    monkeypatch,
+    failing_command,
+):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": ["primary"]}
+    }
+    getattr(commands, failing_command).side_effect = RuntimeError(
+        "cleanup failed"
+    )
+    warning = MagicMock()
+    monkeypatch.setattr(CHAIN.logger, "warning", warning)
+
+    result = CHAIN.chain_del.post_callback(
+        SimpleNamespace(),
+        MagicMock(),
+        FIRST_DN,
+        "primary",
+    )
+
+    assert result is True
+    warning.assert_called_once_with(
+        "Failed to remove deleted chain '%s' from GPMaster: %s",
+        "primary",
+        "cleanup failed",
+    )
+
+
+@pytest.mark.parametrize("active", [True, False])
+def test_chain_rename_updates_active_master_reference(monkeypatch, active):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": ["primary"] if active else ["fallback"]}
+    }
+    renamed_dn = DN(("cn", "renamed"), *FIRST_DN[1:])
+
+    result = CHAIN.chain_mod.post_callback(
+        SimpleNamespace(),
+        MagicMock(),
+        renamed_dn,
+        {"cn": ["renamed"]},
+        "primary",
+        rename="renamed",
+    )
+
+    assert result == renamed_dn
+    if active:
+        commands.gpmaster_mod.assert_called_once_with(
+            add_chain=["renamed"],
+            remove_chain=["primary"],
+        )
+    else:
+        commands.gpmaster_mod.assert_not_called()
+
+
+def test_chain_mod_without_rename_skips_master_reference_update(monkeypatch):
+    commands = _command_api(monkeypatch)
+
+    result = CHAIN.chain_mod.post_callback(
+        SimpleNamespace(),
+        MagicMock(),
+        FIRST_DN,
+        {"cn": ["primary"]},
+        "primary",
+        description="Changed",
+    )
+
+    assert result == FIRST_DN
+    commands.gpmaster_show.assert_not_called()
+    commands.gpmaster_mod.assert_not_called()
+
+
+@pytest.mark.parametrize("failing_command", ["gpmaster_show", "gpmaster_mod"])
+def test_chain_rename_logs_master_update_failure(
+    monkeypatch,
+    failing_command,
+):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": ["primary"]}
+    }
+    getattr(commands, failing_command).side_effect = RuntimeError(
+        "rename sync failed"
+    )
+    warning = MagicMock()
+    monkeypatch.setattr(CHAIN.logger, "warning", warning)
+    renamed_dn = DN(("cn", "renamed"), *FIRST_DN[1:])
+
+    result = CHAIN.chain_mod.post_callback(
+        SimpleNamespace(),
+        MagicMock(),
+        renamed_dn,
+        {"cn": ["renamed"]},
+        "primary",
+        rename="renamed",
+    )
+
+    assert result == renamed_dn
+    warning.assert_called_once_with(
+        "Failed to update renamed chain '%s' in GPMaster: %s",
+        "primary",
+        "rename sync failed",
+    )

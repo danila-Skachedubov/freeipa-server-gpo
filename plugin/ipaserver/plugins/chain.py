@@ -718,10 +718,54 @@ class chain_mod(LDAPUpdate):
             converted = self.obj.convert_names_to_dns(standard_options, strict=True)
             entry_attrs.update(converted)
 
+    def post_callback(self, ldap, dn, entry_attrs, *keys, **options):
+        """Keep an active chain reference valid after an LDAP rename."""
+        if options.get('rename') and keys:
+            old_name = keys[0]
+            new_name = options['rename']
+            try:
+                gpmaster_result = api.Command.gpmaster_show()
+                current_chains = gpmaster_result['result'].get(
+                    'chainlist', []
+                )
+                if old_name in current_chains:
+                    api.Command.gpmaster_mod(
+                        add_chain=[new_name],
+                        remove_chain=[old_name],
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to update renamed chain '%s' in GPMaster: %s",
+                    old_name,
+                    str(exc),
+                )
+
+        return dn
+
 @register()
 class chain_del(LDAPDelete):
     """Delete a Group Policy Chain."""
     msg_summary = _('Deleted Group Policy Chain "%(value)s"')
+
+    def post_callback(self, ldap, dn, *keys, **options):
+        """Remove the deleted chain from the active master list."""
+        chain_name = keys[0] if keys else None
+        if chain_name:
+            try:
+                gpmaster_result = api.Command.gpmaster_show()
+                current_chains = gpmaster_result['result'].get(
+                    'chainlist', []
+                )
+                if chain_name in current_chains:
+                    api.Command.gpmaster_mod(remove_chain=[chain_name])
+            except Exception as exc:
+                logger.warning(
+                    "Failed to remove deleted chain '%s' from GPMaster: %s",
+                    chain_name,
+                    str(exc),
+                )
+
+        return True
 
 @register()
 class chain_find(LDAPSearch):
