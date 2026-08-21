@@ -1698,3 +1698,315 @@ def test_chain_find_execute_propagates_unexpected_backend_error(monkeypatch):
 
     with pytest.raises(RuntimeError, match="LDAP unavailable"):
         CHAIN.chain_find.execute(subject)
+
+
+def _resolver_api(monkeypatch):
+    commands = SimpleNamespace(
+        gpmaster_show=MagicMock(),
+        chain_show=MagicMock(),
+        gpo_show=MagicMock(),
+        user_show=MagicMock(),
+        host_show=MagicMock(),
+    )
+    monkeypatch.setattr(CHAIN, "api", SimpleNamespace(Command=commands))
+    return commands
+
+
+def test_resolver_get_active_chains_returns_master_order(monkeypatch):
+    commands = _resolver_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": ["second", "first"]}
+    }
+
+    result = CHAIN.ChainResolveBase._get_active_chains_optimized(
+        SimpleNamespace()
+    )
+
+    assert result == ["second", "first"]
+
+
+def test_resolver_get_active_chains_defaults_missing_list(monkeypatch):
+    commands = _resolver_api(monkeypatch)
+    commands.gpmaster_show.return_value = {"result": {}}
+
+    assert CHAIN.ChainResolveBase._get_active_chains_optimized(
+        SimpleNamespace()
+    ) == []
+
+
+def test_resolver_get_active_chains_propagates_backend_error(monkeypatch):
+    commands = _resolver_api(monkeypatch)
+    commands.gpmaster_show.side_effect = RuntimeError("LDAP unavailable")
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        CHAIN.ChainResolveBase._get_active_chains_optimized(
+            SimpleNamespace()
+        )
+
+
+@pytest.mark.parametrize(
+    ("target_groups", "chain_groups", "expected"),
+    [
+        (["admins"], ["admins"], True),
+        (["admins", "users"], ["users"], True),
+        (["admins"], ["users"], False),
+        ([], ["admins"], False),
+        (["admins"], [], False),
+    ],
+)
+def test_resolver_groups_match(target_groups, chain_groups, expected):
+    assert CHAIN.ChainResolveBase._groups_match(
+        SimpleNamespace(),
+        target_groups,
+        chain_groups,
+    ) is expected
+
+
+def test_resolver_matching_policies_skips_api_for_empty_targets():
+    subject = SimpleNamespace(
+        _get_active_chains_optimized=MagicMock(),
+        _groups_match=MagicMock(),
+    )
+
+    assert CHAIN.ChainResolveBase._get_matching_policies(
+        subject,
+        [],
+        "usergroup",
+    ) == []
+    subject._get_active_chains_optimized.assert_not_called()
+
+
+def test_resolver_matching_policies_preserves_master_order_and_deduplicates(
+    monkeypatch,
+):
+    commands = _resolver_api(monkeypatch)
+    commands.chain_show.side_effect = lambda name: {
+        "result": {
+            "usergroup": ["admins"] if name != "unmatched" else ["users"],
+            "gplink": {
+                "first": ["Policy A", "Policy B"],
+                "second": ["Policy B", "Policy C"],
+                "unmatched": ["Ignored"],
+            }[name],
+        }
+    }
+    subject = SimpleNamespace(
+        _get_active_chains_optimized=MagicMock(
+            return_value=["first", "unmatched", "second"]
+        ),
+        _groups_match=lambda target, chain: (
+            CHAIN.ChainResolveBase._groups_match(
+                SimpleNamespace(), target, chain
+            )
+        ),
+    )
+
+    result = CHAIN.ChainResolveBase._get_matching_policies(
+        subject,
+        ["admins"],
+        "usergroup",
+    )
+
+    assert result == ["Policy A", "Policy B", "Policy C"]
+    assert commands.chain_show.call_args_list == [
+        call("first"),
+        call("unmatched"),
+        call("second"),
+    ]
+
+
+def test_resolver_matching_policies_skips_stale_missing_chain(monkeypatch):
+    commands = _resolver_api(monkeypatch)
+    commands.chain_show.side_effect = [
+        errors.NotFound(reason="stale chain"),
+        {"result": {"usergroup": ["admins"], "gplink": ["Policy A"]}},
+    ]
+    subject = SimpleNamespace(
+        _get_active_chains_optimized=MagicMock(
+            return_value=["missing", "valid"]
+        ),
+        _groups_match=lambda target, chain: bool(set(target) & set(chain)),
+    )
+
+    assert CHAIN.ChainResolveBase._get_matching_policies(
+        subject,
+        ["admins"],
+        "usergroup",
+    ) == ["Policy A"]
+
+
+def test_resolver_matching_policies_propagates_chain_backend_error(
+    monkeypatch,
+):
+    commands = _resolver_api(monkeypatch)
+    commands.chain_show.side_effect = RuntimeError("LDAP unavailable")
+    subject = SimpleNamespace(
+        _get_active_chains_optimized=MagicMock(return_value=["primary"]),
+        _groups_match=MagicMock(),
+    )
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        CHAIN.ChainResolveBase._get_matching_policies(
+            subject,
+            ["admins"],
+            "usergroup",
+        )
+
+
+def test_resolver_build_policies_preserves_zero_and_scalar_values(monkeypatch):
+    commands = _resolver_api(monkeypatch)
+    commands.gpo_show.return_value = {
+        "result": {
+            "displayname": ["Workstation policy"],
+            "flags": [0],
+            "gpcfilesyspath": "smb://dc/policy",
+            "versionnumber": [0],
+        }
+    }
+
+    result = CHAIN.ChainResolveBase._build_policies_list(
+        SimpleNamespace(),
+        ["Policy A"],
+    )
+
+    assert result == [
+        {
+            "name": "Workstation policy",
+            "flags": 0,
+            "file_system_path": "smb://dc/policy",
+            "version": 0,
+        }
+    ]
+
+
+def test_resolver_build_policies_uses_defaults_for_empty_attributes(
+    monkeypatch,
+):
+    commands = _resolver_api(monkeypatch)
+    commands.gpo_show.return_value = {
+        "result": {
+            "displayname": [],
+            "flags": [],
+            "gpcfilesyspath": None,
+            "versionnumber": [],
+        }
+    }
+
+    result = CHAIN.ChainResolveBase._build_policies_list(
+        SimpleNamespace(),
+        ["Policy A"],
+    )
+
+    assert result == [
+        {
+            "name": "Policy A",
+            "flags": "",
+            "file_system_path": "",
+            "version": "",
+        }
+    ]
+
+
+def test_resolver_build_policies_keeps_order_after_one_lookup_failure(
+    monkeypatch,
+):
+    commands = _resolver_api(monkeypatch)
+    commands.gpo_show.side_effect = [
+        RuntimeError("unavailable"),
+        {"result": {"displayname": ["Second policy"]}},
+    ]
+
+    result = CHAIN.ChainResolveBase._build_policies_list(
+        SimpleNamespace(),
+        ["Broken policy", "Second policy"],
+    )
+
+    assert result == [
+        {
+            "name": "Broken policy",
+            "flags": "",
+            "file_system_path": "",
+            "version": "",
+            "error": "Failed to retrieve policy details",
+        },
+        {
+            "name": "Second policy",
+            "flags": "",
+            "file_system_path": "",
+            "version": "",
+        },
+    ]
+
+
+@pytest.mark.parametrize(
+    ("command_class", "show_command", "direct_attr", "indirect_attr", "chain_attr"),
+    [
+        (
+            CHAIN.chain_resolve_for_user,
+            "user_show",
+            "memberof_group",
+            "memberofindirect_group",
+            "usergroup",
+        ),
+        (
+            CHAIN.chain_resolve_for_host,
+            "host_show",
+            "memberof_hostgroup",
+            "memberofindirect_hostgroup",
+            "computergroup",
+        ),
+    ],
+)
+def test_resolver_execute_combines_direct_and_indirect_groups(
+    monkeypatch,
+    command_class,
+    show_command,
+    direct_attr,
+    indirect_attr,
+    chain_attr,
+):
+    commands = _resolver_api(monkeypatch)
+    getattr(commands, show_command).return_value = {
+        "result": {
+            direct_attr: ["direct", "shared"],
+            indirect_attr: ["indirect", "shared"],
+        }
+    }
+    subject = SimpleNamespace(
+        _get_matching_policies=MagicMock(return_value=["Policy A"]),
+        _build_policies_list=MagicMock(return_value=[{"name": "Policy A"}]),
+    )
+
+    result = command_class.execute(subject, "target")
+
+    assert result == {"result": [{"name": "Policy A"}]}
+    subject._get_matching_policies.assert_called_once_with(
+        ["direct", "shared", "indirect"],
+        chain_attr,
+    )
+    subject._build_policies_list.assert_called_once_with(["Policy A"])
+
+
+@pytest.mark.parametrize(
+    ("command_class", "show_command"),
+    [
+        (CHAIN.chain_resolve_for_user, "user_show"),
+        (CHAIN.chain_resolve_for_host, "host_show"),
+    ],
+)
+def test_resolver_execute_propagates_subject_lookup_failure(
+    monkeypatch,
+    command_class,
+    show_command,
+):
+    commands = _resolver_api(monkeypatch)
+    getattr(commands, show_command).side_effect = RuntimeError(
+        "LDAP unavailable"
+    )
+    subject = SimpleNamespace(
+        _get_matching_policies=MagicMock(),
+        _build_policies_list=MagicMock(),
+    )
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        command_class.execute(subject, "target")

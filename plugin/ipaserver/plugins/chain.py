@@ -72,6 +72,13 @@ def _normalize_to_list(value):
         return []
     return list(value)
 
+def _first_value(value, default=None):
+    """Return the first normalized value without losing falsey numbers."""
+    values = _normalize_to_list(value)
+    if not values or values[0] is None:
+        return default
+    return values[0]
+
 def is_dn(value):
     """Check if the string looks like a DN."""
     return str(value).lower().startswith('cn=')
@@ -807,13 +814,8 @@ class chain_find(LDAPSearch):
 class ChainResolveBase(Command):
     def _get_active_chains_optimized(self):
         """Get active chains using API instead of direct LDAP."""
-        try:
-            gpmaster_result = api.Command.gpmaster_show()
-            active_chains = gpmaster_result['result'].get('chainlist', [])
-            return active_chains
-
-        except Exception as exc:
-            logger.error("Error getting active chains: %s", str(exc))
+        gpmaster_result = api.Command.gpmaster_show()
+        return gpmaster_result['result'].get('chainlist', [])
 
     def _get_matching_policies(self, target_groups, chain_group_attr):
         if not target_groups:
@@ -836,7 +838,7 @@ class ChainResolveBase(Command):
                         if policy_name not in seen_policies:
                             ordered_policies.append(policy_name)
                             seen_policies.add(policy_name)
-            except Exception:
+            except errors.NotFound:
                 continue
 
         return ordered_policies
@@ -854,11 +856,19 @@ class ChainResolveBase(Command):
             try:
                 policy_result = api.Command.gpo_show(policy_name, all=True)['result']
 
+                display_name = _first_value(
+                    policy_result.get('displayname'), policy_name
+                )
+
                 policy_dict = {
-                    'name': policy_result.get('displayname', [''])[0] or policy_name,
-                    'flags': policy_result.get('flags', [''])[0] or '',
-                    'file_system_path': policy_result.get('gpcfilesyspath', [''])[0] or '',
-                    'version': policy_result.get('versionnumber', [''])[0] or ''
+                    'name': display_name or policy_name,
+                    'flags': _first_value(policy_result.get('flags'), ''),
+                    'file_system_path': _first_value(
+                        policy_result.get('gpcfilesyspath'), ''
+                    ),
+                    'version': _first_value(
+                        policy_result.get('versionnumber'), ''
+                    )
                 }
                 policies_list.append(policy_dict)
 
@@ -886,15 +896,15 @@ class chain_resolve_for_user(ChainResolveBase):
     )
 
     def execute(self, username, **options):
-        try:
-            user_groups = api.Command.user_show(username)['result'].get('memberof_group', [])
-            policy_names = self._get_matching_policies(user_groups, 'usergroup')
-            policies_list = self._build_policies_list(policy_names)
+        user_info = api.Command.user_show(username)['result']
+        user_groups = list(dict.fromkeys(
+            _normalize_to_list(user_info.get('memberof_group')) +
+            _normalize_to_list(user_info.get('memberofindirect_group'))
+        ))
+        policy_names = self._get_matching_policies(user_groups, 'usergroup')
+        policies_list = self._build_policies_list(policy_names)
 
-            return {'result': policies_list}
-
-        except Exception:
-            return {'result': []}
+        return {'result': policies_list}
 
 @register()
 class chain_resolve_for_host(ChainResolveBase):
@@ -908,15 +918,17 @@ class chain_resolve_for_host(ChainResolveBase):
     )
 
     def execute(self, hostname, **options):
-        try:
-            host_groups = api.Command.host_show(hostname)['result'].get('memberof_hostgroup', [])
-            policy_names = self._get_matching_policies(host_groups, 'computergroup')
-            policies_list = self._build_policies_list(policy_names)
+        host_info = api.Command.host_show(hostname)['result']
+        host_groups = list(dict.fromkeys(
+            _normalize_to_list(host_info.get('memberof_hostgroup')) +
+            _normalize_to_list(host_info.get('memberofindirect_hostgroup'))
+        ))
+        policy_names = self._get_matching_policies(
+            host_groups, 'computergroup'
+        )
+        policies_list = self._build_policies_list(policy_names)
 
-            return {'result': policies_list}
-
-        except Exception:
-            return {'result': []}
+        return {'result': policies_list}
 
 @register()
 class chain_add_gpo(LDAPAddMember):
