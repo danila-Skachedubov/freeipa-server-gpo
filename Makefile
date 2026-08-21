@@ -5,10 +5,20 @@ PREFIX ?= /usr
 DESTDIR =
 PYTHON_SITELIBDIR = /usr/lib64/python3/site-packages
 UI_PLUGIN_TARGET = $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain
+PYTHON ?= python3
+NODE ?= node
 
-.PHONY: all build install install-ui clean dist rpm compile-po
+.PHONY: all build install install-ui clean dist rpm compile-po test test-python test-ui
 
 all: build
+
+test: test-python test-ui
+
+test-python:
+	$(PYTHON) -m pytest
+
+test-ui:
+	$(NODE) --test plugin/ui/grouppolicy/tests/editor-contract.test.js
 
 build: compile-po
 	@echo "Building $(PACKAGE_NAME) $(VERSION)..."
