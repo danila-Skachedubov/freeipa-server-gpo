@@ -143,7 +143,7 @@ class TestCreateSysvolShare:
 
     Cases:
       1. Dir exists, addshare + setparm succeed  -> True
-      2. Dir exists, addshare succeeds, setparm fails -> True (warning)
+      2. Dir exists, addshare succeeds, setparm fails -> False
       3. Dir exists, addshare fails              -> False
       4. Dir does not exist                      -> False
       5. Exception                               -> False
@@ -159,12 +159,12 @@ class TestCreateSysvolShare:
 
     @patch('ipa_gpo_install.actions.os.path.exists', return_value=True)
     @patch('ipa_gpo_install.actions.ipautil.run')
-    def test_setparm_fails_ok(self, mock_run, mock_exists):
+    def test_setparm_failure_fails_share_creation(self, mock_run, mock_exists):
         addshare_ok = MagicMock(returncode=0, error_output='')
         setparm_fail = MagicMock(returncode=1, error_output='parm error')
         mock_run.side_effect = [addshare_ok, setparm_fail]
         actions = _make_actions()
-        assert actions.create_sysvol_share() is True
+        assert actions.create_sysvol_share() is False
 
     @patch('ipa_gpo_install.actions.os.path.exists', return_value=True)
     @patch('ipa_gpo_install.actions.ipautil.run')

@@ -237,7 +237,12 @@ class IPAActions:
             result_setparm = ipautil.run(cmd_setparm, raiseonerr=False)
 
             if result_setparm.returncode != 0:
-                self.logger.warning(_("Failed to set create mask parameter: {}").format(result_setparm.error_output))
+                self.logger.error(
+                    _("Failed to set create mask parameter: {}").format(
+                        result_setparm.error_output
+                    )
+                )
+                return False
 
             self.logger.info(_("SYSVOL share created successfully"))
             return True
