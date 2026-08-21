@@ -711,12 +711,22 @@ def test_verify_gpo_schema_logs_unexpected_internal_error(monkeypatch):
     debug = MagicMock()
     monkeypatch.setattr(CHAIN.logger, "debug", debug)
 
-    CHAIN.verify_gpo_schema(ldap, plugin_api)
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        CHAIN.verify_gpo_schema(ldap, plugin_api)
 
     debug.assert_called_once_with(
         "GPO schema check error: %s",
         "LDAP unavailable",
     )
+
+
+def test_verify_gpo_schema_propagates_unrelated_public_error():
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = errors.ACIError(info="access denied")
+    plugin_api = SimpleNamespace(env=SimpleNamespace(basedn=BASEDN))
+
+    with pytest.raises(errors.ACIError, match="access denied"):
+        CHAIN.verify_gpo_schema(ldap, plugin_api)
 
 
 def _chain_add_subject():
@@ -2476,3 +2486,223 @@ def test_chain_rename_logs_master_update_failure(
         "primary",
         "rename sync failed",
     )
+
+
+class ChainObjectHarness(CHAIN.chain):
+    name = "chain"
+    doc = "Chain object"
+
+
+def test_chain_json_delegates_when_schema_metadata_is_available(monkeypatch):
+    expected = {"name": "chain", "object_class": ["groupPolicyChain"]}
+    base_json = MagicMock(return_value=expected)
+    monkeypatch.setattr(CHAIN.LDAPObject, "__json__", base_json)
+    subject = object.__new__(ChainObjectHarness)
+
+    result = CHAIN.chain.__json__(subject)
+
+    assert result is expected
+    base_json.assert_called_once_with()
+
+
+def test_chain_json_returns_minimal_metadata_when_schema_is_missing(
+    monkeypatch,
+):
+    def base_json(subject):
+        raise KeyError("groupPolicyChain")
+
+    monkeypatch.setattr(CHAIN.LDAPObject, "__json__", base_json)
+    subject = object.__new__(ChainObjectHarness)
+
+    result = CHAIN.chain.__json__(subject)
+
+    assert result["name"] == "chain"
+    assert result["doc"] == "Chain object"
+    assert result["object_class"] == ["groupPolicyChain"]
+    assert result["default_attributes"] == CHAIN.chain.default_attributes
+    assert result["attribute_members"] == {"gplink": ["gpo"]}
+    assert {param["name"] for param in result["takes_params"]} >= {
+        "cn",
+        "gplink",
+        "active",
+    }
+
+
+def test_chain_json_propagates_unrelated_key_error(monkeypatch):
+    def base_json(subject):
+        raise KeyError("unrelated metadata")
+
+    monkeypatch.setattr(CHAIN.LDAPObject, "__json__", base_json)
+    subject = object.__new__(ChainObjectHarness)
+
+    with pytest.raises(KeyError, match="unrelated metadata"):
+        CHAIN.chain.__json__(subject)
+
+
+def test_chain_finalize_merges_plugin_containers(monkeypatch):
+    env = SimpleNamespace(
+        container_grouppolicychain=None,
+        _merge=MagicMock(),
+    )
+    env._merge.side_effect = lambda **values: [
+        setattr(env, name, value) for name, value in values.items()
+    ]
+
+    class FinalizeHarness(CHAIN.chain):
+        @property
+        def env(self):
+            return env
+
+    def base_finalize(subject):
+        return None
+
+    monkeypatch.setattr(CHAIN.LDAPObject, "_on_finalize", base_finalize)
+    subject = object.__new__(FinalizeHarness)
+
+    CHAIN.chain._on_finalize(subject)
+
+    env._merge.assert_called_once_with(**dict(CHAIN.PLUGIN_CONFIG))
+    assert subject.container_dn == DN(
+        ("cn", "Chains"),
+        ("cn", "System"),
+    )
+
+
+def test_chain_find_gp_by_display_name_uses_policy_container(monkeypatch):
+    ldap = MagicMock()
+    ldap.find_entry_by_attr.return_value = Entry(GPO_DN)
+    monkeypatch.setattr(
+        CHAIN,
+        "api",
+        SimpleNamespace(env=SimpleNamespace(basedn=BASEDN)),
+    )
+    subject = SimpleNamespace(
+        api=SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap))
+    )
+
+    result = CHAIN.chain.find_gp_by_displayname(
+        subject,
+        "Workstation policy",
+    )
+
+    assert result == GPO_DN
+    ldap.find_entry_by_attr.assert_called_once_with(
+        "displayName",
+        "Workstation policy",
+        "groupPolicyContainer",
+        base_dn=DN(("cn", "Policies"), ("cn", "System"), BASEDN),
+    )
+
+
+def test_chain_find_gp_by_display_name_translates_missing_policy(monkeypatch):
+    ldap = MagicMock()
+    ldap.find_entry_by_attr.side_effect = errors.NotFound(reason="missing")
+    monkeypatch.setattr(
+        CHAIN,
+        "api",
+        SimpleNamespace(env=SimpleNamespace(basedn=BASEDN)),
+    )
+    subject = SimpleNamespace(
+        api=SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap))
+    )
+
+    with pytest.raises(errors.NotFound, match="Workstation policy"):
+        CHAIN.chain.find_gp_by_displayname(subject, "Workstation policy")
+
+
+def test_chain_find_gp_by_display_name_propagates_backend_error(monkeypatch):
+    ldap = MagicMock()
+    ldap.find_entry_by_attr.side_effect = RuntimeError("LDAP unavailable")
+    monkeypatch.setattr(
+        CHAIN,
+        "api",
+        SimpleNamespace(env=SimpleNamespace(basedn=BASEDN)),
+    )
+    subject = SimpleNamespace(
+        api=SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap))
+    )
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        CHAIN.chain.find_gp_by_displayname(subject, "Workstation policy")
+
+
+def test_chain_get_attrs_list_appends_gplink_once(monkeypatch):
+    subject = object.__new__(ChainObjectHarness)
+    ldap = MagicMock()
+
+    first = CHAIN.chain.get_attrs_list(
+        subject,
+        ldap,
+        FIRST_DN,
+        ["cn"],
+        all=True,
+    )
+    second = CHAIN.chain.get_attrs_list(
+        subject,
+        ldap,
+        FIRST_DN,
+        ["cn", "gplink"],
+    )
+
+    assert first == ["cn", "gplink"]
+    assert second == ["cn", "gplink"]
+
+
+def test_convert_attribute_members_logs_and_propagates_error(monkeypatch):
+    ldap = MagicMock()
+    error_log = MagicMock()
+    monkeypatch.setattr(CHAIN.logger, "error", error_log)
+    subject = SimpleNamespace(
+        api=SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap)),
+        _convert_groups=MagicMock(side_effect=RuntimeError("lookup failed")),
+        _convert_gpos=MagicMock(),
+    )
+
+    with pytest.raises(RuntimeError, match="lookup failed"):
+        CHAIN.chain.convert_attribute_members(subject, {})
+
+    error_log.assert_called_once_with(
+        "Error in convert_attribute_members: %s",
+        "lookup failed",
+    )
+    subject._convert_gpos.assert_not_called()
+
+
+def test_resolve_unknown_explicit_dn_strict_mode_checks_cn():
+    subject, ldap, _group, _hostgroup = _chain_subject()
+
+    result = CHAIN.chain.resolve_object_name(
+        subject,
+        "custom",
+        str(GPO_DN),
+        strict=True,
+    )
+
+    assert result == str(GPO_DN)
+    ldap.get_entry.assert_called_once_with(GPO_DN, attrs_list=["cn"])
+
+
+def test_resolve_unknown_plain_value_is_preserved():
+    subject, ldap, group, hostgroup = _chain_subject()
+
+    assert CHAIN.chain.resolve_object_name(
+        subject,
+        "custom",
+        "value",
+        strict=True,
+    ) == "value"
+    ldap.get_entry.assert_not_called()
+    group.get_dn.assert_not_called()
+    hostgroup.get_dn.assert_not_called()
+
+
+def test_resolve_object_name_preserves_backend_error_in_non_strict_mode():
+    subject, _ldap, group, _hostgroup = _chain_subject()
+    group.get_dn.side_effect = RuntimeError("LDAP unavailable")
+
+    assert CHAIN.chain.resolve_object_name(
+        subject,
+        "usergroup",
+        "users",
+        strict=False,
+    ) == "users"

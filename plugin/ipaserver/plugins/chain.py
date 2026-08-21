@@ -59,8 +59,10 @@ def verify_gpo_schema(ldap, api):
                         'Please run the ipa-gpo-install command to extend the schema.'
                     )
                 )
+        raise
     except Exception as e:
         logger.debug("GPO schema check error: %s", str(e))
+        raise
 
 def _normalize_to_list(value):
     """Normalize value to list."""
@@ -254,7 +256,7 @@ class chain(LDAPObject):
 
     def get_attrs_list(self, ldap, dn, attrs_list, **options):
         """Include gplink attribute for association tables."""
-        attrs_list = super(chain, self).get_attrs_list(ldap, dn, attrs_list, **options)
+        attrs_list = list(attrs_list)
         if 'gplink' not in attrs_list:
             attrs_list.append('gplink')
         return attrs_list
