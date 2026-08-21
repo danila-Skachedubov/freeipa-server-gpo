@@ -25,9 +25,24 @@ define(['../../util/element-creator'], function(elementCreator) {
     }
 
     function renderTreeList(items, treeViewState, parentItem) {
+        var childItems = Array.isArray(items) ? items : [];
+
+        // The tree is a category navigator. Leaf documents remain children of
+        // their category so the folder view can render them, but they must not
+        // be duplicated as nodes in the left-hand tree.
+        if (treeViewState) {
+            childItems.forEach(function(item) {
+                treeViewState.registerTreeNode(item, {
+                    parentItem: parentItem || null
+                });
+            });
+        }
+
         return createElement('ul', {
             className: 'tree-view__list',
-            children: (items || []).map(function(item) {
+            children: childItems.filter(function(item) {
+                return item && item.type === 'folder';
+            }).map(function(item) {
                 return renderTreeItem(item, treeViewState, parentItem || null);
             })
         });
