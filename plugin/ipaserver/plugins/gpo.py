@@ -1641,11 +1641,15 @@ class gpo_add(LDAPCreate):
             pass
 
         guid = '{' + str(uuid.uuid4()).upper() + '}'
-        dn = DN(('cn', guid), api.env.container_grouppolicy, api.env.basedn)
+        dn = DN(
+            ('cn', guid),
+            self.api.env.container_grouppolicy,
+            self.api.env.basedn,
+        )
         entry_attrs['cn'] = guid
         entry_attrs['distinguishedname'] = str(dn)
         entry_attrs['gpcfilesyspath'] = (
-            f"\\\\{api.env.domain}\\SysVol\\{api.env.domain}"
+            f"\\\\{self.api.env.domain}\\SysVol\\{self.api.env.domain}"
             f"\\Policies\\{guid}"
         )
         entry_attrs['flags'] = 0
@@ -1655,7 +1659,7 @@ class gpo_add(LDAPCreate):
 
     def post_callback(self, ldap, dn, entry_attrs, *keys, **options):
         guid = str(dn[0].value)
-        domain = api.env.domain.lower()
+        domain = self.api.env.domain.lower()
         displayname = keys[-1] if keys else 'New Group Policy Object'
         self.obj._call_dbus_method('create_gpo_structure', guid, domain, displayname, fail_on_error=True)
 
@@ -1675,7 +1679,7 @@ class gpo_del(LDAPDelete):
     def post_callback(self, ldap, dn, entry_attrs, *keys, **options):
 
         guid = str(dn[0].value)
-        domain = api.env.domain.lower()
+        domain = self.api.env.domain.lower()
         # Oddjob removes only the replicated SYSVOL tree.  The private editor
         # state is deliberately preserved: the binding has no safe
         # pending-inspection/cleanup API that is independent of the payload,

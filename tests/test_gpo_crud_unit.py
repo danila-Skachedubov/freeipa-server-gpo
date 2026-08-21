@@ -19,10 +19,27 @@ GPO = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(GPO)
 
 BASEDN = DN(("dc", "example"), ("dc", "test"))
+CONTAINER_DN = DN(("cn", "Policies"), ("cn", "System"))
+GUID = "{E361BAA9-67B3-4828-84C1-6A74AADB9D06}"
+GPO_DN = DN(("cn", GUID), CONTAINER_DN, BASEDN)
 
 
 def _plugin_api():
-    return SimpleNamespace(env=SimpleNamespace(basedn=BASEDN))
+    return SimpleNamespace(env=SimpleNamespace(
+        basedn=BASEDN,
+        container_grouppolicy=CONTAINER_DN,
+        domain="EXAMPLE.TEST",
+    ))
+
+
+def _crud_subject():
+    return SimpleNamespace(
+        api=_plugin_api(),
+        obj=SimpleNamespace(
+            find_gpo_by_displayname=MagicMock(),
+            _call_dbus_method=MagicMock(),
+        ),
+    )
 
 
 def test_verify_gpo_schema_reads_policy_container():
@@ -210,3 +227,148 @@ def test_call_dbus_method_handles_transport_failure(
                 "Failed to call D-Bus create_gpo_structure: service offline"
             )
         ])
+
+
+def test_gpo_add_pre_callback_builds_complete_initial_entry(monkeypatch):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.side_effect = errors.NotFound(
+        reason="not found"
+    )
+    schema_check = MagicMock()
+    generated_uuid = MagicMock()
+    generated_uuid.__str__.return_value = GUID[1:-1].lower()
+    monkeypatch.setattr(GPO, "verify_gpo_schema", schema_check)
+    monkeypatch.setattr(GPO.uuid, "uuid4", MagicMock(return_value=generated_uuid))
+    entry_attrs = {"displayname": "Policy-One"}
+
+    result = GPO.gpo_add.pre_callback(
+        subject,
+        ldap,
+        MagicMock(),
+        entry_attrs,
+        ["cn"],
+        "Policy-One",
+    )
+
+    assert result == GPO_DN
+    assert entry_attrs == {
+        "displayname": "Policy-One",
+        "cn": GUID,
+        "distinguishedname": str(GPO_DN),
+        "gpcfilesyspath": (
+            f"\\\\EXAMPLE.TEST\\SysVol\\EXAMPLE.TEST\\Policies\\{GUID}"
+        ),
+        "flags": 0,
+        "versionnumber": 0,
+    }
+    schema_check.assert_called_once_with(ldap, subject.api)
+    subject.obj.find_gpo_by_displayname.assert_called_once_with(
+        ldap,
+        "Policy-One",
+    )
+
+
+def test_gpo_add_pre_callback_rejects_invalid_display_name(monkeypatch):
+    subject = _crud_subject()
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    with pytest.raises(errors.ValidationError):
+        GPO.gpo_add.pre_callback(
+            subject,
+            MagicMock(),
+            GPO_DN,
+            {},
+            [],
+            "invalid/name",
+        )
+
+    subject.obj.find_gpo_by_displayname.assert_not_called()
+
+
+def test_gpo_add_pre_callback_rejects_duplicate_display_name(monkeypatch):
+    subject = _crud_subject()
+    subject.obj.find_gpo_by_displayname.return_value = SimpleNamespace(
+        dn=GPO_DN
+    )
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    with pytest.raises(errors.InvocationError, match="already exists"):
+        GPO.gpo_add.pre_callback(
+            subject,
+            MagicMock(),
+            GPO_DN,
+            {},
+            [],
+            "Policy-One",
+        )
+
+
+def test_gpo_add_post_callback_creates_sysvol_structure():
+    subject = _crud_subject()
+
+    result = GPO.gpo_add.post_callback(
+        subject,
+        MagicMock(),
+        GPO_DN,
+        {},
+        "Policy One",
+    )
+
+    assert result == GPO_DN
+    subject.obj._call_dbus_method.assert_called_once_with(
+        "create_gpo_structure",
+        GUID,
+        "example.test",
+        "Policy One",
+        fail_on_error=True,
+    )
+
+
+@pytest.mark.parametrize(
+    "callback",
+    [GPO.gpo_del.pre_callback, GPO.gpo_show.pre_callback],
+)
+def test_gpo_lookup_callbacks_resolve_display_name(
+    monkeypatch,
+    callback,
+):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.return_value = SimpleNamespace(
+        dn=GPO_DN
+    )
+    schema_check = MagicMock()
+    monkeypatch.setattr(GPO, "verify_gpo_schema", schema_check)
+
+    if callback is GPO.gpo_show.pre_callback:
+        result = callback(subject, ldap, MagicMock(), [], "Policy One")
+    else:
+        result = callback(subject, ldap, MagicMock(), "Policy One")
+
+    assert result == GPO_DN
+    schema_check.assert_called_once_with(ldap, subject.api)
+    subject.obj.find_gpo_by_displayname.assert_called_once_with(
+        ldap,
+        "Policy One",
+    )
+
+
+def test_gpo_delete_post_callback_removes_sysvol_best_effort():
+    subject = _crud_subject()
+
+    result = GPO.gpo_del.post_callback(
+        subject,
+        MagicMock(),
+        GPO_DN,
+        {},
+        "Policy One",
+    )
+
+    assert result == GPO_DN
+    subject.obj._call_dbus_method.assert_called_once_with(
+        "delete_gpo_structure",
+        GUID,
+        "example.test",
+        fail_on_error=False,
+    )
