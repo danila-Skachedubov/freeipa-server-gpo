@@ -78,9 +78,11 @@ def is_dn(value):
 
 def get_display_name(entry):
     """Get displayName or fallback to cn or DN string."""
+    display_names = _normalize_to_list(entry.get('displayName'))
+    common_names = _normalize_to_list(entry.get('cn'))
     return (
-        entry.get('displayName', [None])[0] or
-        entry.get('cn', [None])[0] or
+        (display_names[0] if display_names else None) or
+        (common_names[0] if common_names else None) or
         str(entry.dn)
     )
 
