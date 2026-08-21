@@ -26,6 +26,10 @@ OBJECT_TYPE_MAPPING = {
     'usergroup': ('group', 'cn'),
     'computergroup': ('hostgroup', 'cn'),
 }
+OBJECT_TYPE_CLASSES = {
+    'usergroup': 'ipausergroup',
+    'computergroup': 'ipahostgroup',
+}
 
 GP_LOOKUP_ATTRIBUTES = ['displayName', 'cn']
 GPO_VALIDATION_ATTRIBUTES = GP_LOOKUP_ATTRIBUTES + ['objectclass']
@@ -329,14 +333,23 @@ class chain(LDAPObject):
             if is_dn(name):
                 if strict:
                     if attr_name in OBJECT_TYPE_MAPPING:
-                        attrs = [OBJECT_TYPE_MAPPING[attr_name][1]]
+                        attrs = [
+                            OBJECT_TYPE_MAPPING[attr_name][1], 'objectclass'
+                        ]
                     elif attr_name == 'gplink':
                         attrs = GPO_VALIDATION_ATTRIBUTES
                     else:
                         attrs = ['cn']
                     ldap = self.api.Backend.ldap2
                     entry = ldap.get_entry(DN(name), attrs_list=attrs)
-                    if attr_name == 'gplink':
+                    if attr_name in OBJECT_TYPE_CLASSES:
+                        _require_object_class(
+                            entry,
+                            OBJECT_TYPE_CLASSES[attr_name],
+                            attr_name,
+                            name,
+                        )
+                    elif attr_name == 'gplink':
                         _require_object_class(
                             entry,
                             'groupPolicyContainer',
@@ -350,7 +363,15 @@ class chain(LDAPObject):
                 group_dn = self.api.Object[obj_type].get_dn(name)
                 if strict:
                     ldap = self.api.Backend.ldap2
-                    ldap.get_entry(group_dn, attrs_list=[name_attr])
+                    entry = ldap.get_entry(
+                        group_dn, attrs_list=[name_attr, 'objectclass']
+                    )
+                    _require_object_class(
+                        entry,
+                        OBJECT_TYPE_CLASSES[attr_name],
+                        attr_name,
+                        name,
+                    )
                 return str(group_dn)
             elif attr_name == 'gplink':
                 return str(self.find_gp_by_displayname(name))

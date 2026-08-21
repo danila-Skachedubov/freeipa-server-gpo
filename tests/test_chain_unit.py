@@ -252,6 +252,10 @@ def test_resolve_object_name_uses_freeipa_group_object(
 def test_resolve_object_name_strict_mode_verifies_group_in_ldap():
     subject, ldap, group, _hostgroup = _chain_subject()
     group.get_dn.return_value = USER_GROUP_DN
+    ldap.get_entry.return_value = {
+        "cn": ["users"],
+        "objectclass": ["top", "ipausergroup"],
+    }
 
     result = CHAIN.chain.resolve_object_name(
         subject,
@@ -261,7 +265,9 @@ def test_resolve_object_name_strict_mode_verifies_group_in_ldap():
     )
 
     assert result == str(USER_GROUP_DN)
-    ldap.get_entry.assert_called_once_with(USER_GROUP_DN, attrs_list=["cn"])
+    ldap.get_entry.assert_called_once_with(
+        USER_GROUP_DN, attrs_list=["cn", "objectclass"]
+    )
 
 
 def test_resolve_object_name_delegates_gpo_display_name_lookup():
@@ -281,15 +287,30 @@ def test_resolve_object_name_delegates_gpo_display_name_lookup():
 
 
 @pytest.mark.parametrize(
-    ("attr_name", "dn", "attrs"),
+    ("attr_name", "dn", "attrs", "objectclass"),
     [
-        ("usergroup", USER_GROUP_DN, ["cn"]),
-        ("computergroup", COMPUTER_GROUP_DN, ["cn"]),
-        ("gplink", GPO_DN, ["displayName", "cn", "objectclass"]),
+        (
+            "usergroup", USER_GROUP_DN,
+            ["cn", "objectclass"], "ipausergroup",
+        ),
+        (
+            "computergroup", COMPUTER_GROUP_DN,
+            ["cn", "objectclass"], "ipahostgroup",
+        ),
+        (
+            "gplink", GPO_DN,
+            ["displayName", "cn", "objectclass"], "groupPolicyContainer",
+        ),
     ],
 )
-def test_strict_explicit_dn_is_verified_in_ldap(attr_name, dn, attrs):
+def test_strict_explicit_dn_is_verified_in_ldap(
+    attr_name, dn, attrs, objectclass,
+):
     subject, ldap, group, hostgroup = _chain_subject()
+    ldap.get_entry.return_value = {
+        "cn": ["resolved"],
+        "objectclass": ["top", objectclass],
+    }
 
     result = CHAIN.chain.resolve_object_name(
         subject,
@@ -326,6 +347,37 @@ def test_strict_explicit_gpo_dn_rejects_non_gpo_object(objectclasses):
 
     assert failure.value.name == "gplink"
     assert "groupPolicyContainer" in failure.value.error
+    group.get_dn.assert_not_called()
+    hostgroup.get_dn.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("attr_name", "dn", "wrong_objectclass"),
+    [
+        ("usergroup", COMPUTER_GROUP_DN, "ipahostgroup"),
+        ("computergroup", USER_GROUP_DN, "ipausergroup"),
+    ],
+)
+def test_strict_explicit_group_dn_rejects_wrong_group_type(
+    attr_name,
+    dn,
+    wrong_objectclass,
+):
+    subject, ldap, group, hostgroup = _chain_subject()
+    ldap.get_entry.return_value = {
+        "cn": ["wrong-group-type"],
+        "objectclass": ["top", wrong_objectclass],
+    }
+
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain.resolve_object_name(
+            subject,
+            attr_name,
+            str(dn),
+            strict=True,
+        )
+
+    assert failure.value.name == attr_name
     group.get_dn.assert_not_called()
     hostgroup.get_dn.assert_not_called()
 
