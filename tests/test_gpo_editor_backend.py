@@ -2084,6 +2084,86 @@ class PreferenceWorkspace:
         self.removals.append(args)
 
 
+def test_preference_filter_replace_and_remove_preserve_opaque_paths():
+    workspace = PreferenceWorkspace()
+    identity = ["opaque", "item"]
+    replacement_fields = [{
+        "id": "filter.name",
+        "value": {"kind": "text", "value": "admins"},
+    }]
+
+    GPO._apply_filter_operations(
+        workspace,
+        "computer",
+        "registry",
+        identity,
+        [
+            {
+                "op": "replace",
+                "path": [7, 2, 1],
+                "filter_kind": "group",
+                "fields": replacement_fields,
+            },
+            {"op": "remove", "path": [7, 2, 3]},
+        ],
+    )
+
+    assert workspace.edits == [
+        (
+            "replace-filter",
+            "computer",
+            "registry",
+            identity,
+            [7, 2, 1],
+            "group",
+            replacement_fields,
+        ),
+        (
+            "remove-filter",
+            "computer",
+            "registry",
+            identity,
+            [7, 2, 3],
+        ),
+    ]
+
+
+def test_preference_filter_none_is_an_explicit_noop():
+    workspace = PreferenceWorkspace()
+
+    assert GPO._apply_filter_operations(
+        workspace, "computer", "registry", ["opaque"], None
+    ) is None
+    assert workspace.edits == []
+    assert workspace.insertions == []
+
+
+@pytest.mark.parametrize(
+    "operations",
+    [
+        "not-an-ordered-list",
+        ["not-an-operation"],
+        [{"op": "unknown"}],
+    ],
+)
+def test_preference_filter_operations_reject_malformed_input(operations):
+    workspace = PreferenceWorkspace()
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._apply_filter_operations(
+            workspace,
+            "computer",
+            "registry",
+            ["opaque"],
+            operations,
+        )
+
+    assert failure.value.category == "validation"
+    assert failure.value.field == "filters"
+    assert workspace.edits == []
+    assert workspace.insertions == []
+
+
 def test_preference_create_preserves_nested_paths_and_commits_once(monkeypatch):
     workspace = PreferenceWorkspace()
     context = editor_context()
