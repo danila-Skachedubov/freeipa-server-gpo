@@ -2285,6 +2285,60 @@ def test_script_add_existing_uses_inventory_canonical_name(monkeypatch):
     assert len(commits) == 1
 
 
+def test_script_add_rejects_unknown_mode_before_workspace(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, recovered, commits = _script_command_environment(
+        monkeypatch,
+        workspace,
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_script_entry_add.execute(
+            command,
+            "Test GPO",
+            "computer",
+            "startup",
+            {
+                "mode": "invented",
+                "executable_group": "classic",
+                "snapshot": "classic-snapshot",
+                "parameters": "",
+            },
+        )
+
+    assert failure.value.category == "validation"
+    assert failure.value.field == "mode"
+    assert recovered == []
+    assert commits == []
+
+
+def test_script_add_rejects_missing_existing_asset_without_commit(monkeypatch):
+    workspace = ScriptWorkspace()
+    workspace.assets = []
+    command, _recovered, commits = _script_command_environment(
+        monkeypatch,
+        workspace,
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_script_entry_add.execute(
+            command,
+            "Test GPO",
+            "computer",
+            "startup",
+            {
+                "mode": "existing_asset",
+                "executable_group": "classic",
+                "snapshot": "classic-snapshot",
+                "name": "missing.cmd",
+                "parameters": "",
+            },
+        )
+
+    assert failure.value.category == "not_found"
+    assert commits == []
+
+
 def test_script_update_and_reorder_use_opaque_entry_contract(monkeypatch):
     workspace = ScriptWorkspace()
     command, _, commits = _script_command_environment(monkeypatch, workspace)
@@ -2338,6 +2392,115 @@ def test_script_remove_and_final_asset_delete_is_one_commit(monkeypatch):
     ]
     assert len(commits) == 1
     assert result["scripts"]["assets"] == []
+
+
+def test_script_remove_rejects_non_boolean_delete_mode_before_workspace(
+    monkeypatch,
+):
+    workspace = ScriptWorkspace()
+    command, recovered, commits = _script_command_environment(
+        monkeypatch,
+        workspace,
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_script_entry_remove.execute(
+            command,
+            "Test GPO",
+            "computer",
+            "startup",
+            {
+                "executable_group": "classic",
+                "identity": "classic-startup-0",
+                "delete_asset": "yes",
+            },
+        )
+
+    assert failure.value.category == "validation"
+    assert failure.value.field == "delete_asset"
+    assert recovered == []
+    assert commits == []
+
+
+def test_script_remove_rejects_asset_delete_for_unmanaged_entry(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, _recovered, commits = _script_command_environment(
+        monkeypatch,
+        workspace,
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_script_entry_remove.execute(
+            command,
+            "Test GPO",
+            "computer",
+            "shutdown",
+            {
+                "executable_group": "classic",
+                "identity": "classic-shutdown-0",
+                "delete_asset": True,
+                "asset_revision": "asset-r1",
+            },
+        )
+
+    assert failure.value.category == "validation"
+    assert commits == []
+
+
+def test_script_remove_rejects_missing_managed_asset_without_commit(
+    monkeypatch,
+):
+    workspace = ScriptWorkspace()
+    workspace.assets = []
+    command, _recovered, commits = _script_command_environment(
+        monkeypatch,
+        workspace,
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_script_entry_remove.execute(
+            command,
+            "Test GPO",
+            "computer",
+            "startup",
+            {
+                "executable_group": "classic",
+                "identity": "classic-startup-0",
+                "delete_asset": True,
+                "asset_revision": "asset-r1",
+            },
+        )
+
+    assert failure.value.category == "not_found"
+    assert commits == []
+
+
+def test_script_reorder_rejects_non_list_identities_before_workspace(
+    monkeypatch,
+):
+    workspace = ScriptWorkspace()
+    command, recovered, commits = _script_command_environment(
+        monkeypatch,
+        workspace,
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_script_entries_reorder.execute(
+            command,
+            "Test GPO",
+            "computer",
+            "startup",
+            {
+                "executable_group": "classic",
+                "snapshot": "classic-snapshot",
+                "identities": ("classic-startup-0",),
+            },
+        )
+
+    assert failure.value.category == "validation"
+    assert failure.value.field == "identities"
+    assert recovered == []
+    assert commits == []
 
 
 def test_script_remove_shared_asset_does_not_commit(monkeypatch):
