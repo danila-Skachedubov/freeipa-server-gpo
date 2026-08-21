@@ -654,14 +654,16 @@ def _validate_publication_plan(plan, expected_snapshot):
             'The publication plan identity does not match the GPO.',
             details={'conflict_fields': ['identity']},
         )
-    try:
-        expected_version = int(plan['expected_version'])
-        target_version = int(plan['target_version'])
-    except (TypeError, ValueError) as exc:
+    if (
+        type(plan['expected_version']) is not int
+        or type(plan['target_version']) is not int
+    ):
         raise EditorFailure(
             'operational',
             'The editor binding returned an invalid publication version.',
-        ) from exc
+        )
+    expected_version = plan['expected_version']
+    target_version = plan['target_version']
     if expected_version != int(expected_snapshot['version_number']):
         raise EditorFailure(
             'publication_conflict',
@@ -672,6 +674,20 @@ def _validate_publication_plan(plan, expected_snapshot):
         raise EditorFailure(
             'operational',
             'The editor binding returned an invalid target version.',
+        )
+    expected_computer = expected_version & 0xffff
+    expected_user = (expected_version >> 16) & 0xffff
+    target_computer = (
+        expected_computer + int(affected_scopes['computer'])
+    ) & 0xffff
+    target_user = (
+        expected_user + int(affected_scopes['user'])
+    ) & 0xffff
+    required_target = (target_user << 16) | target_computer
+    if target_version != required_target:
+        raise EditorFailure(
+            'operational',
+            'The editor binding returned an invalid target version transition.',
         )
 
 

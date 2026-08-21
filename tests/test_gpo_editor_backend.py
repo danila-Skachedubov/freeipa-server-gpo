@@ -581,6 +581,12 @@ def test_publication_helper_uses_one_atomic_compare_modify_with_exact_values():
         ("user_extension_names", ["not", "text"]),
         ("idempotency_token", ""),
         ("idempotency_token", 7),
+        ("expected_version", "0"),
+        ("expected_version", False),
+        ("expected_version", 0.9),
+        ("target_version", "1"),
+        ("target_version", True),
+        ("target_version", -0.1),
         ("affected_scopes", {"computer": True}),
         (
             "affected_scopes",
@@ -608,6 +614,68 @@ def test_publication_helper_rejects_malformed_plan_before_ldap(
         )
 
     assert failure.value.category == "operational"
+    assert backend.modifies == []
+    assert backend.removed == []
+
+
+@pytest.mark.parametrize(
+    ("expected", "affected_scopes", "target"),
+    [
+        ((4 << 16) | 7, {"computer": True, "user": False}, (4 << 16) | 8),
+        ((4 << 16) | 7, {"computer": False, "user": True}, (5 << 16) | 7),
+        ((4 << 16) | 7, {"computer": True, "user": True}, (5 << 16) | 8),
+        ((4 << 16) | 0xffff, {"computer": True, "user": False}, 4 << 16),
+        ((0xffff << 16) | 7, {"computer": False, "user": True}, 7),
+    ],
+)
+def test_publication_plan_accepts_exact_packed_version_transition(
+    expected,
+    affected_scopes,
+    target,
+):
+    publication_plan = {
+        **plan(expected=expected, target=target),
+        "affected_scopes": affected_scopes,
+    }
+
+    GPO._validate_publication_plan(
+        publication_plan, snapshot(version=expected)
+    )
+
+
+@pytest.mark.parametrize(
+    ("affected_scopes", "target"),
+    [
+        ({"computer": True, "user": False}, 0),
+        ({"computer": True, "user": False}, 2),
+        ({"computer": True, "user": False}, 1 << 16),
+        ({"computer": False, "user": True}, 1),
+        ({"computer": False, "user": True}, 2 << 16),
+        ({"computer": True, "user": True}, 1),
+    ],
+)
+def test_publication_helper_rejects_wrong_packed_version_transition_before_ldap(
+    affected_scopes,
+    target,
+):
+    backend = PublicationBackend()
+    context = editor_context()
+    invalid_plan = {
+        **plan(target=target),
+        "affected_scopes": affected_scopes,
+    }
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._apply_publication_plan(
+            backend,
+            context,
+            invalid_plan,
+            context.snapshot,
+            context.presence,
+        )
+
+    assert failure.value.category == "operational"
+    assert "transition" in failure.value.message
     assert backend.modifies == []
     assert backend.removed == []
 
