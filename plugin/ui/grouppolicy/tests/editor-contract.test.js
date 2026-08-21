@@ -485,6 +485,126 @@ test('app destroy invalidates an editor initialization that resolves later', asy
     assert.equal(renders, 0);
 });
 
+test('app assigns one header owner to an async renderer and shared controls', async () => {
+    let rendererOptions;
+    const header = preferenceTestHeader();
+    const workspaceElement = new TestElement('div');
+    const app = loadAmd('js/app.js', {
+        './components/header/header': {},
+        './components/main/main': {},
+        './components/footer/footer': {},
+        './util/resizable': {},
+        './components/templates/default-template': {},
+        './components/templates/admx-template': {
+            async renderAdmxTemplate(options) {
+                rendererOptions = options;
+                return createTestElement('div');
+            }
+        },
+        './components/templates/folder-template': {},
+        './components/templates/preference/preferences-view-template': {},
+        './components/tree-view/tree-view-list': {},
+        './util/element-creator': {},
+        './components/editor-status': {},
+        './locales/translations': { t: (key) => key },
+        './util/API': {}
+    }, { document: new TestDocument(), Element: TestElement });
+    const state = app._test.createTreeViewState();
+    state.setHeader(header);
+    state.setWorkspace({
+        clear() {},
+        append() {},
+        getElement() { return workspaceElement; }
+    });
+    const item = { type: 'file', template: 'admx', policyId: 'policy' };
+
+    await state.renderSelectedItem(item, null);
+
+    const controls = header.getElement().querySelector('.gp__control');
+    const actions = header.getElement().querySelector('.gp__control-actions');
+    assert.equal(rendererOptions.headerOwner, 'editor-view-1');
+    assert.equal(
+        controls.getAttribute('data-editor-view-owner'),
+        rendererOptions.headerOwner
+    );
+    assert.equal(
+        actions.getAttribute('data-editor-view-owner'),
+        rendererOptions.headerOwner
+    );
+});
+
+test('late ADMX render cannot hide controls owned by a newer view', async () => {
+    let resolvePolicy;
+    const policyRequest = new Promise((resolve) => { resolvePolicy = resolve; });
+    const renderer = loadAmd('js/components/templates/admx-template.js', {
+        '../../util/element-creator': { createElement: createTestElement },
+        '../../util/API': { policyShow: () => policyRequest },
+        '../../util/editor-dto': {},
+        '../editor-status': {},
+        '../../locales/translations': { t: (key) => key }
+    }, {
+        document: new TestDocument(),
+        Element: TestElement,
+        window: { location: { reload() {} } }
+    });
+    const header = preferenceTestHeader();
+    const actions = header.getElement().querySelector('.gp__control-actions');
+    const controls = header.getElement().querySelector('.gp__control');
+    actions.setAttribute('data-editor-view-owner', 'old-view');
+    controls.setAttribute('data-editor-view-owner', 'old-view');
+    const rendering = renderer.renderAdmxTemplate({
+        header,
+        headerOwner: 'old-view',
+        item: { scope: 'computer', policyId: 'old-policy' },
+        isCurrent: () => false
+    });
+
+    actions.setAttribute('data-editor-view-owner', 'new-view');
+    controls.setAttribute('data-editor-view-owner', 'new-view');
+    actions.style.display = 'flex';
+    controls.style.display = 'none';
+    resolvePolicy({ policy: {} });
+    await rendering;
+
+    assert.equal(actions.style.display, 'flex');
+    assert.equal(controls.style.display, 'none');
+});
+
+test('stale Preferences cleanup preserves controls owned by a newer view', async () => {
+    let resolveItems;
+    const itemsRequest = new Promise((resolve) => { resolveItems = resolve; });
+    const renderer = loadPreferenceRenderer({
+        preferenceItems: () => itemsRequest,
+        reconcile: async () => ({ recovery: { kind: 'clean' } })
+    });
+    const header = preferenceTestHeader();
+    const controls = header.getElement().querySelector('.gp__control');
+    const actions = header.getElement().querySelector('.gp__control-actions');
+    controls.setAttribute('data-editor-view-owner', 'old-view');
+    actions.setAttribute('data-editor-view-owner', 'old-view');
+    const rendering = renderer.renderPreferencesTemplate({
+        header,
+        headerOwner: 'old-view',
+        item: {
+            scope: 'computer',
+            preferenceKind: 'registry',
+            document: { label: 'Registry', editable: true }
+        },
+        isCurrent: () => false
+    });
+
+    controls.setAttribute('data-editor-view-owner', 'new-view');
+    actions.setAttribute('data-editor-view-owner', 'new-view');
+    controls.style.display = 'none';
+    actions.style.display = 'flex';
+    resolveItems({ items: [] });
+    const staleView = await rendering;
+    staleView.cleanup();
+
+    assert.equal(controls.style.display, 'none');
+    assert.equal(actions.style.display, 'flex');
+});
+
 test('API sends only displayname, opaque ids, structured request, and request locales', async () => {
     const calls = [];
     const rpc = {

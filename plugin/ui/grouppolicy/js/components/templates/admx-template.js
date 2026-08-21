@@ -332,6 +332,7 @@ define([
         var headerElement = config.header && config.header.getElement ? config.header.getElement() : null;
         var actions = headerElement ? headerElement.querySelector('.gp__control-actions') : null;
         var preferenceActions = headerElement ? headerElement.querySelector('.gp__control') : null;
+        var headerOwner = config.headerOwner || null;
         var applyButton = headerElement ? headerElement.querySelector('.admx__btn-apply') : null;
         var cancelButton = headerElement ? headerElement.querySelector('.admx__btn-cancel') : null;
         var policy;
@@ -339,8 +340,15 @@ define([
         var baseline;
         var saving = false;
 
-        if (actions) actions.style.display = 'flex';
-        if (preferenceActions) preferenceActions.style.display = 'none';
+        function ownsHeader(control) {
+            return Boolean(control) && (
+                !headerOwner
+                || control.getAttribute('data-editor-view-owner') === headerOwner
+            );
+        }
+
+        if (ownsHeader(actions)) actions.style.display = 'flex';
+        if (ownsHeader(preferenceActions)) preferenceActions.style.display = 'none';
 
         try {
             var response = await API.policyShow(item.scope, item.policyId);
@@ -351,13 +359,13 @@ define([
                 onReconcile: function() { API.reconcile(); }
             }));
             root.cleanup = function() {
-                if (actions) actions.style.display = 'none';
+                if (ownsHeader(actions)) actions.style.display = 'none';
             };
             return root;
         }
 
         if (typeof config.isCurrent === 'function' && !config.isCurrent()) {
-            if (actions) actions.style.display = 'none';
+            if (ownsHeader(actions)) actions.style.display = 'none';
             return root;
         }
 
@@ -458,9 +466,11 @@ define([
             root.getElement().removeEventListener('change', handleChange);
             if (applyButton) applyButton.removeEventListener('click', handleApply);
             if (cancelButton) cancelButton.removeEventListener('click', handleCancel);
-            if (actions) actions.style.display = 'none';
-            if (applyButton) applyButton.classList.remove('active');
-            if (cancelButton) cancelButton.classList.remove('active');
+            if (ownsHeader(actions)) {
+                actions.style.display = 'none';
+                if (applyButton) applyButton.classList.remove('active');
+                if (cancelButton) cancelButton.classList.remove('active');
+            }
         };
         render();
         return root;

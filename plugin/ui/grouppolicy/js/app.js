@@ -317,6 +317,12 @@ define([
                 var headerElement = this.header && this.header.getElement ? this.header.getElement() : null;
                 var preferenceControls = headerElement ? headerElement.querySelector('.gp__control') : null;
                 var editorActions = headerElement ? headerElement.querySelector('.gp__control-actions') : null;
+                var headerOwner = 'editor-view-' + renderRequestId;
+                [preferenceControls, editorActions].forEach(function(control) {
+                    if (control) {
+                        control.setAttribute('data-editor-view-owner', headerOwner);
+                    }
+                });
                 if (preferenceControls) preferenceControls.style.display = 'none';
                 if (editorActions) editorActions.style.display = 'none';
                 var admxActions = headerElement ? headerElement.querySelector('.gp__control-admx') : null;
@@ -356,6 +362,7 @@ define([
                         templateResult = await renderAdmxTemplate({
                             isHelpOpen: this.isHelpOpen,
                             header: this.header,
+                            headerOwner: headerOwner,
                             item: item,
                             isCurrent: function() {
                                 return renderRequestId === this.renderRequestId
@@ -366,6 +373,7 @@ define([
                     } else if (item.template === 'preferences') {
                         templateResult = await renderPreferencesTemplate({
                             header: this.header,
+                            headerOwner: headerOwner,
                             item: item,
                             isCurrent: function() {
                                 return renderRequestId === this.renderRequestId

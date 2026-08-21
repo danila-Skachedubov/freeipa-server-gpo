@@ -263,6 +263,7 @@ define([
         var headerElement = config.header && config.header.getElement ? config.header.getElement() : null;
         var headerControls = headerElement ? headerElement.querySelector('.gp__control') : null;
         var headerActions = headerElement ? headerElement.querySelector('.gp__control-actions') : null;
+        var editorHeaderOwner = config.headerOwner || null;
         var createButton = headerControls ? headerControls.querySelector('.preferences__btn-create') : null;
         var editButton = headerControls ? headerControls.querySelector('.preferences__btn-edit') : null;
         var deleteButton = headerControls ? headerControls.querySelector('.preferences__btn-delete') : null;
@@ -275,17 +276,25 @@ define([
         var formRequestId = 0;
         var itemsRequestId = 0;
 
-        if (headerControls) {
+        function ownsEditorHeader(control) {
+            return Boolean(control) && (
+                !editorHeaderOwner
+                || control.getAttribute('data-editor-view-owner') === editorHeaderOwner
+            );
+        }
+
+        if (ownsEditorHeader(headerControls)) {
             headerControls.setAttribute('data-preference-owner', headerOwner);
             headerControls.style.display = documentDto.editable ? 'flex' : 'none';
         }
-        if (headerActions) {
+        if (ownsEditorHeader(headerActions)) {
             headerActions.setAttribute('data-preference-owner', headerOwner);
             headerActions.style.display = 'none';
         }
 
         function ownsHeader() {
             return Boolean(headerControls
+                && ownsEditorHeader(headerControls)
                 && headerControls.getAttribute('data-preference-owner') === headerOwner);
         }
 
@@ -1324,6 +1333,7 @@ define([
                 });
             }
             if (headerActions
+                    && ownsEditorHeader(headerActions)
                     && headerActions.getAttribute('data-preference-owner') === headerOwner) {
                 headerActions.style.display = '';
                 headerActions.removeAttribute('data-preference-owner');
