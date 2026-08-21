@@ -374,6 +374,9 @@ class gpmaster_mod(LDAPUpdate):
         current_entry = ldap.get_entry(dn, attrs_list=['chainlist'])
 
         self._handle_add_operations(entry_attrs, options)
+        if 'chainlist' in entry_attrs:
+            current_entry = dict(current_entry)
+            current_entry['chainlist'] = list(entry_attrs['chainlist'])
         self._handle_remove_operations(ldap, current_entry, entry_attrs, options)
         self._handle_standard_modifications(entry_attrs, options)
 

@@ -556,3 +556,44 @@ def test_pre_callback_runs_add_remove_and_standard_handlers_in_order():
 
     assert result == MASTER_DN
     assert calls == ["add", "remove", "standard"]
+
+
+def test_pre_callback_combines_add_and_remove_on_one_chainlist_snapshot():
+    class ModifierHarness:
+        _handle_add_operations = GPMASTER.gpmaster_mod._handle_add_operations
+        _handle_remove_operations = GPMASTER.gpmaster_mod._handle_remove_operations
+        _handle_standard_modifications = (
+            GPMASTER.gpmaster_mod._handle_standard_modifications
+        )
+
+    ldap = MagicMock()
+    ldap.get_entry.return_value = {"chainlist": [CHAIN_DN]}
+    obj = MagicMock()
+    obj.get_gpmaster_dn.return_value = MASTER_DN
+
+    def resolve(name, strict=False):
+        if name == "fallback" and strict:
+            return str(SECOND_CHAIN_DN)
+        if name == "primary" and not strict:
+            return str(CHAIN_DN)
+        raise AssertionError("unexpected resolution: {} {}".format(name, strict))
+
+    obj.resolve_chain_name.side_effect = resolve
+    subject = ModifierHarness()
+    subject.api = SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap))
+    subject.obj = obj
+    entry_attrs = {}
+    options = {"add_chain": "fallback", "remove_chain": "primary"}
+
+    result = GPMASTER.gpmaster_mod.pre_callback(
+        subject,
+        ldap,
+        MASTER_DN,
+        entry_attrs,
+        [],
+        "grouppolicymaster",
+        **options,
+    )
+
+    assert result == MASTER_DN
+    assert entry_attrs["chainlist"] == [str(SECOND_CHAIN_DN)]
