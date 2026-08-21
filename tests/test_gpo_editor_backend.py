@@ -2850,6 +2850,38 @@ def test_script_order_preserves_other_event_value_and_uses_powershell_snapshot(m
     assert len(commits) == 1
 
 
+@pytest.mark.parametrize(("scope", "event"), [
+    ("computer", "shutdown"),
+    ("user", "logoff"),
+])
+def test_script_end_event_order_preserves_start_value(
+    monkeypatch, scope, event,
+):
+    workspace = ScriptWorkspace()
+    workspace.groups["powershell"]["execution_order"] = {
+        "start_execute_ps_first": False,
+        "end_execute_ps_first": None,
+    }
+    workspace.set_script_execution_order = MagicMock(
+        wraps=workspace.set_script_execution_order
+    )
+    command, _, commits = _script_command_environment(monkeypatch, workspace)
+
+    result = GPO.gpo_editor_script_order_update.execute(
+        command, "Test GPO", scope, event, {
+            "snapshot": "powershell-snapshot",
+            "execution_order": "powershell_first",
+        },
+    )
+
+    workspace.set_script_execution_order.assert_called_once_with(
+        scope, "powershell-snapshot", False, True
+    )
+    assert result["scripts"]["execution_order"] == "powershell_first"
+    assert result["publication"] == {"changed": True}
+    assert len(commits) == 1
+
+
 def test_script_upload_rejects_bad_data_before_workspace_open(monkeypatch):
     opened = []
     monkeypatch.setattr(
@@ -2864,6 +2896,47 @@ def test_script_upload_rejects_bad_data_before_workspace_open(monkeypatch):
             },
         )
     assert opened == []
+
+
+def test_script_asset_upload_recovers_commits_and_returns_uploaded_asset(
+    monkeypatch,
+):
+    workspace = ScriptWorkspace()
+    workspace.upload_script_asset = MagicMock(
+        wraps=workspace.upload_script_asset
+    )
+    command, recovered, commits = _script_command_environment(
+        monkeypatch, workspace
+    )
+    payload = b"echo safe\n"
+
+    result = GPO.gpo_editor_script_asset_upload.execute(
+        command, "Test GPO", "computer", "startup", {
+            "name": "deploy.cmd",
+            "content_base64": base64.b64encode(payload).decode("ascii"),
+        },
+    )
+
+    workspace.upload_script_asset.assert_called_once_with(
+        "computer", "startup", "deploy.cmd", payload
+    )
+    uploaded = next(
+        asset for asset in result["scripts"]["assets"]
+        if asset["name"] == "deploy.cmd"
+    )
+    assert uploaded == {
+        "name": "deploy.cmd",
+        "byte_size": len(payload),
+        "revision": "new-r1",
+        "references": [],
+    }
+    assert result["publication"] == {"changed": True}
+    assert recovered == [(
+        workspace, command.api.Backend.ldap2, command.context,
+    )]
+    assert commits == [(
+        workspace, command.api.Backend.ldap2, command.context,
+    )]
 
 
 def test_script_upload_collision_is_safe_and_never_commits(monkeypatch):
