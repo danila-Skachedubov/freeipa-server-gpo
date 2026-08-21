@@ -1128,6 +1128,23 @@ def test_move_gpo_reorders_links(options, expected):
     assert ldap.error_handler_calls == 1
 
 
+def test_move_gpo_matches_display_name_case_insensitively():
+    ldap = GpoMoveLdap([GPO_DN, SECOND_GPO_DN])
+
+    CHAIN.chain_mod._do_move_operation(
+        SimpleNamespace(),
+        ldap,
+        FIRST_DN,
+        ("primary",),
+        {"moveup_gpc": "SECOND POLICY"},
+    )
+
+    assert ldap.chain["gplink"] == [
+        str(SECOND_GPO_DN),
+        str(GPO_DN),
+    ]
+
+
 def test_move_gpo_atomic_modify_failure_preserves_original_links():
     class FailingMoveLdap(GpoMoveLdap):
         def modify_s(self, dn, modifications):

@@ -701,7 +701,9 @@ class chain_mod(LDAPUpdate):
                 try:
                     gp_entry = ldap.get_entry(DN(existing_dn), attrs_list=GP_LOOKUP_ATTRIBUTES)
                     display_name = get_display_name(gp_entry)
-                    if display_name == gp_name:
+                    if (display_name and
+                            str(display_name).casefold() ==
+                            str(gp_name).casefold()):
                         gp_dn = existing_dn
                         break
                 except errors.NotFound:

@@ -573,6 +573,24 @@ def test_move_operation_reorders_with_one_atomic_ldap_modify(options, expected):
     assert ldap.error_handler_calls == 1
 
 
+def test_move_operation_matches_chain_name_case_insensitively():
+    ldap = MoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
+    subject = _move_subject(ldap)
+
+    GPMASTER.gpmaster_mod._do_move_operation(
+        subject,
+        ldap,
+        MASTER_DN,
+        (),
+        {"moveup_chain": "FALLBACK"},
+    )
+
+    assert ldap.master["chainlist"] == [
+        str(SECOND_CHAIN_DN),
+        str(CHAIN_DN),
+    ]
+
+
 def test_move_operation_atomic_modify_failure_preserves_original_chains():
     class FailingMoveLdap(MoveLdap):
         def modify_s(self, dn, modifications):
@@ -645,6 +663,18 @@ def test_validate_move_accepts_active_chain(options):
 
     GPMASTER.gpmaster_mod._validate_move_operations(
         SimpleNamespace(), ldap, MASTER_DN, options
+    )
+
+
+@pytest.mark.parametrize("option_name", ["moveup_chain", "movedown_chain"])
+def test_validate_move_matches_active_chain_case_insensitively(option_name):
+    ldap = MoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
+
+    GPMASTER.gpmaster_mod._validate_move_operations(
+        SimpleNamespace(),
+        ldap,
+        MASTER_DN,
+        {option_name: "PRIMARY"},
     )
 
 

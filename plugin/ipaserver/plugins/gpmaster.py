@@ -351,7 +351,9 @@ class gpmaster_mod(LDAPUpdate):
                 try:
                     chain_entry = ldap.get_entry(DN(existing_dn), attrs_list=['cn'])
                     existing_name = (chain_entry.get('cn') or [None])[0]
-                    if existing_name == chain_name:
+                    if (existing_name and
+                            str(existing_name).casefold() ==
+                            str(chain_name).casefold()):
                         chain_dn = existing_dn
                         break
                 except errors.NotFound:
@@ -413,7 +415,9 @@ class gpmaster_mod(LDAPUpdate):
                     try:
                         chain_entry = ldap.get_entry(DN(existing_dn), attrs_list=['cn'])
                         existing_name = (chain_entry.get('cn') or [None])[0]
-                        if existing_name == chain_name:
+                        if (existing_name and
+                                str(existing_name).casefold() ==
+                                str(chain_name).casefold()):
                             chain_found = True
                             break
                     except errors.NotFound:
@@ -439,7 +443,9 @@ class gpmaster_mod(LDAPUpdate):
                     try:
                         chain_entry = ldap.get_entry(DN(existing_dn), attrs_list=['cn'])
                         existing_name = (chain_entry.get('cn') or [None])[0]
-                        if existing_name == chain_name:
+                        if (existing_name and
+                                str(existing_name).casefold() ==
+                                str(chain_name).casefold()):
                             chain_found = True
                             break
                     except errors.NotFound:
