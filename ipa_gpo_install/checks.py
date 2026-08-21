@@ -14,6 +14,7 @@ from ipalib import api
 from ipalib import krb_utils
 from ipapython import ipautil
 from .config import (
+    FREEIPA_SYSVOL_PATH,
     GPO_EDITOR_STATE_DIR,
     GPO_EDITOR_USER,
     LOCALE_DIR,
@@ -419,11 +420,26 @@ class IPAChecker:
                 self.logger.error(_("Error listing Samba shares: {}").format(result.stderr))
                 return False
 
-            has_share = re.search(
-                r"^\s*\[sysvol\]\s*$",
+            share = re.search(
+                r"^\s*\[sysvol\]\s*$"
+                r"(?P<body>.*?)(?=^\s*\[[^]]+\]\s*$|\Z)",
                 result.stdout,
-                flags=re.IGNORECASE | re.MULTILINE,
-            ) is not None
+                flags=re.IGNORECASE | re.MULTILINE | re.DOTALL,
+            )
+            path = (
+                re.search(
+                    r"^\s*path\s*=\s*(?P<path>.*?)\s*$",
+                    share.group("body"),
+                    flags=re.IGNORECASE | re.MULTILINE,
+                )
+                if share is not None
+                else None
+            )
+            has_share = (
+                path is not None
+                and os.path.normpath(path.group("path"))
+                == os.path.normpath(FREEIPA_SYSVOL_PATH)
+            )
             if has_share:
                 self.logger.info(_("SYSVOL share exists"))
             else:

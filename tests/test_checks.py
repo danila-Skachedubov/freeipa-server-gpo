@@ -204,6 +204,24 @@ class TestCheckSysvolShare:
         assert checker.check_sysvol_share() is True
 
     @patch('ipa_gpo_install.checks.subprocess.run')
+    def test_share_with_wrong_path_is_not_healthy(self, mock_run):
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout='[sysvol]\n  path = /data/sysvol\n'
+        )
+        checker = _make_checker()
+        assert checker.check_sysvol_share() is False
+
+    @patch('ipa_gpo_install.checks.subprocess.run')
+    def test_share_without_path_is_not_healthy(self, mock_run):
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout='[sysvol]\n  guest ok = No\n'
+        )
+        checker = _make_checker()
+        assert checker.check_sysvol_share() is False
+
+    @patch('ipa_gpo_install.checks.subprocess.run')
     def test_command_fails(self, mock_run):
         mock_run.return_value = MagicMock(returncode=1, stderr='error')
         checker = _make_checker()
