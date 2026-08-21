@@ -41,6 +41,37 @@ define([
     var ensureLazyChildren = treeViewListModule.ensureLazyChildren;
     var createElement = elementCreatorModule.createElement;
     var t = translationsModule.t;
+    var lifecycleGeneration = 0;
+    var activeLifecycle = null;
+
+    function destroy() {
+        lifecycleGeneration += 1;
+        var lifecycle = activeLifecycle;
+        activeLifecycle = null;
+        if (!lifecycle) return;
+
+        if (lifecycle.treeViewState) {
+            lifecycle.treeViewState.renderRequestId += 1;
+            lifecycle.treeViewState.navigationRequestId += 1;
+            try {
+                lifecycle.treeViewState.cleanupCurrentView();
+            } catch (error) {
+                if (typeof console !== 'undefined' && console.error) {
+                    console.error(error);
+                }
+            }
+            lifecycle.treeViewState.currentView = null;
+        }
+        if (typeof lifecycle.resizeCleanup === 'function') {
+            try {
+                lifecycle.resizeCleanup();
+            } catch (error) {
+                if (typeof console !== 'undefined' && console.error) {
+                    console.error(error);
+                }
+            }
+        }
+    }
 
     function createTreeViewState() {
         return {
@@ -517,11 +548,20 @@ define([
     }
 
     function init(options) {
+        destroy();
+        var generation = lifecycleGeneration;
         var container = resolveContainer(options || {});
 
         if (!container) {
             return null;
         }
+
+        var lifecycle = {
+            container: container,
+            treeViewState: null,
+            resizeCleanup: null
+        };
+        activeLifecycle = lifecycle;
 
         container.innerHTML = '';
 
@@ -531,7 +571,14 @@ define([
         translationsModule.setLanguage(browserLang);
 
         APIModule.initialize(policyName).then(function(openResult) {
+            if (
+                generation !== lifecycleGeneration
+                || activeLifecycle !== lifecycle
+            ) {
+                return;
+            }
             var treeViewState = createTreeViewState();
+            lifecycle.treeViewState = treeViewState;
             var header = renderHeader(container);
             var headerElement = header.getElement();
             var initialPreferenceControls = headerElement.querySelector('.gp__control');
@@ -619,12 +666,18 @@ define([
             policyBtnNo.addEventListener('click', treeViewState.handlePolicyChangedNo.bind(treeViewState));
             policyBtnYes.addEventListener('click', treeViewState.handlePolicyChangedYes.bind(treeViewState));
 
-            resizable(
+            lifecycle.resizeCleanup = resizable(
                 renderedMain.divider.getElement(),
                 renderedMain.treeView.getElement(),
                 renderedMain.main.getElement()
             );
         }).catch(function(error) {
+            if (
+                generation !== lifecycleGeneration
+                || activeLifecycle !== lifecycle
+            ) {
+                return;
+            }
             container.innerHTML = '';
             container.appendChild(editorStatusModule.renderError(error, {
                 onRefresh: function() { init(options); }
@@ -632,12 +685,14 @@ define([
         });
 
         return {
-            container: container
+            container: container,
+            destroy: destroy
         };
     }
 
     return {
         init: init,
+        destroy: destroy,
         _test: {
             createTreeViewState: createTreeViewState
         }

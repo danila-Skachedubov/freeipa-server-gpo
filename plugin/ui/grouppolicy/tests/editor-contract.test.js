@@ -389,6 +389,102 @@ test('resizable enforces live bounds and removes every listener on cleanup', () 
     assert.equal(document.listeners.size, 0);
 });
 
+test('app destroy cleans the active view and resize lifecycle exactly once', async () => {
+    const container = new TestElement('div');
+    const header = preferenceTestHeader();
+    const resizeCleanup = { calls: 0 };
+    const viewCleanup = { calls: 0 };
+    const element = () => ({ getElement: () => new TestElement('div') });
+    const app = loadAmd('js/app.js', {
+        './components/header/header': { renderHeader: () => header },
+        './components/main/main': {
+            renderMain(_container, state) {
+                state.setCurrentView({
+                    cleanup() { viewCleanup.calls += 1; }
+                });
+                return {
+                    divider: element(),
+                    treeView: element(),
+                    main: element()
+                };
+            }
+        },
+        './components/footer/footer': { renderFooter() {} },
+        './util/resizable': {
+            resizable() {
+                return () => { resizeCleanup.calls += 1; };
+            }
+        },
+        './components/templates/default-template': {},
+        './components/templates/admx-template': {},
+        './components/templates/folder-template': {},
+        './components/templates/preference/preferences-view-template': {},
+        './components/tree-view/tree-view-list': {},
+        './util/element-creator': { createElement: createTestElement },
+        './components/editor-status': {
+            renderPending() { return null; },
+            renderError() { return createTestElement('div'); }
+        },
+        './locales/translations': {
+            t: (key) => key,
+            setLanguage() {}
+        },
+        './util/API': { initialize: () => Promise.resolve({}) }
+    }, {
+        document: new TestDocument(),
+        navigator: { language: 'en-US' },
+        Element: TestElement
+    });
+
+    const handle = app.init({ container, policyName: 'Policy' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    handle.destroy();
+    app.destroy();
+
+    assert.equal(viewCleanup.calls, 1);
+    assert.equal(resizeCleanup.calls, 1);
+});
+
+test('app destroy invalidates an editor initialization that resolves later', async () => {
+    let resolveOpen;
+    const initialized = new Promise((resolve) => { resolveOpen = resolve; });
+    let renders = 0;
+    const app = loadAmd('js/app.js', {
+        './components/header/header': {
+            renderHeader() {
+                renders += 1;
+                return preferenceTestHeader();
+            }
+        },
+        './components/main/main': {},
+        './components/footer/footer': {},
+        './util/resizable': {},
+        './components/templates/default-template': {},
+        './components/templates/admx-template': {},
+        './components/templates/folder-template': {},
+        './components/templates/preference/preferences-view-template': {},
+        './components/tree-view/tree-view-list': {},
+        './util/element-creator': {},
+        './components/editor-status': {},
+        './locales/translations': { t: (key) => key, setLanguage() {} },
+        './util/API': { initialize: () => initialized }
+    }, {
+        document: new TestDocument(),
+        navigator: { language: 'en-US' },
+        Element: TestElement
+    });
+
+    app.init({ container: new TestElement('div'), policyName: 'Policy' });
+    app.destroy();
+    resolveOpen({});
+    await initialized;
+    await Promise.resolve();
+
+    assert.equal(renders, 0);
+});
+
 test('API sends only displayname, opaque ids, structured request, and request locales', async () => {
     const calls = [];
     const rpc = {
