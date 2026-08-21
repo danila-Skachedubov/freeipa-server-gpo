@@ -441,6 +441,71 @@ def editor_context(current=None):
     )
 
 
+def test_read_gpc_snapshot_reads_exact_attributes_and_presence():
+    ldap_entry = entry(
+        versionnumber=[5],
+        gpcmachineextensionnames=[""],
+        gpcuserextensionnames=["[(USER)]"],
+    )
+    backend = FakeLdap(ldap_entry)
+    context = editor_context()
+
+    observed, presence = GPO._read_gpc_snapshot(backend, context)
+
+    assert observed == snapshot(
+        version=5,
+        machine="",
+        user="[(USER)]",
+    )
+    assert presence == {
+        "version_number": True,
+        "machine_extension_names": True,
+        "user_extension_names": True,
+    }
+    assert backend.calls == [
+        ("get_entry", DN_VALUE, list(GPO.GPC_SNAPSHOT_ATTRIBUTES))
+    ]
+
+
+def test_read_gpc_snapshot_rejects_changed_identity():
+    changed_guid = "{11111111-2222-3333-4444-555555555555}"
+    backend = FakeLdap(entry(cn=[changed_guid]))
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._read_gpc_snapshot(backend, editor_context())
+
+    assert failure.value.category == "publication_conflict"
+    assert failure.value.details == {"conflict_fields": ["identity"]}
+
+
+@pytest.mark.parametrize(
+    "invalid_path",
+    [
+        "not-a-UNC",
+        f"\\\\other.test\\SysVol\\other.test\\Policies\\{GUID}",
+    ],
+)
+def test_read_gpc_snapshot_rejects_invalid_or_changed_unc(invalid_path):
+    backend = FakeLdap(entry(gpcfilesyspath=[invalid_path]))
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._read_gpc_snapshot(backend, editor_context())
+
+    assert failure.value.category == "validation"
+    assert failure.value.field == "gpcfilesyspath"
+
+
+@pytest.mark.parametrize("invalid_version", ["not-an-int", -1, 0x100000000])
+def test_read_gpc_snapshot_rejects_invalid_version(invalid_version):
+    backend = FakeLdap(entry(versionnumber=[invalid_version]))
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._read_gpc_snapshot(backend, editor_context())
+
+    assert failure.value.category == "operational"
+    assert "version is invalid" in failure.value.message
+
+
 def test_publication_helper_uses_one_atomic_compare_modify_with_exact_values():
     backend = PublicationBackend()
     context = editor_context()
