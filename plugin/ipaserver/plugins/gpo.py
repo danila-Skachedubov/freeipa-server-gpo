@@ -1711,19 +1711,11 @@ class gpo_find(LDAPSearch):
 
     def execute(self, *args, **options):
         """Search for Group Policy Objects."""
+        verify_gpo_schema(self.api.Backend.ldap2, self.api)
         try:
-            result = super(gpo_find, self).execute(*args, **options)
-            return result
+            return super(gpo_find, self).execute(*args, **options)
 
         except errors.NotFound:
-            return {
-                'result': [],
-                'count': 0,
-                'truncated': False,
-                'summary': self.msg_summary % {'count': 0}
-            }
-        except Exception as e:
-            logger.error("Error in gpo_find: %s", str(e))
             return {
                 'result': [],
                 'count': 0,

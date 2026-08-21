@@ -372,3 +372,82 @@ def test_gpo_delete_post_callback_removes_sysvol_best_effort():
         "example.test",
         fail_on_error=False,
     )
+
+
+def _gpo_find_subject(monkeypatch):
+    ldap = MagicMock()
+    plugin_api = _plugin_api()
+    plugin_api.Backend = SimpleNamespace(ldap2=ldap)
+    monkeypatch.setattr(GPO.gpo_find, "api", plugin_api, raising=False)
+    return object.__new__(GPO.gpo_find), plugin_api, ldap
+
+
+def test_gpo_find_checks_schema_and_returns_search_result(monkeypatch):
+    subject, plugin_api, ldap = _gpo_find_subject(monkeypatch)
+    expected = {
+        "result": [{"displayname": ["Policy-One"]}],
+        "count": 1,
+        "truncated": False,
+    }
+    schema_check = MagicMock()
+    base_execute = MagicMock(return_value=expected)
+    monkeypatch.setattr(GPO, "verify_gpo_schema", schema_check)
+    monkeypatch.setattr(GPO.LDAPSearch, "execute", base_execute)
+
+    result = GPO.gpo_find.execute(subject, "Policy", sizelimit=10)
+
+    assert result is expected
+    schema_check.assert_called_once_with(ldap, plugin_api)
+    base_execute.assert_called_once_with("Policy", sizelimit=10)
+
+
+def test_gpo_find_returns_empty_result_for_not_found(monkeypatch):
+    subject, _plugin_api_value, _ldap = _gpo_find_subject(monkeypatch)
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+    monkeypatch.setattr(
+        GPO.LDAPSearch,
+        "execute",
+        MagicMock(side_effect=errors.NotFound(reason="none")),
+    )
+
+    result = GPO.gpo_find.execute(subject)
+
+    assert result["result"] == []
+    assert result["count"] == 0
+    assert result["truncated"] is False
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [errors.ACIError(info="denied"), RuntimeError("LDAP unavailable")],
+)
+def test_gpo_find_propagates_unexpected_search_failure(
+    monkeypatch,
+    failure,
+):
+    subject, _plugin_api_value, _ldap = _gpo_find_subject(monkeypatch)
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+    monkeypatch.setattr(
+        GPO.LDAPSearch,
+        "execute",
+        MagicMock(side_effect=failure),
+    )
+
+    with pytest.raises(type(failure), match=str(failure)):
+        GPO.gpo_find.execute(subject)
+
+
+def test_gpo_find_does_not_search_when_schema_check_fails(monkeypatch):
+    subject, _plugin_api_value, _ldap = _gpo_find_subject(monkeypatch)
+    base_execute = MagicMock()
+    monkeypatch.setattr(
+        GPO,
+        "verify_gpo_schema",
+        MagicMock(side_effect=errors.NotFound(reason="schema missing")),
+    )
+    monkeypatch.setattr(GPO.LDAPSearch, "execute", base_execute)
+
+    with pytest.raises(errors.NotFound, match="schema missing"):
+        GPO.gpo_find.execute(subject)
+
+    base_execute.assert_not_called()
