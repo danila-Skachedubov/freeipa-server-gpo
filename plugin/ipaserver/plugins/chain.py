@@ -1,6 +1,8 @@
 import logging
 import re
 
+import ldap as ldap_module
+
 from ipalib import api, errors, _, ngettext
 from ipalib import Str, Command, output, Flag, Bool
 from ipalib.plugable import Registry
@@ -705,12 +707,17 @@ class chain_mod(LDAPUpdate):
         if current_gplinks == original_gplinks:
             return
 
-        entry['gplink'] = []
-        ldap.update_entry(entry)
-
-        entry = ldap.get_entry(dn)
-        entry['gplink'] = current_gplinks
-        ldap.update_entry(entry)
+        ldap.modify_ext_s(
+            str(dn),
+            [
+                (ldap_module.MOD_DELETE, 'gpLink', None),
+                (
+                    ldap_module.MOD_ADD,
+                    'gpLink',
+                    [ldap.encode(value) for value in current_gplinks],
+                ),
+            ],
+        )
 
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
         """Standard operations only - move operations handled in execute."""

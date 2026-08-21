@@ -1,6 +1,7 @@
 """Focused unit tests for Group Policy Chain helper functions."""
 
 import importlib.util
+import ldap as python_ldap
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call
@@ -992,7 +993,7 @@ def test_chain_add_post_callback_keeps_created_chain_on_activation_failure(
 class GpoMoveLdap:
     def __init__(self, gplinks):
         self.chain = {"gplink": list(gplinks)}
-        self.updated_gplinks = []
+        self.modifications = []
         self.gpo_entries = {
             str(GPO_DN): Entry(
                 GPO_DN,
@@ -1011,8 +1012,15 @@ class GpoMoveLdap:
             return self.chain
         return self.gpo_entries[str(dn)]
 
-    def update_entry(self, entry):
-        self.updated_gplinks.append(list(entry.get("gplink", [])))
+    @staticmethod
+    def encode(value):
+        return str(value).encode()
+
+    def modify_ext_s(self, dn, modifications):
+        self.modifications.append((dn, modifications))
+        self.chain["gplink"] = [
+            value.decode() for value in modifications[1][2]
+        ]
 
 
 @pytest.mark.parametrize(
@@ -1039,8 +1047,41 @@ def test_move_gpo_reorders_links(options, expected):
         options,
     )
 
-    assert ldap.updated_gplinks == [[], expected]
+    assert ldap.modifications == [
+        (
+            str(FIRST_DN),
+            [
+                (python_ldap.MOD_DELETE, "gpLink", None),
+                (
+                    python_ldap.MOD_ADD,
+                    "gpLink",
+                    [value.encode() for value in expected],
+                ),
+            ],
+        )
+    ]
     assert ldap.chain["gplink"] == expected
+
+
+def test_move_gpo_atomic_modify_failure_preserves_original_links():
+    class FailingMoveLdap(GpoMoveLdap):
+        def modify_ext_s(self, dn, modifications):
+            self.modifications.append((dn, modifications))
+            raise RuntimeError("atomic modify failed")
+
+    backend = FailingMoveLdap([GPO_DN, SECOND_GPO_DN])
+
+    with pytest.raises(RuntimeError, match="atomic modify failed"):
+        CHAIN.chain_mod._do_move_operation(
+            SimpleNamespace(),
+            backend,
+            FIRST_DN,
+            ("primary",),
+            {"moveup_gpc": "Second policy"},
+        )
+
+    assert backend.chain["gplink"] == [GPO_DN, SECOND_GPO_DN]
+    assert len(backend.modifications) == 1
 
 
 def test_empty_moveup_gpo_does_not_override_movedown_direction():
@@ -1073,7 +1114,7 @@ def test_move_gpo_rejects_conflicting_directions_without_writes():
         )
 
     assert failure.value.name == "move_gpc"
-    assert ldap.updated_gplinks == []
+    assert ldap.modifications == []
 
 
 def test_move_gpo_rejects_unlinked_policy_without_writes():
@@ -1089,7 +1130,7 @@ def test_move_gpo_rejects_unlinked_policy_without_writes():
         )
 
     assert failure.value.name == "moveup_gpc"
-    assert ldap.updated_gplinks == []
+    assert ldap.modifications == []
 
 
 def test_move_gpo_propagates_link_lookup_failure_without_writes():
@@ -1112,7 +1153,7 @@ def test_move_gpo_propagates_link_lookup_failure_without_writes():
             {"moveup_gpc": "Second policy"},
         )
 
-    assert ldap.updated_gplinks == []
+    assert ldap.modifications == []
 
 
 @pytest.mark.parametrize(
@@ -1134,7 +1175,7 @@ def test_move_gpo_boundary_and_short_list_do_not_write(options, gplinks):
         options,
     )
 
-    assert ldap.updated_gplinks == []
+    assert ldap.modifications == []
 
 
 def test_move_gpo_uses_cn_when_display_name_is_empty():
