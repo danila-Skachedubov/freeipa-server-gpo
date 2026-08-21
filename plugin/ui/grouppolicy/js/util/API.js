@@ -11,6 +11,7 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
     var selectedDisplayName = null;
     var editorOpenPromise = null;
     var editorOpenResult = null;
+    var editorOpenGeneration = 0;
 
     function clone(value) {
         if (value === undefined) return undefined;
@@ -161,11 +162,14 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
     }
 
     function initialize(displayName) {
+        var generation = ++editorOpenGeneration;
         selectedDisplayName = displayName ? String(displayName) : null;
         editorOpenResult = null;
         editorOpenPromise = selectedDisplayName
             ? execute("editor_open", [], withLocales()).then(function(result) {
-                editorOpenResult = result;
+                if (generation === editorOpenGeneration) {
+                    editorOpenResult = result;
+                }
                 return result;
             })
             : Promise.reject(new EditorError("No GPO is selected", {

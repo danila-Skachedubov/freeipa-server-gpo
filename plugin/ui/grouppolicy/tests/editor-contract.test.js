@@ -393,6 +393,39 @@ test('API sends only displayname, opaque ids, structured request, and request lo
     assert.equal(JSON.stringify(calls).includes('registry_' + 'path'), false);
 });
 
+test('API initialize keeps the newest GPO cached when an older request resolves late', async () => {
+    const calls = [];
+    const rpc = {
+        command(spec) {
+            calls.push(spec);
+            return { execute() {} };
+        }
+    };
+    const API = loadAmd('js/util/API.js', {
+        'freeipa/ipa': { api_version: '2.0' },
+        'freeipa/rpc': rpc,
+        '../locales/translations': { getLanguage: () => 'en' }
+    });
+
+    const oldRequest = API.initialize('Old policy');
+    const newRequest = API.initialize('New policy');
+    assert.deepEqual(calls.map((call) => plain(call.args)), [
+        ['Old policy'],
+        ['New policy']
+    ]);
+
+    calls[1].on_success({ result: { result: { gpo: { displayname: 'New policy' } } } });
+    await newRequest;
+    assert.equal(API.getOpenResult().gpo.displayname, 'New policy');
+
+    calls[0].on_success({ result: { result: { gpo: { displayname: 'Old policy' } } } });
+    const oldResult = await oldRequest;
+
+    assert.equal(oldResult.gpo.displayname, 'Old policy');
+    assert.equal(API.getDisplayName(), 'New policy');
+    assert.equal(API.getOpenResult().gpo.displayname, 'New policy');
+});
+
 test('scripts API mirrors every RPC without creating trusted client path state', async () => {
     const calls = [];
     const rpc = {
