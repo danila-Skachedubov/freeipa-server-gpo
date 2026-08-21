@@ -109,7 +109,7 @@ function loadChain(environment, windowValue = { location: { hash: '' } }) {
     }, { window: windowValue });
 }
 
-function loadGpo(environment) {
+function loadGpo(environment, options = {}) {
     const links = [];
     const document = {
         createElement() {
@@ -122,7 +122,7 @@ function loadGpo(environment) {
         }
     };
     const exported = loadAmd('gpo.js', {
-        require() {},
+        require: options.require || function() {},
         'freeipa/ipa': environment.IPA,
         'freeipa/phases': environment.phases,
         'freeipa/reg': environment.reg,
@@ -131,11 +131,76 @@ function loadGpo(environment) {
     }, {
         document,
         window: { location: { hash: '' }, console },
-        $() {
+        $: options.$ || function() {
             throw new Error('jQuery must not be used while loading the module');
         }
     });
     return { exported, links };
+}
+
+function jqueryModalHarness() {
+    function control() {
+        return {
+            handlers: {},
+            on(event, handler) {
+                this.handlers[event] = handler;
+                return this;
+            },
+            text(value) {
+                this.textValue = value;
+                return this;
+            },
+            trigger(event) {
+                if (this.handlers[event]) this.handlers[event]();
+            }
+        };
+    }
+
+    function node(kind) {
+        const controls = {
+            '.close': control(),
+            '.modal-title': control()
+        };
+        return {
+            kind,
+            removed: 0,
+            children: [],
+            remove() {
+                this.removed += 1;
+                return this;
+            },
+            find(selector) {
+                return controls[selector] || control();
+            },
+            append(child) {
+                this.children.push(child);
+                return this;
+            },
+            controls
+        };
+    }
+
+    const state = {
+        backdrop: null,
+        modal: null,
+        body: node('body')
+    };
+    state.$ = function(value) {
+        if (value === 'body') return state.body;
+        if (String(value).includes('modal-backdrop')) {
+            state.backdrop = node('backdrop');
+            state.backdrop.on = control().on.bind(state.backdrop);
+            state.backdrop.handlers = {};
+            state.backdrop.trigger = control().trigger.bind(state.backdrop);
+            return state.backdrop;
+        }
+        if (String(value).includes('modal-gpui')) {
+            state.modal = node('modal');
+            return state.modal;
+        }
+        throw new Error(`Unexpected jQuery input: ${value}`);
+    };
+    return state;
 }
 
 test('chain plugin registers its public actions, formatter, entity and menu phase', () => {
@@ -358,4 +423,59 @@ test('GPO save action skips no-op and sends one canonical modification', () => {
     assert.deepEqual(response, { updated: true });
     assert.equal(facet.refreshes, 1);
     assert.match(environment.calls.notifications.at(-1)[1], /renamed from/);
+});
+
+test('GPUI modal close destroys the initialized app lifecycle exactly once', () => {
+    const environment = pluginEnvironment();
+    const jquery = jqueryModalHarness();
+    let initCalls = 0;
+    let destroyCalls = 0;
+    let refreshes = 0;
+    const app = {
+        init() {
+            initCalls += 1;
+            return { destroy() { destroyCalls += 1; } };
+        }
+    };
+    const { exported: gpo } = loadGpo(environment, {
+        $: jquery.$,
+        require(_modules, onLoad) { onLoad(app); }
+    });
+    const action = gpo.gpui_action();
+    const facet = {
+        get_selected_values: () => ['Policy One'],
+        refresh() { refreshes += 1; }
+    };
+
+    action.execute_action(facet);
+    assert.equal(initCalls, 1);
+    jquery.modal.controls['.close'].trigger('click');
+    jquery.backdrop.trigger('click');
+
+    assert.equal(destroyCalls, 1);
+    assert.equal(jquery.modal.removed, 1);
+    assert.equal(jquery.backdrop.removed, 1);
+    assert.equal(refreshes, 1);
+});
+
+test('GPUI modal closed before app load never initializes the late module', () => {
+    const environment = pluginEnvironment();
+    const jquery = jqueryModalHarness();
+    let finishLoading;
+    let initCalls = 0;
+    const { exported: gpo } = loadGpo(environment, {
+        $: jquery.$,
+        require(_modules, onLoad) { finishLoading = onLoad; }
+    });
+    const action = gpo.gpui_action();
+    const facet = {
+        get_selected_values: () => ['Policy One'],
+        refresh() {}
+    };
+
+    action.execute_action(facet);
+    jquery.backdrop.trigger('click');
+    finishLoading({ init() { initCalls += 1; } });
+
+    assert.equal(initCalls, 0);
 });
