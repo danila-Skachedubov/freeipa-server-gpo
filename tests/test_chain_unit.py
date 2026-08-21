@@ -666,3 +666,202 @@ def test_toggle_commands_delegate_with_expected_direction(
 
     assert result == {"result": {}}
     subject._toggle_chain.assert_called_once_with("primary", enable=enable)
+
+
+def test_verify_gpo_schema_reads_policy_container():
+    ldap = MagicMock()
+    plugin_api = SimpleNamespace(env=SimpleNamespace(basedn=BASEDN))
+
+    CHAIN.verify_gpo_schema(ldap, plugin_api)
+
+    ldap.get_entry.assert_called_once_with(
+        DN(("cn", "Policies"), ("cn", "System"), BASEDN),
+        attrs_list=["cn"],
+    )
+
+
+def test_verify_gpo_schema_reports_missing_container():
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = errors.NotFound(reason="missing")
+    plugin_api = SimpleNamespace(env=SimpleNamespace(basedn=BASEDN))
+
+    with pytest.raises(errors.NotFound, match="schema is not installed"):
+        CHAIN.verify_gpo_schema(ldap, plugin_api)
+
+
+def test_verify_gpo_schema_translates_schema_backend_error():
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = errors.DatabaseError(
+        desc="LDAP schema",
+        info="undefined object class",
+    )
+    plugin_api = SimpleNamespace(env=SimpleNamespace(basedn=BASEDN))
+
+    with pytest.raises(errors.NotFound, match="groupPolicyContainer"):
+        CHAIN.verify_gpo_schema(ldap, plugin_api)
+
+
+def test_verify_gpo_schema_logs_unexpected_internal_error(monkeypatch):
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = RuntimeError("LDAP unavailable")
+    plugin_api = SimpleNamespace(env=SimpleNamespace(basedn=BASEDN))
+    debug = MagicMock()
+    monkeypatch.setattr(CHAIN.logger, "debug", debug)
+
+    CHAIN.verify_gpo_schema(ldap, plugin_api)
+
+    debug.assert_called_once_with(
+        "GPO schema check error: %s",
+        "LDAP unavailable",
+    )
+
+
+def _chain_add_subject():
+    return SimpleNamespace(
+        api=SimpleNamespace(env=SimpleNamespace(basedn=BASEDN)),
+        obj=SimpleNamespace(convert_names_to_dns=MagicMock()),
+    )
+
+
+def test_chain_add_pre_callback_validates_and_converts_references(monkeypatch):
+    schema_check = MagicMock()
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", schema_check)
+    subject = _chain_add_subject()
+    subject.obj.convert_names_to_dns.return_value = {
+        "usergroup": str(USER_GROUP_DN),
+        "gplink": [str(GPO_DN)],
+    }
+    ldap = MagicMock()
+    entry_attrs = {"description": "Primary chain"}
+    options = {
+        "usergroup": "users",
+        "gplink": ("Workstation policy",),
+    }
+
+    result = CHAIN.chain_add.pre_callback(
+        subject,
+        ldap,
+        FIRST_DN,
+        entry_attrs,
+        [],
+        "primary",
+        **options,
+    )
+
+    assert result == FIRST_DN
+    assert entry_attrs == {
+        "description": "Primary chain",
+        "usergroup": str(USER_GROUP_DN),
+        "gplink": [str(GPO_DN)],
+    }
+    schema_check.assert_called_once_with(ldap, subject.api)
+    subject.obj.convert_names_to_dns.assert_called_once_with(
+        options,
+        strict=True,
+    )
+
+
+def test_chain_add_pre_callback_rejects_invalid_name(monkeypatch):
+    schema_check = MagicMock()
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", schema_check)
+    subject = _chain_add_subject()
+    ldap = MagicMock()
+
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain_add.pre_callback(
+            subject,
+            ldap,
+            FIRST_DN,
+            {},
+            [],
+            "invalid/name",
+        )
+
+    assert failure.value.name == "cn"
+    schema_check.assert_called_once_with(ldap, subject.api)
+    subject.obj.convert_names_to_dns.assert_not_called()
+
+
+def test_chain_add_pre_callback_propagates_reference_validation_error(
+    monkeypatch,
+):
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", MagicMock())
+    subject = _chain_add_subject()
+    subject.obj.convert_names_to_dns.side_effect = errors.NotFound(
+        reason="missing group"
+    )
+
+    with pytest.raises(errors.NotFound, match="missing group"):
+        CHAIN.chain_add.pre_callback(
+            subject,
+            MagicMock(),
+            FIRST_DN,
+            {},
+            [],
+            "primary",
+            usergroup="missing",
+        )
+
+
+def test_chain_add_post_callback_activates_new_chain(monkeypatch):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": ["fallback"]}
+    }
+
+    result = CHAIN.chain_add.post_callback(
+        SimpleNamespace(),
+        MagicMock(),
+        FIRST_DN,
+        {},
+        "primary",
+    )
+
+    assert result == FIRST_DN
+    commands.gpmaster_mod.assert_called_once_with(add_chain=["primary"])
+
+
+def test_chain_add_post_callback_does_not_duplicate_active_chain(monkeypatch):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": ["primary"]}
+    }
+
+    CHAIN.chain_add.post_callback(
+        SimpleNamespace(),
+        MagicMock(),
+        FIRST_DN,
+        {},
+        "primary",
+    )
+
+    commands.gpmaster_mod.assert_not_called()
+
+
+@pytest.mark.parametrize("failing_command", ["gpmaster_show", "gpmaster_mod"])
+def test_chain_add_post_callback_keeps_created_chain_on_activation_failure(
+    monkeypatch,
+    failing_command,
+):
+    commands = _command_api(monkeypatch)
+    warning = MagicMock()
+    monkeypatch.setattr(CHAIN.logger, "warning", warning)
+    commands.gpmaster_show.return_value = {"result": {"chainlist": []}}
+    getattr(commands, failing_command).side_effect = RuntimeError(
+        "activation failed"
+    )
+
+    result = CHAIN.chain_add.post_callback(
+        SimpleNamespace(),
+        MagicMock(),
+        FIRST_DN,
+        {},
+        "primary",
+    )
+
+    assert result == FIRST_DN
+    warning.assert_called_once_with(
+        "Failed to activate newly created chain '%s': %s",
+        "primary",
+        "activation failed",
+    )

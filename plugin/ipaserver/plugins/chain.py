@@ -449,8 +449,12 @@ class chain_add(LDAPCreate):
 
             if chain_name not in current_chains:
                 api.Command.gpmaster_mod(add_chain=[chain_name])
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "Failed to activate newly created chain '%s': %s",
+                chain_name,
+                str(exc),
+            )
 
         return dn
 
