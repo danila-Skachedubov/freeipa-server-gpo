@@ -1190,6 +1190,30 @@ def _recover_before_mutation(workspace, ldap_backend, context):
     )
 
 
+def _structured_request(request, allowed, required=()):
+    if not isinstance(request, dict):
+        raise EditorFailure(
+            'validation', 'A structured request is required.', field='request'
+        )
+    unknown = sorted(set(request) - set(allowed))
+    if unknown:
+        raise EditorFailure(
+            'validation',
+            'The request contains an unknown field.',
+            field='request',
+            details={'unknown_fields': unknown},
+        )
+    missing = [name for name in required if name not in request]
+    if missing:
+        raise EditorFailure(
+            'validation',
+            'The request is missing a required field.',
+            field='request',
+            details={'missing_fields': missing},
+        )
+    return request
+
+
 def _identity(request):
     if not isinstance(request, dict):
         raise EditorFailure(
@@ -2088,12 +2112,10 @@ class gpo_editor_policy_update(_GpoEditorCommand):
         locales=None, **options
     ):
         def operation():
-            if not isinstance(request, dict):
-                raise EditorFailure(
-                    'validation',
-                    'A structured policy update is required.',
-                    field='request',
-                )
+            _structured_request(
+                request,
+                ('state', 'set_parameters', 'clear_parameters', 'comment'),
+            )
             normalized_scope = _validated_scope(scope)
             context = self._context(displayname, write=True)
             ldap_backend = self.api.Backend.ldap2
@@ -2266,11 +2288,7 @@ class gpo_editor_preference_show(_GpoEditorCommand):
     def execute(self, displayname, scope, kind, request, **options):
         def operation():
             normalized_scope = _validated_scope(scope)
-            if not isinstance(request, dict):
-                raise EditorFailure(
-                    'validation', 'A structured request is required.',
-                    field='request'
-                )
+            _structured_request(request, ('identity',))
             context = self._context(displayname)
             workspace, runtime = _open_workspace(
                 context, load_preferences=True
@@ -2306,11 +2324,11 @@ class gpo_editor_preference_create(_GpoEditorCommand):
 
     def execute(self, displayname, scope, kind, request, **options):
         def operation():
-            if not isinstance(request, dict):
-                raise EditorFailure(
-                    'validation', 'A structured request is required.',
-                    field='request'
-                )
+            _structured_request(
+                request,
+                ('fields', 'filters', 'parent'),
+                required=('fields',),
+            )
             normalized_scope = _validated_scope(scope)
             context = self._context(displayname, write=True)
             ldap_backend = self.api.Backend.ldap2
@@ -2360,6 +2378,11 @@ class gpo_editor_preference_update(_GpoEditorCommand):
     def execute(self, displayname, scope, kind, request, **options):
         def operation():
             normalized_scope = _validated_scope(scope)
+            _structured_request(
+                request,
+                ('identity', 'fields', 'name', 'filters'),
+                required=('identity',),
+            )
             identity = _identity(request)
             context = self._context(displayname, write=True)
             ldap_backend = self.api.Backend.ldap2
@@ -2416,6 +2439,11 @@ class gpo_editor_preference_delete(_GpoEditorCommand):
     def execute(self, displayname, scope, kind, request, **options):
         def operation():
             normalized_scope = _validated_scope(scope)
+            _structured_request(
+                request,
+                ('identity',),
+                required=('identity',),
+            )
             identity = _identity(request)
             context = self._context(displayname, write=True)
             ldap_backend = self.api.Backend.ldap2

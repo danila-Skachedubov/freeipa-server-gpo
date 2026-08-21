@@ -1536,6 +1536,83 @@ def test_policy_mid_form_validation_failure_never_reaches_commit(monkeypatch):
         )
 
 
+@pytest.mark.parametrize(
+    ("command", "args", "request_payload", "unknown_field"),
+    [
+        (
+            GPO.gpo_editor_policy_update,
+            ("Test GPO", "computer", "policy-id"),
+            {"stat": "enabled"},
+            "stat",
+        ),
+        (
+            GPO.gpo_editor_preference_show,
+            ("Test GPO", "computer", "files"),
+            {"identity": None, "extra": True},
+            "extra",
+        ),
+        (
+            GPO.gpo_editor_preference_create,
+            ("Test GPO", "computer", "files"),
+            {"fields": [], "fileds": []},
+            "fileds",
+        ),
+        (
+            GPO.gpo_editor_preference_update,
+            ("Test GPO", "computer", "files"),
+            {"identity": ["files", "opaque-id"], "fileds": []},
+            "fileds",
+        ),
+        (
+            GPO.gpo_editor_preference_delete,
+            ("Test GPO", "computer", "files"),
+            {"identity": ["files", "opaque-id"], "extra": True},
+            "extra",
+        ),
+    ],
+)
+def test_structured_editor_requests_reject_unknown_fields_before_context(
+    command,
+    args,
+    request_payload,
+    unknown_field,
+):
+    harness = CommandHarness(editor_context())
+    context_calls = []
+    harness._context = lambda *args, **kwargs: context_calls.append(
+        (args, kwargs)
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        command.execute(harness, *args, request_payload)
+
+    assert failure.value.category == "validation"
+    assert failure.value.field == "request"
+    assert failure.value.details == {"unknown_fields": [unknown_field]}
+    assert context_calls == []
+
+
+def test_preference_create_requires_fields_before_context():
+    harness = CommandHarness(editor_context())
+    context_calls = []
+    harness._context = lambda *args, **kwargs: context_calls.append(
+        (args, kwargs)
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_preference_create.execute(
+            harness,
+            "Test GPO",
+            "computer",
+            "files",
+            {},
+        )
+
+    assert failure.value.category == "validation"
+    assert failure.value.details == {"missing_fields": ["fields"]}
+    assert context_calls == []
+
+
 def test_policy_navigation_preserves_opaque_ids_and_unsupported_values(
     monkeypatch,
 ):
