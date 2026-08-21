@@ -3,7 +3,7 @@
 import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 from ipalib import errors
@@ -156,4 +156,135 @@ def test_get_gpmaster_dn_uses_global_basedn(monkeypatch):
         ("cn", "grouppolicymaster"),
         ("cn", "etc"),
         BASEDN,
+    )
+
+
+def _modifier(current_chains=()):
+    ldap = MagicMock()
+    ldap.get_entry.return_value = {"chainlist": list(current_chains)}
+    obj = MagicMock()
+    obj.get_gpmaster_dn.return_value = DN(
+        ("cn", "grouppolicymaster"), ("cn", "etc"), BASEDN
+    )
+    subject = SimpleNamespace(
+        api=SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap)),
+        obj=obj,
+    )
+    return subject, obj, ldap
+
+
+def test_add_chain_appends_new_dn_without_duplicate():
+    subject, obj, _ldap = _modifier([CHAIN_DN])
+    second_dn = DN(("cn", "fallback"), ("cn", "gpo-chains"), BASEDN)
+    obj.resolve_chain_name.side_effect = [str(CHAIN_DN), str(second_dn)]
+    entry_attrs = {}
+
+    GPMASTER.gpmaster_mod._handle_add_operations(
+        subject,
+        entry_attrs,
+        {"add_chain": ("primary", "fallback")},
+    )
+
+    assert entry_attrs["chainlist"] == [str(CHAIN_DN), str(second_dn)]
+    assert obj.resolve_chain_name.call_args_list == [
+        call("primary", strict=True),
+        call("fallback", strict=True),
+    ]
+
+
+def test_add_chain_reports_missing_chain():
+    subject, obj, _ldap = _modifier()
+    obj.resolve_chain_name.side_effect = errors.NotFound(reason="missing")
+
+    with pytest.raises(errors.NotFound):
+        GPMASTER.gpmaster_mod._handle_add_operations(
+            subject, {}, {"add_chain": "missing"}
+        )
+
+
+def test_remove_chain_rejects_empty_master():
+    subject, _obj, ldap = _modifier()
+
+    with pytest.raises(errors.ValidationError) as failure:
+        GPMASTER.gpmaster_mod._handle_remove_operations(
+            subject,
+            ldap,
+            {"chainlist": []},
+            {},
+            {"remove_chain": "primary"},
+        )
+
+    assert failure.value.name == "remove_chain"
+
+
+def test_remove_chain_by_resolved_dn():
+    subject, obj, ldap = _modifier()
+    obj.resolve_chain_name.return_value = str(CHAIN_DN)
+    entry_attrs = {}
+
+    GPMASTER.gpmaster_mod._handle_remove_operations(
+        subject,
+        ldap,
+        {"chainlist": [CHAIN_DN]},
+        entry_attrs,
+        {"remove_chain": "primary"},
+    )
+
+    assert entry_attrs["chainlist"] == []
+    ldap.get_entry.assert_not_called()
+
+
+def test_remove_chain_by_readable_name_when_dn_resolution_is_unavailable():
+    subject, obj, ldap = _modifier()
+    obj.resolve_chain_name.return_value = "primary"
+    ldap.get_entry.return_value = {"cn": ["primary"]}
+    entry_attrs = {}
+
+    GPMASTER.gpmaster_mod._handle_remove_operations(
+        subject,
+        ldap,
+        {"chainlist": [CHAIN_DN]},
+        entry_attrs,
+        {"remove_chain": "primary"},
+    )
+
+    assert entry_attrs["chainlist"] == []
+    ldap.get_entry.assert_called_once_with(CHAIN_DN, attrs_list=["cn"])
+
+
+def test_remove_chain_reports_name_not_assigned_to_master():
+    subject, obj, ldap = _modifier()
+    obj.resolve_chain_name.return_value = "missing"
+    ldap.get_entry.side_effect = errors.NotFound(reason="missing")
+
+    with pytest.raises(errors.NotFound):
+        GPMASTER.gpmaster_mod._handle_remove_operations(
+            subject,
+            ldap,
+            {"chainlist": [CHAIN_DN]},
+            {},
+            {"remove_chain": "missing"},
+        )
+
+
+def test_standard_modifications_set_pdc_and_resolve_chainlist():
+    subject, obj, _ldap = _modifier()
+    obj.convert_chain_names_to_dns.return_value = [str(CHAIN_DN)]
+    entry_attrs = {}
+
+    GPMASTER.gpmaster_mod._handle_standard_modifications(
+        subject,
+        entry_attrs,
+        {
+            "pdcemulator": "dc1.example.test",
+            "chainlist": ["primary"],
+        },
+    )
+
+    assert entry_attrs == {
+        "pdcemulator": "dc1.example.test",
+        "chainlist": [str(CHAIN_DN)],
+    }
+    obj.convert_chain_names_to_dns.assert_called_once_with(
+        ["primary"], strict=True
     )
