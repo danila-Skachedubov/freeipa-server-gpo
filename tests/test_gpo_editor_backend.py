@@ -1,6 +1,7 @@
 """Focused unit and contract coverage for the FreeIPA libadmix editor host."""
 
 import base64
+import builtins
 import importlib.util
 import json
 from pathlib import Path
@@ -110,6 +111,43 @@ def resolve_context(tmp_path, monkeypatch, ldap_backend=None, write=False):
     )
     assert context.gpo_root == root.resolve()
     return context, backend
+
+
+def test_admix_binding_is_loaded_lazily_and_cached(monkeypatch):
+    binding = SimpleNamespace(name="fake-admix")
+    imports = []
+    real_import = builtins.__import__
+
+    def import_module(name, *args, **kwargs):
+        if name == "admix":
+            imports.append(name)
+            return binding
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_module)
+
+    assert GPO._load_admix() is binding
+    assert GPO._load_admix() is binding
+    assert imports == ["admix"]
+
+
+def test_admix_binding_failure_is_structured_and_keeps_cache_empty(monkeypatch):
+    real_import = builtins.__import__
+
+    def import_module(name, *args, **kwargs):
+        if name == "admix":
+            raise ImportError("binding is not installed")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_module)
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._load_admix()
+
+    assert failure.value.category == "operational"
+    assert "binding is not available" in failure.value.message
+    assert isinstance(failure.value.__cause__, ImportError)
+    assert GPO._admix_module is None
 
 
 def test_lazy_catalog_refresh_is_throttled_and_retains_healthy_generation():
@@ -1465,6 +1503,50 @@ def test_editor_command_success_envelope_uses_eager_string_summary():
 
     assert isinstance(envelope["summary"], str)
     assert envelope["result"] == {"ok": True}
+
+
+def test_editor_command_run_translates_callback_failure(monkeypatch):
+    original = RuntimeError("binding internals")
+    translated = errors.ExecutionError(message="translated")
+    translator_calls = []
+
+    def translate(exc):
+        translator_calls.append(exc)
+        raise translated
+
+    monkeypatch.setattr(GPO, "_translate_editor_exception", translate)
+
+    with pytest.raises(errors.ExecutionError) as failure:
+        GPO._GpoEditorCommand._run(
+            None,
+            lambda: (_ for _ in ()).throw(original),
+        )
+
+    assert failure.value is translated
+    assert translator_calls == [original]
+
+
+def test_editor_command_context_uses_command_api_backend(monkeypatch):
+    ldap_backend = object()
+    plugin_api = SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap_backend))
+    subject = SimpleNamespace(api=plugin_api)
+    expected = object()
+    calls = []
+
+    def resolve(ldap, api_instance, displayname, write=False):
+        calls.append((ldap, api_instance, displayname, write))
+        return expected
+
+    monkeypatch.setattr(GPO, "_resolve_editor_context", resolve)
+
+    result = GPO._GpoEditorCommand._context(
+        subject,
+        "Policy-One",
+        write=True,
+    )
+
+    assert result is expected
+    assert calls == [(ldap_backend, plugin_api, "Policy-One", True)]
 
 
 def test_editor_open_returns_documents_from_one_preference_workspace(
