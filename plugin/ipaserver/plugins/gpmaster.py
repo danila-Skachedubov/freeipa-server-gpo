@@ -105,7 +105,25 @@ class gpmaster(LDAPObject):
     def resolve_chain_name(self, chain_name, strict=False):
         """Convert chain name to DN."""
         if chain_name.startswith(('cn=', 'CN=')):
-            return chain_name
+            if not strict:
+                return chain_name
+            try:
+                chain_dn = DN(chain_name)
+                self.api.Backend.ldap2.get_entry(
+                    chain_dn, attrs_list=['cn']
+                )
+                return chain_name
+            except errors.NotFound:
+                raise errors.NotFound(
+                    reason=_("Chain '{}' not found").format(chain_name)
+                )
+            except Exception as e:
+                raise errors.ValidationError(
+                    name='chain',
+                    error=_("Failed to resolve chain '{}': {}").format(
+                        chain_name, str(e)
+                    )
+                )
 
         try:
             chain_dn = self.api.Object.chain.get_dn(chain_name)

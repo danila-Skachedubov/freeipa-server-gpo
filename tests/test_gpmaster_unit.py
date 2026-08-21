@@ -19,8 +19,12 @@ GPMASTER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(GPMASTER)
 
 BASEDN = DN(("dc", "example"), ("dc", "test"))
-CHAIN_DN = DN(("cn", "primary"), ("cn", "gpo-chains"), BASEDN)
-SECOND_CHAIN_DN = DN(("cn", "fallback"), ("cn", "gpo-chains"), BASEDN)
+CHAIN_DN = DN(
+    ("cn", "primary"), ("cn", "Chains"), ("cn", "System"), BASEDN
+)
+SECOND_CHAIN_DN = DN(
+    ("cn", "fallback"), ("cn", "Chains"), ("cn", "System"), BASEDN
+)
 MASTER_DN = DN(("cn", "grouppolicymaster"), ("cn", "etc"), BASEDN)
 
 
@@ -49,14 +53,36 @@ def _resolver(chain_object=None, ldap=None):
 
 
 @pytest.mark.parametrize("chain_dn", [str(CHAIN_DN), str(CHAIN_DN).upper()])
-def test_resolve_chain_name_preserves_existing_dn(chain_dn):
+def test_non_strict_resolution_preserves_existing_dn(chain_dn):
     subject, chain, ldap = _resolver()
 
-    result = GPMASTER.gpmaster.resolve_chain_name(subject, chain_dn, strict=True)
+    result = GPMASTER.gpmaster.resolve_chain_name(subject, chain_dn)
 
     assert result == chain_dn
     chain.get_dn.assert_not_called()
     ldap.get_entry.assert_not_called()
+
+
+def test_strict_explicit_dn_verifies_ldap_entry():
+    subject, chain, ldap = _resolver()
+
+    result = GPMASTER.gpmaster.resolve_chain_name(
+        subject, str(CHAIN_DN), strict=True
+    )
+
+    assert result == str(CHAIN_DN)
+    chain.get_dn.assert_not_called()
+    ldap.get_entry.assert_called_once_with(CHAIN_DN, attrs_list=["cn"])
+
+
+def test_strict_explicit_dn_reports_missing_chain():
+    subject, _chain, ldap = _resolver()
+    ldap.get_entry.side_effect = errors.NotFound(reason="missing")
+
+    with pytest.raises(errors.NotFound):
+        GPMASTER.gpmaster.resolve_chain_name(
+            subject, str(CHAIN_DN), strict=True
+        )
 
 
 def test_resolve_chain_name_uses_chain_object():
@@ -126,8 +152,12 @@ def test_convert_chain_names_to_dns_normalizes_input_types():
 
 def test_convert_chain_dns_to_names_keeps_unresolved_values():
     first_dn = str(CHAIN_DN)
-    missing_dn = str(DN(("cn", "missing"), ("cn", "gpo-chains"), BASEDN))
-    broken_dn = str(DN(("cn", "broken"), ("cn", "gpo-chains"), BASEDN))
+    missing_dn = str(DN(
+        ("cn", "missing"), ("cn", "Chains"), ("cn", "System"), BASEDN
+    ))
+    broken_dn = str(DN(
+        ("cn", "broken"), ("cn", "Chains"), ("cn", "System"), BASEDN
+    ))
     ldap = MagicMock()
 
     def get_entry(dn, attrs_list):
@@ -177,7 +207,7 @@ def _modifier(current_chains=()):
 
 def test_add_chain_appends_new_dn_without_duplicate():
     subject, obj, _ldap = _modifier([CHAIN_DN])
-    second_dn = DN(("cn", "fallback"), ("cn", "gpo-chains"), BASEDN)
+    second_dn = SECOND_CHAIN_DN
     obj.resolve_chain_name.side_effect = [str(CHAIN_DN), str(second_dn)]
     entry_attrs = {}
 
