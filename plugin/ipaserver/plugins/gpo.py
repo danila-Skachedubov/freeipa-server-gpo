@@ -654,6 +654,18 @@ def _validate_publication_plan(plan, expected_snapshot):
             'The publication plan identity does not match the GPO.',
             details={'conflict_fields': ['identity']},
         )
+    for scope, extension_key in (
+        ('computer', 'machine_extension_names'),
+        ('user', 'user_extension_names'),
+    ):
+        if (
+            not affected_scopes[scope]
+            and plan[extension_key] != expected_snapshot[extension_key]
+        ):
+            raise EditorFailure(
+                'operational',
+                'The publication plan changes an unaffected scope.',
+            )
     if (
         type(plan['expected_version']) is not int
         or type(plan['target_version']) is not int

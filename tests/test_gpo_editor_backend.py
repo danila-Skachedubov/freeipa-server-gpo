@@ -409,7 +409,7 @@ def snapshot(version=0, machine="", user="", identity=None):
     }
 
 
-def plan(expected=0, target=1, machine="M", user="U"):
+def plan(expected=0, target=1, machine="M", user=""):
     return {
         "identity": snapshot()["identity"],
         "expected_version": expected,
@@ -634,14 +634,44 @@ def test_publication_plan_accepts_exact_packed_version_transition(
     affected_scopes,
     target,
 ):
+    before = snapshot(version=expected, machine="OLD-M", user="OLD-U")
     publication_plan = {
-        **plan(expected=expected, target=target),
+        **plan(
+            expected=expected,
+            target=target,
+            machine=("NEW-M" if affected_scopes["computer"] else "OLD-M"),
+            user=("NEW-U" if affected_scopes["user"] else "OLD-U"),
+        ),
         "affected_scopes": affected_scopes,
     }
 
-    GPO._validate_publication_plan(
-        publication_plan, snapshot(version=expected)
-    )
+    GPO._validate_publication_plan(publication_plan, before)
+
+
+@pytest.mark.parametrize(
+    ("affected_scopes", "target", "machine", "user"),
+    [
+        ({"computer": False, "user": True}, 1 << 16, "NEW-M", "OLD-U"),
+        ({"computer": True, "user": False}, 1, "OLD-M", "NEW-U"),
+    ],
+)
+def test_publication_plan_rejects_extension_change_for_unaffected_scope(
+    affected_scopes,
+    target,
+    machine,
+    user,
+):
+    before = snapshot(machine="OLD-M", user="OLD-U")
+    publication_plan = {
+        **plan(target=target, machine=machine, user=user),
+        "affected_scopes": affected_scopes,
+    }
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._validate_publication_plan(publication_plan, before)
+
+    assert failure.value.category == "operational"
+    assert "unaffected scope" in failure.value.message
 
 
 @pytest.mark.parametrize(
@@ -661,8 +691,13 @@ def test_publication_helper_rejects_wrong_packed_version_transition_before_ldap(
 ):
     backend = PublicationBackend()
     context = editor_context()
+    before = snapshot(machine="OLD-M", user="OLD-U")
     invalid_plan = {
-        **plan(target=target),
+        **plan(
+            target=target,
+            machine=("NEW-M" if affected_scopes["computer"] else "OLD-M"),
+            user=("NEW-U" if affected_scopes["user"] else "OLD-U"),
+        ),
         "affected_scopes": affected_scopes,
     }
 
@@ -671,7 +706,7 @@ def test_publication_helper_rejects_wrong_packed_version_transition_before_ldap(
             backend,
             context,
             invalid_plan,
-            context.snapshot,
+            before,
             context.presence,
         )
 
