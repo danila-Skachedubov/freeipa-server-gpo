@@ -451,3 +451,133 @@ def test_gpo_find_does_not_search_when_schema_check_fails(monkeypatch):
         GPO.gpo_find.execute(subject)
 
     base_execute.assert_not_called()
+
+
+def test_gpo_mod_without_rename_resolves_current_entry(monkeypatch):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.return_value = SimpleNamespace(
+        dn=GPO_DN
+    )
+    schema_check = MagicMock()
+    monkeypatch.setattr(GPO, "verify_gpo_schema", schema_check)
+
+    result = GPO.gpo_mod.pre_callback(
+        subject,
+        ldap,
+        GPO_DN,
+        {"flags": 1},
+        ["flags"],
+        "Policy-One",
+    )
+
+    assert result == GPO_DN
+    schema_check.assert_called_once_with(ldap, subject.api)
+    subject.obj.find_gpo_by_displayname.assert_called_once_with(
+        ldap,
+        "Policy-One",
+    )
+
+
+def test_gpo_mod_accepts_available_rename(monkeypatch):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.side_effect = [
+        SimpleNamespace(dn=GPO_DN),
+        errors.NotFound(reason="new name is available"),
+    ]
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    result = GPO.gpo_mod.pre_callback(
+        subject,
+        ldap,
+        GPO_DN,
+        {},
+        [],
+        "Policy-One",
+        rename="Policy-Two",
+    )
+
+    assert result == GPO_DN
+    assert subject.obj.find_gpo_by_displayname.call_args_list == [
+        call(ldap, "Policy-One"),
+        call(ldap, "Policy-Two"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("rename", "error_type"),
+    [
+        ("invalid/name", errors.ValidationError),
+        ("Policy-One", errors.ValidationError),
+    ],
+)
+def test_gpo_mod_rejects_invalid_or_unchanged_rename(
+    monkeypatch,
+    rename,
+    error_type,
+):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.return_value = SimpleNamespace(
+        dn=GPO_DN
+    )
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    with pytest.raises(error_type):
+        GPO.gpo_mod.pre_callback(
+            subject,
+            ldap,
+            GPO_DN,
+            {},
+            [],
+            "Policy-One",
+            rename=rename,
+        )
+
+    subject.obj.find_gpo_by_displayname.assert_called_once_with(
+        ldap,
+        "Policy-One",
+    )
+
+
+def test_gpo_mod_rejects_duplicate_rename(monkeypatch):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.side_effect = [
+        SimpleNamespace(dn=GPO_DN),
+        SimpleNamespace(dn=GPO_DN),
+    ]
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    with pytest.raises(errors.DuplicateEntry, match="already exists"):
+        GPO.gpo_mod.pre_callback(
+            subject,
+            ldap,
+            GPO_DN,
+            {},
+            [],
+            "Policy-One",
+            rename="Policy-Two",
+        )
+
+
+def test_gpo_mod_propagates_rename_lookup_failure(monkeypatch):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.side_effect = [
+        SimpleNamespace(dn=GPO_DN),
+        RuntimeError("LDAP unavailable"),
+    ]
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        GPO.gpo_mod.pre_callback(
+            subject,
+            ldap,
+            GPO_DN,
+            {},
+            [],
+            "Policy-One",
+            rename="Policy-Two",
+        )
