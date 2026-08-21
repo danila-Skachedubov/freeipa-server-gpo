@@ -42,6 +42,115 @@ def _crud_subject():
     )
 
 
+def test_gpo_json_delegates_when_schema_metadata_is_available(monkeypatch):
+    subject = object.__new__(GPO.gpo)
+    expected = {"name": "from-base"}
+    monkeypatch.setattr(
+        GPO.LDAPObject,
+        "__json__",
+        MagicMock(return_value=expected),
+    )
+
+    assert GPO.gpo.__json__(subject) is expected
+
+
+def test_gpo_json_falls_back_when_schema_metadata_is_missing(monkeypatch):
+    subject = object.__new__(GPO.gpo)
+    monkeypatch.setattr(
+        GPO.LDAPObject,
+        "__json__",
+        MagicMock(side_effect=KeyError("groupPolicyContainer")),
+    )
+
+    result = GPO.gpo.__json__(subject)
+
+    assert result["name"] == "gpo"
+    assert result["object_class"] == ["groupPolicyContainer"]
+    assert [parameter["name"] for parameter in result["takes_params"]] == [
+        "displayname",
+        "cn",
+        "distinguishedname",
+        "flags",
+        "gpcfilesyspath",
+        "versionnumber",
+        "gpcmachineextensionnames",
+        "gpcuserextensionnames",
+    ]
+    assert result["default_attributes"] == subject.default_attributes
+
+
+def test_gpo_json_propagates_unrelated_metadata_failure(monkeypatch):
+    subject = object.__new__(GPO.gpo)
+    monkeypatch.setattr(
+        GPO.LDAPObject,
+        "__json__",
+        MagicMock(side_effect=KeyError("unrelated schema")),
+    )
+
+    with pytest.raises(KeyError, match="unrelated schema"):
+        GPO.gpo.__json__(subject)
+
+
+def test_gpo_finalize_merges_plugin_containers(monkeypatch):
+    subject = object.__new__(GPO.gpo)
+    env = SimpleNamespace()
+
+    def merge(**values):
+        for name, value in values.items():
+            setattr(env, name, value)
+
+    env._merge = merge
+    monkeypatch.setattr(GPO.gpo, "env", env, raising=False)
+    base_finalize = MagicMock()
+    monkeypatch.setattr(GPO.LDAPObject, "_on_finalize", base_finalize)
+
+    GPO.gpo._on_finalize(subject)
+
+    assert env.container_system == DN(("cn", "System"))
+    assert env.container_grouppolicy == CONTAINER_DN
+    assert subject.container_dn == CONTAINER_DN
+    base_finalize.assert_called_once_with()
+
+
+def test_find_gpo_by_displayname_uses_policy_container():
+    subject = SimpleNamespace(env=_plugin_api().env)
+    ldap = MagicMock()
+    expected = SimpleNamespace(dn=GPO_DN)
+    ldap.find_entry_by_attr.return_value = expected
+
+    result = GPO.gpo.find_gpo_by_displayname(
+        subject,
+        ldap,
+        "Policy-One",
+    )
+
+    assert result is expected
+    ldap.find_entry_by_attr.assert_called_once_with(
+        "displayName",
+        "Policy-One",
+        "groupPolicyContainer",
+        base_dn=DN(CONTAINER_DN, BASEDN),
+    )
+
+
+def test_find_gpo_by_displayname_translates_not_found():
+    subject = SimpleNamespace(env=_plugin_api().env)
+    ldap = MagicMock()
+    ldap.find_entry_by_attr.side_effect = errors.NotFound(reason="missing")
+
+    with pytest.raises(errors.NotFound, match="Policy-One"):
+        GPO.gpo.find_gpo_by_displayname(subject, ldap, "Policy-One")
+
+
+def test_find_gpo_by_displayname_propagates_backend_failure():
+    subject = SimpleNamespace(env=_plugin_api().env)
+    ldap = MagicMock()
+    ldap.find_entry_by_attr.side_effect = RuntimeError("LDAP unavailable")
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        GPO.gpo.find_gpo_by_displayname(subject, ldap, "Policy-One")
+
+
 def test_verify_gpo_schema_reads_policy_container():
     ldap = MagicMock()
 
