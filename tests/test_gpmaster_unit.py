@@ -463,6 +463,28 @@ def test_move_operation_skips_ldap_updates_for_short_list():
     "options",
     [
         {"moveup_chain": "primary"},
+        {"movedown_chain": "fallback"},
+    ],
+)
+def test_move_operation_skips_ldap_updates_at_list_boundary(options):
+    ldap = MoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
+    subject = _move_subject(ldap)
+
+    GPMASTER.gpmaster_mod._do_move_operation(
+        subject, ldap, MASTER_DN, (), options
+    )
+
+    subject._validate_move_operations.assert_called_once_with(
+        ldap, MASTER_DN, options
+    )
+    assert ldap.updated_chainlists == []
+    assert ldap.master["chainlist"] == [CHAIN_DN, SECOND_CHAIN_DN]
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"moveup_chain": "primary"},
         {"movedown_chain": ("fallback",)},
     ],
 )
