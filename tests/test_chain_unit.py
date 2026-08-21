@@ -1034,3 +1034,171 @@ def test_move_gpo_uses_cn_when_display_name_is_empty():
     )
 
     assert ldap.chain["gplink"] == [str(SECOND_GPO_DN), str(GPO_DN)]
+
+
+@pytest.mark.parametrize(
+    ("options", "error_name"),
+    [
+        (
+            {"add_usergroup": "users", "remove_usergroup": True},
+            "usergroup",
+        ),
+        (
+            {"add_computergroup": "workstations", "remove_computergroup": True},
+            "computergroup",
+        ),
+        (
+            {"usergroup": "users", "add_usergroup": "admins"},
+            "usergroup",
+        ),
+        (
+            {"computergroup": "workstations", "remove_computergroup": True},
+            "computergroup",
+        ),
+        (
+            {"moveup_gpc": "Second policy", "description": "Changed"},
+            "move_gpc",
+        ),
+        (
+            {"movedown_gpc": "First policy", "rename": "renamed"},
+            "move_gpc",
+        ),
+    ],
+)
+def test_chain_mod_rejects_conflicting_options(options, error_name):
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain_mod._validate_modification_options(
+            SimpleNamespace(),
+            options,
+        )
+
+    assert failure.value.name == error_name
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"add_usergroup": "users"},
+        {"remove_computergroup": True},
+        {"description": "Changed"},
+        {"moveup_gpc": "Second policy", "raw": True},
+    ],
+)
+def test_chain_mod_accepts_non_conflicting_options(options):
+    CHAIN.chain_mod._validate_modification_options(
+        SimpleNamespace(),
+        options,
+    )
+
+
+def test_chain_mod_move_execute_checks_schema_and_returns_updated_entry(
+    monkeypatch,
+):
+    schema_check = MagicMock()
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", schema_check)
+    ldap = MagicMock()
+    ldap.get_entry.return_value = {
+        "cn": ["primary"],
+        "description": ["Primary chain"],
+        "gplink": [str(GPO_DN), str(SECOND_GPO_DN)],
+    }
+    obj = SimpleNamespace(
+        get_dn=MagicMock(return_value=FIRST_DN),
+        default_attributes=["cn", "description", "gplink"],
+        convert_attribute_members=MagicMock(),
+    )
+    subject = SimpleNamespace(
+        api=SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap)),
+        obj=obj,
+        msg_summary='Modified Group Policy Chain "%(value)s"',
+        _validate_modification_options=MagicMock(),
+        _do_move_operation=MagicMock(),
+    )
+    options = {"moveup_gpc": "Second policy"}
+
+    result = CHAIN.chain_mod.execute(subject, "primary", **options)
+
+    assert result == {
+        "result": {
+            "cn": "primary",
+            "description": "Primary chain",
+            "gplink": [str(GPO_DN), str(SECOND_GPO_DN)],
+        },
+        "value": "primary",
+        "summary": 'Modified Group Policy Chain "primary"',
+    }
+    subject._validate_modification_options.assert_called_once_with(options)
+    schema_check.assert_called_once_with(ldap, subject.api)
+    subject._do_move_operation.assert_called_once_with(
+        ldap,
+        FIRST_DN,
+        ("primary",),
+        options,
+    )
+    obj.convert_attribute_members.assert_called_once_with(
+        ldap.get_entry.return_value,
+        "primary",
+        **options,
+    )
+
+
+def test_chain_mod_move_execute_rejects_mixed_update_before_ldap_access():
+    ldap = MagicMock()
+    subject = SimpleNamespace(
+        api=SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap)),
+        _validate_modification_options=lambda options: (
+            CHAIN.chain_mod._validate_modification_options(
+                SimpleNamespace(),
+                options,
+            )
+        ),
+    )
+
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain_mod.execute(
+            subject,
+            "primary",
+            moveup_gpc="Second policy",
+            description="Changed",
+        )
+
+    assert failure.value.name == "move_gpc"
+    ldap.get_entry.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("option", "current_entry", "error_name"),
+    [
+        ("remove_usergroup", {}, "remove_usergroup"),
+        ("remove_computergroup", {}, "remove_computergroup"),
+    ],
+)
+def test_chain_mod_remove_missing_group_uses_api_parameter_name(
+    option,
+    current_entry,
+    error_name,
+):
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain_mod._handle_remove_operations(
+            SimpleNamespace(),
+            MagicMock(),
+            current_entry,
+            {},
+            {option: True},
+        )
+
+    assert failure.value.name == error_name
+
+
+def test_chain_mod_remove_existing_groups_clears_attributes():
+    entry_attrs = {}
+
+    CHAIN.chain_mod._handle_remove_operations(
+        SimpleNamespace(),
+        MagicMock(),
+        {"usergroup": [str(USER_GROUP_DN)], "computergroup": [str(COMPUTER_GROUP_DN)]},
+        entry_attrs,
+        {"remove_usergroup": True, "remove_computergroup": True},
+    )
+
+    assert entry_attrs == {"usergroup": None, "computergroup": None}

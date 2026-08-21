@@ -498,12 +498,59 @@ class chain_mod(LDAPUpdate):
         ),
     )
 
+    def _validate_modification_options(self, options):
+        """Reject combinations whose results would overwrite each other."""
+        group_options = {
+            'usergroup': (
+                'usergroup', 'add_usergroup', 'remove_usergroup'
+            ),
+            'computergroup': (
+                'computergroup',
+                'add_computergroup',
+                'remove_computergroup',
+            ),
+        }
+        for attr_name, option_names in group_options.items():
+            active_options = [
+                name for name in option_names if options.get(name)
+            ]
+            if len(active_options) > 1:
+                raise errors.ValidationError(
+                    name=attr_name,
+                    error=_(
+                        "Cannot combine conflicting modifications: {}"
+                    ).format(', '.join(active_options))
+                )
+
+        move_requested = (
+            options.get('moveup_gpc') or options.get('movedown_gpc')
+        )
+        standard_option_names = {
+            'rename', 'description', 'usergroup', 'computergroup', 'gplink',
+            'add_usergroup', 'remove_usergroup',
+            'add_computergroup', 'remove_computergroup',
+            'setattr', 'addattr', 'delattr',
+        }
+        conflicting_options = [
+            name for name in standard_option_names if options.get(name)
+        ]
+        if move_requested and conflicting_options:
+            raise errors.ValidationError(
+                name='move_gpc',
+                error=_(
+                    "Cannot combine GPO movement with other modifications: {}"
+                ).format(', '.join(sorted(conflicting_options)))
+            )
+
     def execute(self, *keys, **options):
         """Handle move operations separately, everything else normally."""
+        self._validate_modification_options(options)
+
         if ('moveup_gpc' in options and options['moveup_gpc']) or \
            ('movedown_gpc' in options and options['movedown_gpc']):
 
             ldap = self.api.Backend.ldap2
+            verify_gpo_schema(ldap, self.api)
             dn = self.obj.get_dn(*keys)
 
             self._do_move_operation(ldap, dn, keys, options)
@@ -633,7 +680,7 @@ class chain_mod(LDAPUpdate):
         if 'remove_usergroup' in options and options['remove_usergroup']:
             if not current_entry.get('usergroup'):
                 raise errors.ValidationError(
-                    name='remove_user_group',
+                    name='remove_usergroup',
                     error=_("No user group assigned to this chain")
                 )
             entry_attrs['usergroup'] = None
@@ -641,7 +688,7 @@ class chain_mod(LDAPUpdate):
         if 'remove_computergroup' in options and options['remove_computergroup']:
             if not current_entry.get('computergroup'):
                 raise errors.ValidationError(
-                    name='remove_computer_group',
+                    name='remove_computergroup',
                     error=_("No computer group assigned to this chain")
                 )
             entry_attrs['computergroup'] = None
