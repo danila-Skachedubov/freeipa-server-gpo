@@ -213,6 +213,24 @@ def test_policies_access_accepts_empty_directory(monkeypatch, tmp_path):
     assert checker.check_policies_editor_access() is True
 
 
+@pytest.mark.parametrize("dangling", [False, True])
+def test_policies_access_rejects_top_level_policy_symlink(
+    monkeypatch, tmp_path, dangling,
+):
+    policies = tmp_path / "Policies"
+    policies.mkdir()
+    target = tmp_path / "external-policy"
+    if not dangling:
+        target.mkdir()
+    (policies / "linked-gpo").symlink_to(target, target_is_directory=True)
+    checker = _checker_for_policies(monkeypatch, policies)
+    monkeypatch.setattr(
+        checker, "_check_editor_directory", MagicMock(return_value=True)
+    )
+
+    assert checker.check_policies_editor_access() is False
+
+
 def test_policies_access_rejects_representative_gpo_acl(
     monkeypatch, tmp_path
 ):

@@ -347,10 +347,16 @@ class IPAChecker:
                     forbid_write=True):
                 return False
 
-            gpo_directories = sorted(
-                child for child in policies_path.iterdir()
-                if child.is_dir() and not child.is_symlink()
-            )
+            policy_children = sorted(policies_path.iterdir())
+            for child in policy_children:
+                if child.is_symlink():
+                    self.logger.warning(
+                        _("Policies contains a symlink: {}").format(child)
+                    )
+                    return False
+            gpo_directories = [
+                child for child in policy_children if child.is_dir()
+            ]
             if not gpo_directories:
                 self.logger.info(
                     _("Policies ACLs are ready; no existing GPO needs sampling")
