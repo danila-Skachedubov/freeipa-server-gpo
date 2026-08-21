@@ -532,14 +532,24 @@ class chain_mod(LDAPUpdate):
 
     def _do_move_operation(self, ldap, dn, keys, options):
         """Move operation for GPCs in chain."""
+        if options.get('moveup_gpc') and options.get('movedown_gpc'):
+            raise errors.ValidationError(
+                name='move_gpc',
+                error=_(
+                    "Cannot move GPOs up and down in the same operation"
+                )
+            )
+
         entry = ldap.get_entry(dn, attrs_list=['gplink'])
         current_gplinks = [str(gp_dn) for gp_dn in entry.get('gplink', [])]
+        original_gplinks = list(current_gplinks)
 
         if len(current_gplinks) < 2:
             return
 
         gp_names = options.get('moveup_gpc') or options.get('movedown_gpc')
-        direction = 'up' if 'moveup_gpc' in options else 'down'
+        direction = 'up' if options.get('moveup_gpc') else 'down'
+        option_name = 'moveup_gpc' if direction == 'up' else 'movedown_gpc'
 
         if isinstance(gp_names, str):
             gp_names = [gp_names]
@@ -551,17 +561,20 @@ class chain_mod(LDAPUpdate):
             for existing_dn in current_gplinks:
                 try:
                     gp_entry = ldap.get_entry(DN(existing_dn), attrs_list=GP_LOOKUP_ATTRIBUTES)
-                    display_name = (
-                        gp_entry.get('displayName', [None])[0] or
-                        gp_entry.get('cn', [None])[0]
-                    )
+                    display_name = get_display_name(gp_entry)
                     if display_name == gp_name:
                         gp_dn = existing_dn
                         break
-                except Exception:
+                except errors.NotFound:
                     continue
             if not gp_dn:
-                continue
+                raise errors.ValidationError(
+                    name=option_name,
+                    error=_(
+                        "Cannot move unlinked GPO '{}'. "
+                        "Only linked GPOs can be moved."
+                    ).format(gp_name)
+                )
 
             current_index = current_gplinks.index(gp_dn)
             if direction == 'up' and current_index > 0:
@@ -572,6 +585,9 @@ class chain_mod(LDAPUpdate):
                 continue
             gp_to_move = current_gplinks.pop(current_index)
             current_gplinks.insert(new_index, gp_to_move)
+
+        if current_gplinks == original_gplinks:
+            return
 
         entry['gplink'] = []
         ldap.update_entry(entry)

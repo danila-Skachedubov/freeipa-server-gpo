@@ -24,6 +24,12 @@ SECOND_DN = DN(("cn", "second"), ("cn", "groups"), BASEDN)
 USER_GROUP_DN = DN(("cn", "users"), ("cn", "groups"), BASEDN)
 COMPUTER_GROUP_DN = DN(("cn", "workstations"), ("cn", "hostgroups"), BASEDN)
 GPO_DN = DN(("cn", "policy-guid"), ("cn", "Policies"), ("cn", "System"), BASEDN)
+SECOND_GPO_DN = DN(
+    ("cn", "second-policy-guid"),
+    ("cn", "Policies"),
+    ("cn", "System"),
+    BASEDN,
+)
 
 
 class Entry(dict):
@@ -865,3 +871,166 @@ def test_chain_add_post_callback_keeps_created_chain_on_activation_failure(
         "primary",
         "activation failed",
     )
+
+
+class GpoMoveLdap:
+    def __init__(self, gplinks):
+        self.chain = {"gplink": list(gplinks)}
+        self.updated_gplinks = []
+        self.gpo_entries = {
+            str(GPO_DN): Entry(
+                GPO_DN,
+                displayName=["First policy"],
+                cn=["policy-guid"],
+            ),
+            str(SECOND_GPO_DN): Entry(
+                SECOND_GPO_DN,
+                displayName=["Second policy"],
+                cn=["second-policy-guid"],
+            ),
+        }
+
+    def get_entry(self, dn, attrs_list=None):
+        if dn == FIRST_DN:
+            return self.chain
+        return self.gpo_entries[str(dn)]
+
+    def update_entry(self, entry):
+        self.updated_gplinks.append(list(entry.get("gplink", [])))
+
+
+@pytest.mark.parametrize(
+    ("options", "expected"),
+    [
+        (
+            {"moveup_gpc": "Second policy"},
+            [str(SECOND_GPO_DN), str(GPO_DN)],
+        ),
+        (
+            {"movedown_gpc": "First policy"},
+            [str(SECOND_GPO_DN), str(GPO_DN)],
+        ),
+    ],
+)
+def test_move_gpo_reorders_links(options, expected):
+    ldap = GpoMoveLdap([GPO_DN, SECOND_GPO_DN])
+
+    CHAIN.chain_mod._do_move_operation(
+        SimpleNamespace(),
+        ldap,
+        FIRST_DN,
+        ("primary",),
+        options,
+    )
+
+    assert ldap.updated_gplinks == [[], expected]
+    assert ldap.chain["gplink"] == expected
+
+
+def test_empty_moveup_gpo_does_not_override_movedown_direction():
+    ldap = GpoMoveLdap([GPO_DN, SECOND_GPO_DN])
+
+    CHAIN.chain_mod._do_move_operation(
+        SimpleNamespace(),
+        ldap,
+        FIRST_DN,
+        ("primary",),
+        {"moveup_gpc": (), "movedown_gpc": "First policy"},
+    )
+
+    assert ldap.chain["gplink"] == [str(SECOND_GPO_DN), str(GPO_DN)]
+
+
+def test_move_gpo_rejects_conflicting_directions_without_writes():
+    ldap = GpoMoveLdap([GPO_DN, SECOND_GPO_DN])
+
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain_mod._do_move_operation(
+            SimpleNamespace(),
+            ldap,
+            FIRST_DN,
+            ("primary",),
+            {
+                "moveup_gpc": "Second policy",
+                "movedown_gpc": "First policy",
+            },
+        )
+
+    assert failure.value.name == "move_gpc"
+    assert ldap.updated_gplinks == []
+
+
+def test_move_gpo_rejects_unlinked_policy_without_writes():
+    ldap = GpoMoveLdap([GPO_DN, SECOND_GPO_DN])
+
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain_mod._do_move_operation(
+            SimpleNamespace(),
+            ldap,
+            FIRST_DN,
+            ("primary",),
+            {"moveup_gpc": "Missing policy"},
+        )
+
+    assert failure.value.name == "moveup_gpc"
+    assert ldap.updated_gplinks == []
+
+
+def test_move_gpo_propagates_link_lookup_failure_without_writes():
+    ldap = GpoMoveLdap([GPO_DN, SECOND_GPO_DN])
+    original_get_entry = ldap.get_entry
+
+    def get_entry(dn, attrs_list=None):
+        if dn == FIRST_DN:
+            return original_get_entry(dn, attrs_list)
+        raise RuntimeError("LDAP unavailable")
+
+    ldap.get_entry = get_entry
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        CHAIN.chain_mod._do_move_operation(
+            SimpleNamespace(),
+            ldap,
+            FIRST_DN,
+            ("primary",),
+            {"moveup_gpc": "Second policy"},
+        )
+
+    assert ldap.updated_gplinks == []
+
+
+@pytest.mark.parametrize(
+    ("options", "gplinks"),
+    [
+        ({"moveup_gpc": "First policy"}, [GPO_DN, SECOND_GPO_DN]),
+        ({"movedown_gpc": "Second policy"}, [GPO_DN, SECOND_GPO_DN]),
+        ({"moveup_gpc": "First policy"}, [GPO_DN]),
+    ],
+)
+def test_move_gpo_boundary_and_short_list_do_not_write(options, gplinks):
+    ldap = GpoMoveLdap(gplinks)
+
+    CHAIN.chain_mod._do_move_operation(
+        SimpleNamespace(),
+        ldap,
+        FIRST_DN,
+        ("primary",),
+        options,
+    )
+
+    assert ldap.updated_gplinks == []
+
+
+def test_move_gpo_uses_cn_when_display_name_is_empty():
+    ldap = GpoMoveLdap([GPO_DN, SECOND_GPO_DN])
+    ldap.gpo_entries[str(SECOND_GPO_DN)]["displayName"] = []
+
+    CHAIN.chain_mod._do_move_operation(
+        SimpleNamespace(),
+        ldap,
+        FIRST_DN,
+        ("primary",),
+        {"moveup_gpc": "second-policy-guid"},
+    )
+
+    assert ldap.chain["gplink"] == [str(SECOND_GPO_DN), str(GPO_DN)]
