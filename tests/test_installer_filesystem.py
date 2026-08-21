@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -271,7 +272,88 @@ def test_create_gpo_handler_reports_acl_failure(tmp_path, monkeypatch):
     ])
 
     assert handler.main() == 1
-    assert (policy / "GPT.INI").is_file()
+    assert not policy.exists()
+
+
+def test_create_gpo_handler_does_not_overwrite_existing_policy(
+    tmp_path, monkeypatch
+):
+    handler = _load_create_handler()
+    policies = tmp_path / "Policies"
+    policy = policies / GUID
+    policy.mkdir(parents=True)
+    gpt_ini = policy / "GPT.INI"
+    gpt_ini.write_text("existing-policy", encoding="utf-8")
+    acl = MagicMock()
+    monkeypatch.setattr(
+        handler, "get_policies_path", lambda _domain: str(policies)
+    )
+    monkeypatch.setattr(
+        handler, "get_policy_path", lambda _domain, _guid: str(policy)
+    )
+    monkeypatch.setattr(
+        handler, "get_gpt_ini_path", lambda _domain, _guid: str(gpt_ini)
+    )
+    monkeypatch.setattr(handler, "ensure_new_gpo_acls", acl)
+    monkeypatch.setattr(sys, "argv", [
+        str(CREATE_HANDLER), GUID, "example.test", "replacement"
+    ])
+
+    assert handler.main() == 1
+    assert gpt_ini.read_text(encoding="utf-8") == "existing-policy"
+    acl.assert_not_called()
+
+
+def test_create_gpo_handler_rejects_symlink_policy_without_touching_target(
+    tmp_path, monkeypatch
+):
+    handler = _load_create_handler()
+    policies = tmp_path / "Policies"
+    policies.mkdir()
+    external = tmp_path / "external"
+    external.mkdir()
+    marker = external / "keep"
+    marker.write_text("safe", encoding="utf-8")
+    policy = policies / GUID
+    policy.symlink_to(external, target_is_directory=True)
+    monkeypatch.setattr(
+        handler, "get_policies_path", lambda _domain: str(policies)
+    )
+    monkeypatch.setattr(
+        handler, "get_policy_path", lambda _domain, _guid: str(policy)
+    )
+    monkeypatch.setattr(sys, "argv", [
+        str(CREATE_HANDLER), GUID, "example.test"
+    ])
+
+    assert handler.main() == 1
+    assert policy.is_symlink()
+    assert marker.read_text(encoding="utf-8") == "safe"
+
+
+def test_create_gpo_handler_cleans_tree_after_gpt_write_failure(
+    tmp_path, monkeypatch
+):
+    handler = _load_create_handler()
+    policies = tmp_path / "Policies"
+    policy = policies / GUID
+    monkeypatch.setattr(
+        handler, "get_policies_path", lambda _domain: str(policies)
+    )
+    monkeypatch.setattr(
+        handler, "get_policy_path", lambda _domain, _guid: str(policy)
+    )
+    monkeypatch.setattr(
+        handler,
+        "get_gpt_ini_path",
+        lambda _domain, _guid: str(policy / "Machine"),
+    )
+    monkeypatch.setattr(sys, "argv", [
+        str(CREATE_HANDLER), GUID, "example.test"
+    ])
+
+    assert handler.main() == 1
+    assert not policy.exists()
 
 
 @pytest.mark.parametrize(

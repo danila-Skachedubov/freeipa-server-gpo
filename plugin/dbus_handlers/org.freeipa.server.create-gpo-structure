@@ -2,6 +2,7 @@
 """D-Bus handler for creating Group Policy Object directory structure."""
 
 import os
+import shutil
 import sys
 from ipa_gpo_install.config import (
     get_policies_path, get_policy_path, get_gpt_ini_path,
@@ -39,8 +40,10 @@ def main():
             print("Error creating policies directory: {}".format(exc), file=sys.stderr)
             return 1
 
+    created_policy = False
     try:
-        os.makedirs(policy_path, exist_ok=True)
+        os.makedirs(policy_path, exist_ok=False)
+        created_policy = True
         machine_path = os.path.join(policy_path, "Machine")
         user_path = os.path.join(policy_path, "User")
 
@@ -61,6 +64,16 @@ def main():
 
     except Exception as exc:
         print("Error creating GPO structure: {}".format(exc), file=sys.stderr)
+        if created_policy:
+            try:
+                shutil.rmtree(policy_path)
+            except Exception as cleanup_exc:
+                print(
+                    "Error cleaning incomplete GPO structure: {}".format(
+                        cleanup_exc
+                    ),
+                    file=sys.stderr,
+                )
         return 1
 
 
