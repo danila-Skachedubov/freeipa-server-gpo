@@ -1202,3 +1202,175 @@ def test_chain_mod_remove_existing_groups_clears_attributes():
     )
 
     assert entry_attrs == {"usergroup": None, "computergroup": None}
+
+
+def test_chain_mod_non_move_execute_delegates_to_ldap_update(monkeypatch):
+    calls = []
+    expected = {"result": {"cn": ["primary"]}}
+
+    def base_execute(subject, *keys, **options):
+        calls.append((subject, keys, options))
+        return expected
+
+    monkeypatch.setattr(CHAIN.LDAPUpdate, "execute", base_execute)
+    subject = object.__new__(CHAIN.chain_mod)
+    options = {"description": "Changed"}
+
+    result = CHAIN.chain_mod.execute(subject, "primary", **options)
+
+    assert result is expected
+    assert calls == [(subject, ("primary",), options)]
+
+
+def test_chain_mod_pre_callback_runs_schema_and_handlers(monkeypatch):
+    schema_check = MagicMock()
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", schema_check)
+    ldap = MagicMock()
+    current_entry = {
+        "usergroup": [str(USER_GROUP_DN)],
+        "computergroup": [str(COMPUTER_GROUP_DN)],
+        "gplink": [str(GPO_DN)],
+    }
+    ldap.get_entry.return_value = current_entry
+    subject = SimpleNamespace(
+        api=SimpleNamespace(env=SimpleNamespace(basedn=BASEDN)),
+        _handle_add_operations=MagicMock(),
+        _handle_remove_operations=MagicMock(),
+        _handle_standard_modifications=MagicMock(),
+    )
+    entry_attrs = {}
+    options = {"rename": "renamed", "description": "Changed"}
+
+    result = CHAIN.chain_mod.pre_callback(
+        subject,
+        ldap,
+        FIRST_DN,
+        entry_attrs,
+        [],
+        "primary",
+        **options,
+    )
+
+    assert result == FIRST_DN
+    schema_check.assert_called_once_with(ldap, subject.api)
+    ldap.get_entry.assert_called_once_with(
+        FIRST_DN,
+        attrs_list=["usergroup", "computergroup", "gplink"],
+    )
+    subject._handle_add_operations.assert_called_once_with(
+        entry_attrs,
+        options,
+        ("primary",),
+    )
+    subject._handle_remove_operations.assert_called_once_with(
+        ldap,
+        current_entry,
+        entry_attrs,
+        options,
+    )
+    subject._handle_standard_modifications.assert_called_once_with(
+        entry_attrs,
+        options,
+    )
+
+
+def test_chain_mod_pre_callback_rejects_invalid_rename_before_read(
+    monkeypatch,
+):
+    schema_check = MagicMock()
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", schema_check)
+    ldap = MagicMock()
+    subject = SimpleNamespace(
+        api=SimpleNamespace(env=SimpleNamespace(basedn=BASEDN)),
+    )
+
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain_mod.pre_callback(
+            subject,
+            ldap,
+            FIRST_DN,
+            {},
+            [],
+            "primary",
+            rename="invalid/name",
+        )
+
+    assert failure.value.name == "cn"
+    schema_check.assert_called_once_with(ldap, subject.api)
+    ldap.get_entry.assert_not_called()
+
+
+def test_chain_mod_add_group_operations_use_strict_resolution():
+    obj = SimpleNamespace(convert_names_to_dns=MagicMock())
+    obj.convert_names_to_dns.side_effect = [
+        {"usergroup": str(USER_GROUP_DN)},
+        {"computergroup": str(COMPUTER_GROUP_DN)},
+    ]
+    subject = SimpleNamespace(obj=obj)
+    entry_attrs = {}
+
+    CHAIN.chain_mod._handle_add_operations(
+        subject,
+        entry_attrs,
+        {
+            "add_usergroup": "users",
+            "add_computergroup": "workstations",
+        },
+        ("primary",),
+    )
+
+    assert entry_attrs == {
+        "usergroup": str(USER_GROUP_DN),
+        "computergroup": str(COMPUTER_GROUP_DN),
+    }
+    assert obj.convert_names_to_dns.call_args_list == [
+        call({"usergroup": "users"}, strict=True),
+        call({"computergroup": "workstations"}, strict=True),
+    ]
+
+
+def test_chain_mod_standard_modifications_convert_only_supported_values():
+    obj = SimpleNamespace(convert_names_to_dns=MagicMock())
+    obj.convert_names_to_dns.return_value = {
+        "usergroup": str(USER_GROUP_DN),
+        "gplink": [str(GPO_DN)],
+    }
+    subject = SimpleNamespace(obj=obj)
+    entry_attrs = {"description": "Changed"}
+
+    CHAIN.chain_mod._handle_standard_modifications(
+        subject,
+        entry_attrs,
+        {
+            "usergroup": "users",
+            "computergroup": "",
+            "gplink": ["Workstation policy"],
+            "description": "Changed",
+            "raw": True,
+        },
+    )
+
+    assert entry_attrs == {
+        "description": "Changed",
+        "usergroup": str(USER_GROUP_DN),
+        "gplink": [str(GPO_DN)],
+    }
+    obj.convert_names_to_dns.assert_called_once_with(
+        {"usergroup": "users", "gplink": ["Workstation policy"]},
+        strict=True,
+    )
+
+
+def test_chain_mod_standard_modifications_skip_empty_values():
+    obj = SimpleNamespace(convert_names_to_dns=MagicMock())
+    subject = SimpleNamespace(obj=obj)
+    entry_attrs = {}
+
+    CHAIN.chain_mod._handle_standard_modifications(
+        subject,
+        entry_attrs,
+        {"usergroup": None, "computergroup": "", "gplink": ()},
+    )
+
+    assert entry_attrs == {}
+    obj.convert_names_to_dns.assert_not_called()
