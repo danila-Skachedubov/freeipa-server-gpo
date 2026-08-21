@@ -79,6 +79,15 @@ def _first_value(value, default=None):
         return default
     return values[0]
 
+def _extract_displayname_from_value(value):
+    """Extract a displayName RDN value without case-sensitive assumptions."""
+    text = str(value)
+    first_part = text.split(',', 1)[0]
+    attr_name, separator, attr_value = first_part.partition('=')
+    if separator and attr_name.lower() == 'displayname':
+        return attr_value
+    return text
+
 def is_dn(value):
     """Check if the string looks like a DN."""
     return str(value).lower().startswith('cn=')
@@ -252,6 +261,9 @@ class chain(LDAPObject):
 
     def convert_attribute_members(self, entry_attrs, *keys, **options):
         """Convert attribute members for display."""
+        if options.get('raw', False):
+            return
+
         try:
             ldap = self.api.Backend.ldap2
 
@@ -353,9 +365,6 @@ class chain_show(LDAPRetrieve):
     """Display information about a Group Policy Chain."""
 
     def post_callback(self, ldap, dn, entry_attrs, *keys, **options):
-        if not options.get('raw', False):
-            self.obj.convert_attribute_members(entry_attrs, *keys, **options)
-
         chain_name = keys[0] if keys else None
         if chain_name:
             try:
@@ -940,6 +949,7 @@ class chain_add_gpo(LDAPAddMember):
     def pre_callback(self, ldap, dn, found, not_found, *keys, **options):
         """Pre-processing before adding GPOs."""
         assert isinstance(dn, DN)
+        verify_gpo_schema(ldap, self.api)
 
         try:
             entry_attrs = ldap.get_entry(dn, self.obj.default_attributes)
@@ -955,7 +965,16 @@ class chain_add_gpo(LDAPAddMember):
                 for gpo_value in gpo_names:
                     try:
                         gpo_displayname = self._extract_displayname_from_value(gpo_value)
-                        gpo_dn = self.obj.find_gp_by_displayname(gpo_displayname)
+                        if is_dn(gpo_displayname):
+                            gpo_dn = DN(gpo_displayname)
+                            ldap.get_entry(
+                                gpo_dn,
+                                attrs_list=GP_LOOKUP_ATTRIBUTES,
+                            )
+                        else:
+                            gpo_dn = self.obj.find_gp_by_displayname(
+                                gpo_displayname
+                            )
                         found[attr_name]['gpo'].append(gpo_dn)
                     except errors.NotFound:
                         if attr_name not in not_found:
@@ -968,20 +987,10 @@ class chain_add_gpo(LDAPAddMember):
 
     def _extract_displayname_from_value(self, value):
         """Extract displayName from value."""
-        if isinstance(value, str):
-            if value.startswith('displayname='):
-                displayname_part = value.split(',')[0]
-                return displayname_part.replace('displayname=', '')
-            else:
-                return value
-        else:
-            return self._extract_displayname_from_value(str(value))
+        return _extract_displayname_from_value(value)
 
     def post_callback(self, ldap, completed, failed, dn, entry_attrs, *keys, **options):
         """Post-processing after adding GPOs."""
-        if not options.get('raw', False):
-            self.obj.convert_attribute_members(entry_attrs, *keys, **options)
-
         return (completed, dn)
 
 @register()
@@ -994,6 +1003,7 @@ class chain_remove_gpo(LDAPRemoveMember):
     def pre_callback(self, ldap, dn, found, not_found, *keys, **options):
         """Pre-processing before removing GPOs."""
         assert isinstance(dn, DN)
+        verify_gpo_schema(ldap, self.api)
 
         try:
             entry_attrs = ldap.get_entry(dn, self.obj.default_attributes)
@@ -1001,10 +1011,17 @@ class chain_remove_gpo(LDAPRemoveMember):
         except errors.NotFound:
             raise self.obj.handle_not_found(*keys)
 
+        requested_gpos = any(
+            attr_name in found and found[attr_name].get('gpo')
+            for attr_name in self.member_attributes
+        )
+        if not requested_gpos:
+            return dn
+
         current_gplinks = entry_attrs.get('gplink', [])
         if not current_gplinks:
             raise errors.ValidationError(
-                name='gplink',
+                name='gpo',
                 error=_("No Group Policies assigned to this chain")
             )
 
@@ -1017,21 +1034,34 @@ class chain_remove_gpo(LDAPRemoveMember):
                     gpo_dn = None
                     gpo_displayname = self._extract_displayname_from_value(gpo_value)
 
-                    try:
-                        gpo_dn = self.obj.find_gp_by_displayname(gpo_displayname)
-                    except errors.NotFound:
+                    if is_dn(gpo_displayname):
+                        requested_dn = DN(gpo_displayname)
+                        for existing_dn in current_gplinks:
+                            if DN(existing_dn) == requested_dn:
+                                gpo_dn = existing_dn
+                                break
+                    else:
+                        try:
+                            resolved_dn = self.obj.find_gp_by_displayname(
+                                gpo_displayname
+                            )
+                            for existing_dn in current_gplinks:
+                                if DN(existing_dn) == DN(resolved_dn):
+                                    gpo_dn = existing_dn
+                                    break
+                        except errors.NotFound:
+                            pass
+
+                    if not gpo_dn and not is_dn(gpo_displayname):
                         for existing_dn in current_gplinks:
                             try:
                                 gp_entry = ldap.get_entry(DN(existing_dn),
                                                         attrs_list=GP_LOOKUP_ATTRIBUTES)
-                                existing_name = (
-                                    gp_entry.get('displayName', [None])[0] or
-                                    gp_entry.get('cn', [None])[0]
-                                )
+                                existing_name = get_display_name(gp_entry)
                                 if existing_name == gpo_displayname:
                                     gpo_dn = existing_dn
                                     break
-                            except Exception:
+                            except errors.NotFound:
                                 continue
 
                     if gpo_dn:
@@ -1047,18 +1077,8 @@ class chain_remove_gpo(LDAPRemoveMember):
 
     def _extract_displayname_from_value(self, value):
         """Extract displayName from value."""
-        if isinstance(value, str):
-            if value.startswith('displayname='):
-                displayname_part = value.split(',')[0]
-                return displayname_part.replace('displayname=', '')
-            else:
-                return value
-        else:
-            return self._extract_displayname_from_value(str(value))
+        return _extract_displayname_from_value(value)
 
     def post_callback(self, ldap, completed, failed, dn, entry_attrs, *keys, **options):
         """Post-processing after removing GPOs."""
-        if not options.get('raw', False):
-            self.obj.convert_attribute_members(entry_attrs, *keys, **options)
-
         return (completed, dn)

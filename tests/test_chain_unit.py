@@ -481,10 +481,7 @@ def test_chain_show_sets_computed_active_state(
 
     assert result == FIRST_DN
     assert entry["active"] == [expected]
-    subject.obj.convert_attribute_members.assert_called_once_with(
-        entry,
-        "primary",
-    )
+    subject.obj.convert_attribute_members.assert_not_called()
     commands.gpmaster_show.assert_called_once_with()
 
 
@@ -2010,3 +2007,342 @@ def test_resolver_execute_propagates_subject_lookup_failure(
 
     with pytest.raises(RuntimeError, match="LDAP unavailable"):
         command_class.execute(subject, "target")
+
+
+def test_convert_attribute_members_skips_all_work_in_raw_mode():
+    subject = SimpleNamespace(
+        api=SimpleNamespace(Backend=SimpleNamespace(ldap2=MagicMock())),
+        _convert_groups=MagicMock(),
+        _convert_gpos=MagicMock(),
+    )
+    entry = {"gplink": [str(GPO_DN)]}
+
+    CHAIN.chain.convert_attribute_members(subject, entry, raw=True)
+
+    assert entry == {"gplink": [str(GPO_DN)]}
+    subject._convert_groups.assert_not_called()
+    subject._convert_gpos.assert_not_called()
+
+
+def test_convert_attribute_members_converts_once_in_nonraw_mode():
+    ldap = MagicMock()
+    subject = SimpleNamespace(
+        api=SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap)),
+        _convert_groups=MagicMock(),
+        _convert_gpos=MagicMock(),
+    )
+    entry = {"gplink": [str(GPO_DN)]}
+
+    CHAIN.chain.convert_attribute_members(subject, entry)
+
+    subject._convert_groups.assert_called_once_with([entry], ldap)
+    subject._convert_gpos.assert_called_once_with([entry], ldap)
+
+
+def _association_subject():
+    obj = SimpleNamespace(
+        default_attributes=["cn", "gplink"],
+        find_gp_by_displayname=MagicMock(),
+        handle_not_found=MagicMock(
+            return_value=errors.NotFound(reason="chain missing")
+        ),
+        convert_attribute_members=MagicMock(),
+    )
+    return SimpleNamespace(
+        api=SimpleNamespace(env=SimpleNamespace(basedn=BASEDN)),
+        obj=obj,
+        member_attributes=["gplink"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("command_class", "value", "expected"),
+    [
+        (CHAIN.chain_add_gpo, "Policy A", "Policy A"),
+        (
+            CHAIN.chain_add_gpo,
+            "displayname=Policy A,cn=Policies",
+            "Policy A",
+        ),
+        (
+            CHAIN.chain_remove_gpo,
+            "displayName=Policy A,cn=Policies",
+            "Policy A",
+        ),
+        (
+            CHAIN.chain_remove_gpo,
+            "DISPLAYNAME=Policy A,cn=Policies",
+            "Policy A",
+        ),
+        (CHAIN.chain_add_gpo, GPO_DN, str(GPO_DN)),
+    ],
+)
+def test_gpo_association_extracts_display_name_case_insensitively(
+    command_class,
+    value,
+    expected,
+):
+    assert command_class._extract_displayname_from_value(
+        SimpleNamespace(),
+        value,
+    ) == expected
+
+
+def test_chain_add_gpo_pre_callback_resolves_valid_and_missing_values(
+    monkeypatch,
+):
+    schema_check = MagicMock()
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", schema_check)
+    subject = _association_subject()
+    subject._extract_displayname_from_value = (
+        lambda value: CHAIN.chain_add_gpo._extract_displayname_from_value(
+            subject, value
+        )
+    )
+    subject.obj.find_gp_by_displayname.side_effect = [
+        GPO_DN,
+        errors.NotFound(reason="missing"),
+    ]
+    ldap = MagicMock()
+    ldap.get_entry.return_value = Entry(FIRST_DN, cn=["primary"])
+    found = {"gplink": {"gpo": ["Policy A", "Missing policy"]}}
+    not_found = {}
+
+    result = CHAIN.chain_add_gpo.pre_callback(
+        subject,
+        ldap,
+        FIRST_DN,
+        found,
+        not_found,
+        "primary",
+    )
+
+    assert result == FIRST_DN
+    assert found == {"gplink": {"gpo": [GPO_DN]}}
+    assert not_found == {
+        "gplink": {"gpo": [("Missing policy", "GPO not found")]}
+    }
+    schema_check.assert_called_once_with(ldap, subject.api)
+
+
+def test_chain_add_gpo_pre_callback_accepts_verified_explicit_dn(
+    monkeypatch,
+):
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", MagicMock())
+    subject = _association_subject()
+    subject._extract_displayname_from_value = lambda value: str(value)
+    chain_entry = Entry(FIRST_DN, cn=["primary"])
+    gpo_entry = Entry(GPO_DN, displayName=["Policy A"])
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = [chain_entry, gpo_entry]
+    found = {"gplink": {"gpo": [str(GPO_DN)]}}
+
+    CHAIN.chain_add_gpo.pre_callback(
+        subject,
+        ldap,
+        FIRST_DN,
+        found,
+        {},
+        "primary",
+    )
+
+    assert found == {"gplink": {"gpo": [GPO_DN]}}
+    ldap.get_entry.assert_any_call(
+        GPO_DN,
+        attrs_list=["displayName", "cn"],
+    )
+    subject.obj.find_gp_by_displayname.assert_not_called()
+
+
+def test_chain_add_gpo_pre_callback_translates_missing_chain(monkeypatch):
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", MagicMock())
+    subject = _association_subject()
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = errors.NotFound(reason="missing")
+
+    with pytest.raises(errors.NotFound, match="chain missing"):
+        CHAIN.chain_add_gpo.pre_callback(
+            subject,
+            ldap,
+            FIRST_DN,
+            {},
+            {},
+            "primary",
+        )
+
+    subject.obj.handle_not_found.assert_called_once_with("primary")
+
+
+def test_chain_remove_gpo_pre_callback_resolves_linked_policy(monkeypatch):
+    schema_check = MagicMock()
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", schema_check)
+    subject = _association_subject()
+    subject._extract_displayname_from_value = lambda value: str(value)
+    subject.obj.find_gp_by_displayname.return_value = GPO_DN
+    ldap = MagicMock()
+    ldap.get_entry.return_value = Entry(
+        FIRST_DN,
+        cn=["primary"],
+        gplink=[GPO_DN],
+    )
+    found = {"gplink": {"gpo": ["Policy A"]}}
+
+    result = CHAIN.chain_remove_gpo.pre_callback(
+        subject,
+        ldap,
+        FIRST_DN,
+        found,
+        {},
+        "primary",
+    )
+
+    assert result == FIRST_DN
+    assert found == {"gplink": {"gpo": [GPO_DN]}}
+    schema_check.assert_called_once_with(ldap, subject.api)
+
+
+def test_chain_remove_gpo_falls_back_to_cn_for_empty_display_name(
+    monkeypatch,
+):
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", MagicMock())
+    subject = _association_subject()
+    subject._extract_displayname_from_value = lambda value: str(value)
+    subject.obj.find_gp_by_displayname.side_effect = errors.NotFound(
+        reason="missing"
+    )
+    ldap = MagicMock()
+
+    def get_entry(dn, attrs_list=None):
+        if dn == FIRST_DN:
+            return Entry(FIRST_DN, gplink=[GPO_DN])
+        return Entry(GPO_DN, displayName=[], cn=["policy-guid"])
+
+    ldap.get_entry.side_effect = get_entry
+    found = {"gplink": {"gpo": ["policy-guid"]}}
+
+    CHAIN.chain_remove_gpo.pre_callback(
+        subject,
+        ldap,
+        FIRST_DN,
+        found,
+        {},
+        "primary",
+    )
+
+    assert found == {"gplink": {"gpo": [GPO_DN]}}
+
+
+def test_chain_remove_gpo_propagates_link_lookup_failure(monkeypatch):
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", MagicMock())
+    subject = _association_subject()
+    subject._extract_displayname_from_value = lambda value: str(value)
+    subject.obj.find_gp_by_displayname.side_effect = errors.NotFound(
+        reason="missing"
+    )
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = [
+        Entry(FIRST_DN, gplink=[GPO_DN]),
+        RuntimeError("LDAP unavailable"),
+    ]
+    found = {"gplink": {"gpo": ["Policy A"]}}
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        CHAIN.chain_remove_gpo.pre_callback(
+            subject,
+            ldap,
+            FIRST_DN,
+            found,
+            {},
+            "primary",
+        )
+
+
+def test_chain_remove_gpo_allows_orphaned_link_by_explicit_dn(monkeypatch):
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", MagicMock())
+    subject = _association_subject()
+    subject._extract_displayname_from_value = lambda value: str(value)
+    subject.obj.find_gp_by_displayname.side_effect = errors.NotFound(
+        reason="GPO deleted"
+    )
+    ldap = MagicMock()
+    ldap.get_entry.return_value = Entry(FIRST_DN, gplink=[GPO_DN])
+    found = {"gplink": {"gpo": [str(GPO_DN)]}}
+
+    CHAIN.chain_remove_gpo.pre_callback(
+        subject,
+        ldap,
+        FIRST_DN,
+        found,
+        {},
+        "primary",
+    )
+
+    assert found == {"gplink": {"gpo": [GPO_DN]}}
+    assert ldap.get_entry.call_count == 1
+
+
+def test_chain_remove_gpo_empty_chain_uses_public_parameter_name(
+    monkeypatch,
+):
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", MagicMock())
+    subject = _association_subject()
+    ldap = MagicMock()
+    ldap.get_entry.return_value = Entry(FIRST_DN, gplink=[])
+
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain_remove_gpo.pre_callback(
+            subject,
+            ldap,
+            FIRST_DN,
+            {"gplink": {"gpo": ["Policy A"]}},
+            {},
+            "primary",
+        )
+
+    assert failure.value.name == "gpo"
+
+
+def test_chain_remove_gpo_no_requested_values_is_noop_on_empty_chain(
+    monkeypatch,
+):
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", MagicMock())
+    subject = _association_subject()
+    ldap = MagicMock()
+    ldap.get_entry.return_value = Entry(FIRST_DN, gplink=[])
+
+    result = CHAIN.chain_remove_gpo.pre_callback(
+        subject,
+        ldap,
+        FIRST_DN,
+        {},
+        {},
+        "primary",
+    )
+
+    assert result == FIRST_DN
+
+
+@pytest.mark.parametrize(
+    "command_class",
+    [CHAIN.chain_add_gpo, CHAIN.chain_remove_gpo],
+)
+@pytest.mark.parametrize("raw", [True, False])
+def test_gpo_association_post_callback_defers_conversion_to_base(
+    command_class,
+    raw,
+):
+    subject = _association_subject()
+
+    result = command_class.post_callback(
+        subject,
+        MagicMock(),
+        1,
+        {},
+        FIRST_DN,
+        {"gplink": [str(GPO_DN)]},
+        "primary",
+        raw=raw,
+    )
+
+    assert result == (1, FIRST_DN)
+    subject.obj.convert_attribute_members.assert_not_called()
