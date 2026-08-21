@@ -1743,7 +1743,33 @@ class gpo_add(LDAPCreate):
         guid = str(dn[0].value)
         domain = self.api.env.domain.lower()
         displayname = keys[-1] if keys else 'New Group Policy Object'
-        self.obj._call_dbus_method('create_gpo_structure', guid, domain, displayname, fail_on_error=True)
+        try:
+            self.obj._call_dbus_method(
+                'create_gpo_structure',
+                guid,
+                domain,
+                displayname,
+                fail_on_error=True,
+            )
+        except Exception:
+            try:
+                self.obj._call_dbus_method(
+                    'delete_gpo_structure',
+                    guid,
+                    domain,
+                    fail_on_error=False,
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to clean SYSVOL after GPO creation failure"
+                )
+            try:
+                ldap.delete_entry(dn)
+            except Exception:
+                logger.exception(
+                    "Failed to roll back LDAP GPO after creation failure"
+                )
+            raise
 
         return dn
 

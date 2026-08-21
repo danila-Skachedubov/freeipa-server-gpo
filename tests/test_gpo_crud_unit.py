@@ -415,10 +415,11 @@ def test_gpo_add_pre_callback_rejects_duplicate_display_name(monkeypatch):
 
 def test_gpo_add_post_callback_creates_sysvol_structure():
     subject = _crud_subject()
+    ldap = MagicMock()
 
     result = GPO.gpo_add.post_callback(
         subject,
-        MagicMock(),
+        ldap,
         GPO_DN,
         {},
         "Policy One",
@@ -432,6 +433,64 @@ def test_gpo_add_post_callback_creates_sysvol_structure():
         "Policy One",
         fail_on_error=True,
     )
+    ldap.delete_entry.assert_not_called()
+
+
+def test_gpo_add_post_callback_rolls_back_sysvol_and_ldap_on_failure():
+    subject = _crud_subject()
+    primary = errors.ExecutionError(message="create failed")
+    subject.obj._call_dbus_method.side_effect = [primary, None]
+    ldap = MagicMock()
+
+    with pytest.raises(errors.ExecutionError) as failure:
+        GPO.gpo_add.post_callback(
+            subject,
+            ldap,
+            GPO_DN,
+            {},
+            "Policy One",
+        )
+
+    assert failure.value is primary
+    assert subject.obj._call_dbus_method.call_args_list == [
+        call(
+            "create_gpo_structure",
+            GUID,
+            "example.test",
+            "Policy One",
+            fail_on_error=True,
+        ),
+        call(
+            "delete_gpo_structure",
+            GUID,
+            "example.test",
+            fail_on_error=False,
+        ),
+    ]
+    ldap.delete_entry.assert_called_once_with(GPO_DN)
+
+
+def test_gpo_add_post_callback_preserves_primary_failure_when_cleanup_fails():
+    subject = _crud_subject()
+    primary = errors.ExecutionError(message="create failed")
+    subject.obj._call_dbus_method.side_effect = [
+        primary,
+        RuntimeError("SYSVOL cleanup failed"),
+    ]
+    ldap = MagicMock()
+    ldap.delete_entry.side_effect = RuntimeError("LDAP rollback failed")
+
+    with pytest.raises(errors.ExecutionError) as failure:
+        GPO.gpo_add.post_callback(
+            subject,
+            ldap,
+            GPO_DN,
+            {},
+            "Policy One",
+        )
+
+    assert failure.value is primary
+    ldap.delete_entry.assert_called_once_with(GPO_DN)
 
 
 @pytest.mark.parametrize(
