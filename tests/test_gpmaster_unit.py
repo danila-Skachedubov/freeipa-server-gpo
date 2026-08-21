@@ -458,6 +458,62 @@ def test_empty_moveup_option_does_not_override_movedown_direction():
     ]
 
 
+@pytest.mark.parametrize(
+    "option_name",
+    ["moveup_chain", "movedown_chain"],
+)
+def test_validate_move_propagates_chain_lookup_failure(option_name):
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = [
+        {"chainlist": [str(CHAIN_DN)]},
+        RuntimeError("LDAP unavailable"),
+    ]
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        GPMASTER.gpmaster_mod._validate_move_operations(
+            SimpleNamespace(),
+            ldap,
+            MASTER_DN,
+            {option_name: "primary"},
+        )
+
+
+def test_move_operation_propagates_lookup_failure_before_update():
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = [
+        {"chainlist": [str(CHAIN_DN), str(SECOND_CHAIN_DN)]},
+        RuntimeError("LDAP unavailable"),
+    ]
+    subject = _move_subject(ldap)
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        GPMASTER.gpmaster_mod._do_move_operation(
+            subject,
+            ldap,
+            MASTER_DN,
+            (),
+            {"moveup_chain": "fallback"},
+        )
+
+    ldap.update_entry.assert_not_called()
+
+
+def test_validate_move_skips_empty_name_on_unrelated_chain():
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = [
+        {"chainlist": [str(CHAIN_DN), str(SECOND_CHAIN_DN)]},
+        {"cn": []},
+        {"cn": ["fallback"]},
+    ]
+
+    GPMASTER.gpmaster_mod._validate_move_operations(
+        SimpleNamespace(),
+        ldap,
+        MASTER_DN,
+        {"moveup_chain": "fallback"},
+    )
+
+
 def _command_subject(entry=None):
     ldap = MagicMock()
     ldap.get_entry.return_value = entry or {}

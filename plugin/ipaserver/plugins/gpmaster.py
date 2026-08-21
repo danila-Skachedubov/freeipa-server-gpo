@@ -283,11 +283,11 @@ class gpmaster_mod(LDAPUpdate):
             for existing_dn in current_chains:
                 try:
                     chain_entry = ldap.get_entry(DN(existing_dn), attrs_list=['cn'])
-                    existing_name = chain_entry.get('cn', [None])[0]
+                    existing_name = (chain_entry.get('cn') or [None])[0]
                     if existing_name == chain_name:
                         chain_dn = existing_dn
                         break
-                except Exception:
+                except errors.NotFound:
                     continue
 
             if not chain_dn:
@@ -336,11 +336,11 @@ class gpmaster_mod(LDAPUpdate):
                 for existing_dn in current_chains:
                     try:
                         chain_entry = ldap.get_entry(DN(existing_dn), attrs_list=['cn'])
-                        existing_name = chain_entry.get('cn', [None])[0]
+                        existing_name = (chain_entry.get('cn') or [None])[0]
                         if existing_name == chain_name:
                             chain_found = True
                             break
-                    except Exception:
+                    except errors.NotFound:
                         continue
 
                 if not chain_found:
@@ -362,11 +362,11 @@ class gpmaster_mod(LDAPUpdate):
                 for existing_dn in current_chains:
                     try:
                         chain_entry = ldap.get_entry(DN(existing_dn), attrs_list=['cn'])
-                        existing_name = chain_entry.get('cn', [None])[0]
+                        existing_name = (chain_entry.get('cn') or [None])[0]
                         if existing_name == chain_name:
                             chain_found = True
                             break
-                    except Exception:
+                    except errors.NotFound:
                         continue
 
                 if not chain_found:
