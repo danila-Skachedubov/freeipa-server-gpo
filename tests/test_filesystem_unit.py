@@ -1,6 +1,5 @@
 """Focused unit tests for installer filesystem safety checks."""
 
-import grp
 import os
 import pwd
 import subprocess
@@ -97,11 +96,17 @@ def test_state_directory_status_rejects_wrong_mode(tmp_path):
     state.mkdir(mode=0o755)
     os.chmod(state, 0o755)
 
-    healthy, reason = editor_state_directory_status(
-        state,
-        editor_user=pwd.getpwuid(os.getuid()).pw_name,
-        editor_group=grp.getgrgid(os.getgid()).gr_name,
-    )
+    username = pwd.getpwuid(os.getuid()).pw_name
+    with (
+        pytest.MonkeyPatch.context() as monkeypatch,
+    ):
+        monkeypatch.setattr(
+            "ipa_gpo_install.filesystem.grp.getgrnam",
+            lambda _name: SimpleNamespace(gr_gid=os.getgid()),
+        )
+        healthy, reason = editor_state_directory_status(
+            state, username, "current-group"
+        )
 
     assert healthy is False
     assert reason == "mode is not 0700"
@@ -193,3 +198,71 @@ def test_state_directory_status_rejects_wrong_owner(tmp_path, monkeypatch):
 
     assert healthy is False
     assert reason == "owner is not ipaapi:ipaapi"
+
+
+def test_state_directory_rechecks_type_after_creation(tmp_path, monkeypatch):
+    state = tmp_path / "state"
+    monkeypatch.setattr("pathlib.Path.mkdir", lambda *_args, **_kwargs: None)
+
+    with pytest.raises(
+        FilesystemConfigurationError,
+        match="editor state path is not a directory",
+    ):
+        ensure_editor_state_directory(state)
+
+
+def test_directory_editor_acl_applies_access_and_default_acl(tmp_path):
+    directory = tmp_path / "gpo"
+    directory.mkdir()
+    calls = []
+
+    def runner(command, **_kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    ensure_directory_editor_acl(directory, "ipaapi", runner=runner)
+
+    assert calls == [
+        [
+            "setfacl",
+            "-m",
+            "u:ipaapi:rwx,d:u:ipaapi:rwx",
+            "--",
+            str(directory),
+        ]
+    ]
+
+
+def test_state_directory_status_rejects_regular_file(tmp_path, monkeypatch):
+    state = tmp_path / "state"
+    state.write_text("not a directory", encoding="utf-8")
+    username = pwd.getpwuid(os.getuid()).pw_name
+    monkeypatch.setattr(
+        "ipa_gpo_install.filesystem.grp.getgrnam",
+        lambda _name: SimpleNamespace(gr_gid=os.getgid()),
+    )
+
+    healthy, reason = editor_state_directory_status(
+        state, username, "current-group"
+    )
+
+    assert healthy is False
+    assert reason == "path is not a real directory"
+
+
+def test_state_directory_status_accepts_healthy_directory(tmp_path, monkeypatch):
+    state = tmp_path / "state"
+    state.mkdir(mode=0o700)
+    os.chmod(state, 0o700)
+    username = pwd.getpwuid(os.getuid()).pw_name
+    monkeypatch.setattr(
+        "ipa_gpo_install.filesystem.grp.getgrnam",
+        lambda _name: SimpleNamespace(gr_gid=os.getgid()),
+    )
+
+    healthy, reason = editor_state_directory_status(
+        state, username, "current-group"
+    )
+
+    assert healthy is True
+    assert reason == "ok"

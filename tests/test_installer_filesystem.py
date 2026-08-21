@@ -1,6 +1,5 @@
 """Installer and oddjob coverage for fresh GPO editor provisioning."""
 
-import grp
 import importlib.util
 import os
 import pwd
@@ -28,10 +27,16 @@ CREATE_HANDLER = (
 GUID = "{11111111-2222-3333-4444-555555555555}"
 
 
-def test_state_directory_is_private_and_preserves_pending_records(tmp_path):
+def test_state_directory_is_private_and_preserves_pending_records(
+    tmp_path, monkeypatch
+):
     state = tmp_path / "gpo-editor-state"
     username = pwd.getpwuid(os.getuid()).pw_name
-    groupname = grp.getgrgid(os.getgid()).gr_name
+    groupname = "current-group"
+    monkeypatch.setattr(
+        "ipa_gpo_install.filesystem.grp.getgrnam",
+        lambda _name: type("Group", (), {"gr_gid": os.getgid()})(),
+    )
 
     ensure_editor_state_directory(state, username, groupname)
     pending = state / "pending-publication.json"
