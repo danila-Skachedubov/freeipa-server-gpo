@@ -189,6 +189,20 @@ def test_strict_explicit_dn_reports_missing_chain():
         )
 
 
+def test_strict_explicit_dn_translates_backend_error():
+    subject, chain, ldap = _resolver()
+    ldap.get_entry.side_effect = RuntimeError("LDAP unavailable")
+
+    with pytest.raises(errors.ValidationError) as failure:
+        GPMASTER.gpmaster.resolve_chain_name(
+            subject, str(CHAIN_DN), strict=True
+        )
+
+    assert failure.value.name == "chain"
+    assert "LDAP unavailable" in failure.value.error
+    chain.get_dn.assert_not_called()
+
+
 def test_resolve_chain_name_uses_chain_object():
     subject, chain, ldap = _resolver()
     chain.get_dn.return_value = CHAIN_DN
@@ -212,6 +226,23 @@ def test_strict_chain_resolution_verifies_ldap_entry():
     ldap.get_entry.assert_called_once_with(
         CHAIN_DN, attrs_list=["cn", "objectclass"]
     )
+
+
+def test_strict_chain_resolution_rejects_non_chain_object():
+    subject, chain, ldap = _resolver()
+    chain.get_dn.return_value = CHAIN_DN
+    ldap.get_entry.return_value = {
+        "cn": ["ordinary-group"],
+        "objectclass": ["top", "groupOfNames"],
+    }
+
+    with pytest.raises(errors.ValidationError) as failure:
+        GPMASTER.gpmaster.resolve_chain_name(
+            subject, "ordinary-group", strict=True
+        )
+
+    assert failure.value.name == "chain"
+    assert "not a Group Policy Chain" in failure.value.error
 
 
 def test_non_strict_chain_resolution_preserves_unknown_name():
