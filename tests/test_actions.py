@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import call, patch, MagicMock
 
 from ipa_gpo_install import actions as actions_module
 from ipa_gpo_install.actions import IPAActions
@@ -35,6 +35,9 @@ class TestInstallAdtrust:
         mock_run.return_value = MagicMock(returncode=0, error_output='')
         actions = _make_actions()
         assert actions.install_adtrust() is True
+        mock_run.assert_called_once_with(
+            ['/usr/sbin/ipa-adtrust-install', '-U'], raiseonerr=False
+        )
 
     @patch('ipa_gpo_install.actions.os.path.exists', return_value=True)
     @patch('ipa_gpo_install.actions.ipautil.run')
@@ -73,7 +76,16 @@ class TestSetDefaultAcl:
         actions = _make_actions()
         from pathlib import Path
         assert actions._set_default_acl(Path('/tmp/test')) is True
-        assert mock_run.call_count == 2
+        assert mock_run.call_args_list == [
+            call(["which", "setfacl"], raiseonerr=False),
+            call(
+                [
+                    "setfacl", "-d", "-m", "g:admins:rwx,o::r-x",
+                    "/tmp/test",
+                ],
+                raiseonerr=False,
+            ),
+        ]
 
     @patch('ipa_gpo_install.actions.ipautil.run')
     def test_acl_set_fails(self, mock_run):
@@ -155,7 +167,22 @@ class TestCreateSysvolShare:
         mock_run.return_value = MagicMock(returncode=0, error_output='')
         actions = _make_actions()
         assert actions.create_sysvol_share() is True
-        assert mock_run.call_count == 2
+        assert mock_run.call_args_list == [
+            call(
+                [
+                    "net", "conf", "addshare", "sysvol",
+                    "/var/lib/freeipa/sysvol", "writeable=y", "guest_ok=N",
+                ],
+                raiseonerr=False,
+            ),
+            call(
+                [
+                    "net", "conf", "setparm", "sysvol", "create mask",
+                    "0664",
+                ],
+                raiseonerr=False,
+            ),
+        ]
 
     @patch('ipa_gpo_install.actions.os.path.exists', return_value=True)
     @patch('ipa_gpo_install.actions.ipautil.run')
@@ -202,6 +229,9 @@ class TestRunIpaServerUpgrade:
         mock_run.return_value = MagicMock(returncode=0, error_output='')
         actions = _make_actions()
         assert actions.run_ipa_server_upgrade() is True
+        mock_run.assert_called_once_with(
+            ['/usr/sbin/ipa-server-upgrade'], raiseonerr=False
+        )
 
     @patch('ipa_gpo_install.actions.ipautil.run')
     def test_fails(self, mock_run):
@@ -232,6 +262,9 @@ class TestRestartOddjob:
         mock_run.return_value = MagicMock(returncode=0, error_output='')
         actions = _make_actions()
         assert actions.restart_oddjob() is True
+        mock_run.assert_called_once_with(
+            ['systemctl', 'restart', 'oddjobd'], raiseonerr=False
+        )
 
     @patch('ipa_gpo_install.actions.ipautil.run')
     def test_fails(self, mock_run):
