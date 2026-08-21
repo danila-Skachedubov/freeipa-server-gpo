@@ -1,7 +1,12 @@
 import logging
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 
+from ipa_gpo_install import actions as actions_module
 from ipa_gpo_install.actions import IPAActions
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _make_actions():
@@ -295,22 +300,33 @@ class TestArePluginsActivated:
       - DBus handlers: create/delete-gpo-structure
     """
 
-    @patch('ipa_gpo_install.actions.os.path.exists', return_value=True)
-    def test_all_present(self, mock_exists):
+    @patch('ipa_gpo_install.actions.os.access', return_value=True)
+    @patch('ipa_gpo_install.actions.os.path.isfile', return_value=True)
+    def test_all_present(self, mock_isfile, mock_access):
         actions = _make_actions()
         assert actions.are_plugins_activated() is True
 
-    @patch('ipa_gpo_install.actions.os.path.exists', return_value=False)
-    def test_missing_file(self, mock_exists):
+    @patch('ipa_gpo_install.actions.os.path.isfile', return_value=False)
+    def test_missing_file(self, mock_isfile):
         actions = _make_actions()
         assert actions.are_plugins_activated() is False
 
-    @patch('ipa_gpo_install.actions.os.path.exists')
-    def test_first_missing_stops_early(self, mock_exists):
-        mock_exists.return_value = False
+    @patch('ipa_gpo_install.actions.os.path.isfile')
+    def test_first_missing_stops_early(self, mock_isfile):
+        mock_isfile.return_value = False
         actions = _make_actions()
         assert actions.are_plugins_activated() is False
-        assert mock_exists.call_count == 1
+        assert mock_isfile.call_count == 1
+
+    @patch('ipa_gpo_install.actions.os.access', return_value=False)
+    @patch('ipa_gpo_install.actions.os.path.isfile', return_value=True)
+    def test_non_executable_handler_is_not_activated(
+        self, mock_isfile, mock_access
+    ):
+        actions = _make_actions()
+
+        assert actions.are_plugins_activated() is False
+        mock_access.assert_called_once()
 
 
 class TestActivatePlugins:
@@ -326,25 +342,46 @@ class TestActivatePlugins:
       3. All files missing     -> False
     """
 
-    @patch('ipa_gpo_install.actions.os.path.exists', return_value=True)
-    def test_all_present(self, mock_exists):
+    @patch('ipa_gpo_install.actions.os.access', return_value=True)
+    @patch('ipa_gpo_install.actions.os.path.isfile', return_value=True)
+    def test_all_present(self, mock_isfile, mock_access):
         actions = _make_actions()
         assert actions.activate_plugins() is True
 
-    @patch('ipa_gpo_install.actions.os.path.exists', return_value=False)
-    def test_all_missing(self, mock_exists):
+    @patch('ipa_gpo_install.actions.os.path.isfile', return_value=False)
+    def test_all_missing(self, mock_isfile):
         actions = _make_actions()
         assert actions.activate_plugins() is False
 
-    @patch('ipa_gpo_install.actions.os.path.exists')
-    def test_checks_all_files(self, mock_exists):
-        mock_exists.return_value = True
+    @patch('ipa_gpo_install.actions.os.access', return_value=True)
+    @patch('ipa_gpo_install.actions.os.path.isfile')
+    def test_checks_exact_manifest(self, mock_isfile, mock_access):
+        mock_isfile.return_value = True
         actions = _make_actions()
         actions.activate_plugins()
-        assert mock_exists.call_count == 14
+        expected_paths = {
+            str(Path(target_dir) / filename)
+            for target_dir, filenames in actions_module.PLUGIN_FILE_GROUPS
+            for filename in filenames
+        }
+        assert {call.args[0] for call in mock_isfile.call_args_list} == expected_paths
 
-    @patch('ipa_gpo_install.actions.os.path.exists')
-    def test_reports_missing(self, mock_exists):
-        mock_exists.side_effect = lambda p: 'chain.py' not in p
+    @patch('ipa_gpo_install.actions.os.access', return_value=True)
+    @patch('ipa_gpo_install.actions.os.path.isfile')
+    def test_reports_missing(self, mock_isfile, mock_access):
+        mock_isfile.side_effect = lambda p: 'chain.py' not in p
         actions = _make_actions()
         assert actions.activate_plugins() is False
+
+
+def test_ui_plugin_manifest_matches_all_runtime_source_assets():
+    ui_root = ROOT / "plugin" / "ui" / "grouppolicy"
+    expected = {"chain.js", "gpo.js"}
+    for directory in ("css", "img", "js"):
+        expected.update(
+            str(path.relative_to(ui_root))
+            for path in (ui_root / directory).rglob("*")
+            if path.is_file()
+        )
+
+    assert set(actions_module.UI_PLUGIN_FILES) == expected

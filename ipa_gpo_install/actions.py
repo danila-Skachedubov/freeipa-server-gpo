@@ -19,6 +19,68 @@ from .filesystem import (
     ensure_policies_root_acl,
 )
 
+
+UI_PLUGIN_FILES = (
+    'chain.js',
+    'gpo.js',
+    'css/main.css',
+    'css/other.css',
+    'img/arrow.svg',
+    'img/close.svg',
+    'img/svg/arrow.svg',
+    'img/svg/close.svg',
+    'img/svg/ico/computer.svg',
+    'img/svg/ico/file.svg',
+    'img/svg/ico/folder.svg',
+    'img/svg/ico/user.svg',
+    'js/app.js',
+    'js/components/divider/divider.js',
+    'js/components/editor-status.js',
+    'js/components/footer/footer.js',
+    'js/components/header/header.js',
+    'js/components/main/main.js',
+    'js/components/templates/admx-template.js',
+    'js/components/templates/default-template.js',
+    'js/components/templates/folder-template.js',
+    'js/components/templates/preference/preferences-view-template.js',
+    'js/components/tree-view/tree-view-list-data.js',
+    'js/components/tree-view/tree-view-list.js',
+    'js/components/tree-view/tree-view.js',
+    'js/components/workspace/workspace.js',
+    'js/locales/en.js',
+    'js/locales/ru.js',
+    'js/locales/translations.js',
+    'js/util/API.js',
+    'js/util/editor-dto.js',
+    'js/util/element-creator.js',
+    'js/util/resizable.js',
+)
+
+PLUGIN_FILE_GROUPS = (
+    (TARGET_PYTHON_PLUGINS, ('chain.py', 'gpmaster.py', 'gpo.py')),
+    (TARGET_UI_PLUGINS, UI_PLUGIN_FILES),
+    (TARGET_SCHEMA_DIR, (
+        '75-chain.ldif', '75-gpc.ldif', '75-gpmaster.ldif',
+    )),
+    (TARGET_UPDATE_DIR, (
+        '75-chain.update', '75-gpc.update', '75-gpmaster.update',
+    )),
+    (TARGET_DBUS_CONFIG_DIR, ('ipa-gpo.conf',)),
+    (TARGET_DBUS_HANDLERS_DIR, (
+        'org.freeipa.server.create-gpo-structure',
+        'org.freeipa.server.delete-gpo-structure',
+    )),
+)
+
+
+def _plugin_file_is_healthy(target_dir, filename):
+    target_path = os.path.join(target_dir, filename)
+    if not os.path.isfile(target_path):
+        return False
+    if target_dir == TARGET_DBUS_HANDLERS_DIR:
+        return os.access(target_path, os.X_OK)
+    return True
+
 try:
     locale.setlocale(locale.LC_ALL, '')
     current_locale, encoding = locale.getlocale()
@@ -242,22 +304,10 @@ class IPAActions:
             True if all plugin files are present in target directories,
             False if any are missing.
         """
-        # List of (target_dir, filenames)
-        file_groups = [
-            (TARGET_PYTHON_PLUGINS, ['chain.py', 'gpmaster.py', 'gpo.py']),
-            (TARGET_UI_PLUGINS, ['chain.js', 'gpo.js']),
-            (TARGET_SCHEMA_DIR, ['75-chain.ldif', '75-gpc.ldif', '75-gpmaster.ldif']),
-            (TARGET_UPDATE_DIR, ['75-chain.update', '75-gpc.update', '75-gpmaster.update']),
-            (TARGET_DBUS_CONFIG_DIR, ['ipa-gpo.conf']),
-            (TARGET_DBUS_HANDLERS_DIR,
-             ['org.freeipa.server.create-gpo-structure',
-              'org.freeipa.server.delete-gpo-structure']),
-        ]
-
-        for target_dir, filenames in file_groups:
+        for target_dir, filenames in PLUGIN_FILE_GROUPS:
             for filename in filenames:
                 target_path = os.path.join(target_dir, filename)
-                if not os.path.exists(target_path):
+                if not _plugin_file_is_healthy(target_dir, filename):
                     self.logger.debug(
                         _("Plugin file not found: {}").format(target_path)
                     )
@@ -274,23 +324,11 @@ class IPAActions:
             True if all plugin files are present, False otherwise.
         """
         self.logger.info(_("Checking plugin files installation"))
-        # List of (target_dir, filenames)
-        file_groups = [
-            (TARGET_PYTHON_PLUGINS, ['chain.py', 'gpmaster.py', 'gpo.py']),
-            (TARGET_UI_PLUGINS, ['chain.js', 'gpo.js']),
-            (TARGET_SCHEMA_DIR, ['75-chain.ldif', '75-gpc.ldif', '75-gpmaster.ldif']),
-            (TARGET_UPDATE_DIR, ['75-chain.update', '75-gpc.update', '75-gpmaster.update']),
-            (TARGET_DBUS_CONFIG_DIR, ['ipa-gpo.conf']),
-            (TARGET_DBUS_HANDLERS_DIR,
-             ['org.freeipa.server.create-gpo-structure',
-              'org.freeipa.server.delete-gpo-structure']),
-        ]
-
         missing_files = []
-        for target_dir, filenames in file_groups:
+        for target_dir, filenames in PLUGIN_FILE_GROUPS:
             for filename in filenames:
                 target_path = os.path.join(target_dir, filename)
-                if not os.path.exists(target_path):
+                if not _plugin_file_is_healthy(target_dir, filename):
                     missing_files.append(target_path)
                     self.logger.error(
                         _("Plugin file not found: {}").format(target_path)
