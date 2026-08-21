@@ -8,17 +8,20 @@ UI_PLUGIN_TARGET = $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain
 PYTHON ?= python3
 NODE ?= node
 
-.PHONY: all build install install-ui clean dist rpm compile-po test test-python test-ui
+.PHONY: all build install install-ui clean dist rpm compile-po test test-python test-ui test-integration
 
 all: build
 
 test: test-python test-ui
 
 test-python:
-	$(PYTHON) -m pytest
+	$(PYTHON) -m pytest --ignore=tests/integration
 
 test-ui:
 	$(NODE) --test plugin/ui/grouppolicy/tests/*.test.js
+
+test-integration:
+	$(PYTHON) -m pytest tests/integration
 
 build: compile-po
 	@echo "Building $(PACKAGE_NAME) $(VERSION)..."
