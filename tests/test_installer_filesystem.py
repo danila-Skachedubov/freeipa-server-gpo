@@ -170,6 +170,113 @@ def test_new_gpo_handler_applies_editor_acls_after_creation(tmp_path, monkeypatc
 @pytest.mark.parametrize(
     "argv",
     [
+        [str(CREATE_HANDLER)],
+        [str(CREATE_HANDLER), "invalid-guid", "example.test"],
+        [str(CREATE_HANDLER), GUID, "invalid/domain"],
+    ],
+)
+def test_create_gpo_handler_rejects_invalid_arguments(monkeypatch, argv):
+    handler = _load_create_handler()
+    path_calls = []
+    monkeypatch.setattr(
+        handler,
+        "get_policies_path",
+        lambda *args: path_calls.append(args),
+    )
+    monkeypatch.setattr(sys, "argv", argv)
+
+    assert handler.main() == 1
+    assert path_calls == []
+
+
+def test_create_gpo_handler_reports_policies_root_failure(monkeypatch):
+    handler = _load_create_handler()
+    monkeypatch.setattr(handler.os.path, "exists", lambda _path: False)
+    monkeypatch.setattr(
+        handler.os,
+        "makedirs",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            OSError("read-only filesystem")
+        ),
+    )
+    monkeypatch.setattr(sys, "argv", [
+        str(CREATE_HANDLER),
+        GUID,
+        "example.test",
+    ])
+
+    assert handler.main() == 1
+
+
+def test_create_gpo_handler_uses_default_display_name(tmp_path, monkeypatch):
+    handler = _load_create_handler()
+    policies = tmp_path / "Policies"
+    policy = policies / GUID
+    monkeypatch.setattr(
+        handler,
+        "get_policies_path",
+        lambda _domain: str(policies),
+    )
+    monkeypatch.setattr(
+        handler,
+        "get_policy_path",
+        lambda _domain, _guid: str(policy),
+    )
+    monkeypatch.setattr(
+        handler,
+        "get_gpt_ini_path",
+        lambda _domain, _guid: str(policy / "GPT.INI"),
+    )
+    monkeypatch.setattr(handler, "ensure_new_gpo_acls", lambda *_args: None)
+    monkeypatch.setattr(sys, "argv", [
+        str(CREATE_HANDLER),
+        GUID,
+        "example.test",
+    ])
+
+    assert handler.main() == 0
+    assert "displayName=New Group Policy Object\n" in (
+        policy / "GPT.INI"
+    ).read_text(encoding="utf-8")
+
+
+def test_create_gpo_handler_reports_acl_failure(tmp_path, monkeypatch):
+    handler = _load_create_handler()
+    policies = tmp_path / "Policies"
+    policy = policies / GUID
+    monkeypatch.setattr(
+        handler,
+        "get_policies_path",
+        lambda _domain: str(policies),
+    )
+    monkeypatch.setattr(
+        handler,
+        "get_policy_path",
+        lambda _domain, _guid: str(policy),
+    )
+    monkeypatch.setattr(
+        handler,
+        "get_gpt_ini_path",
+        lambda _domain, _guid: str(policy / "GPT.INI"),
+    )
+    monkeypatch.setattr(
+        handler,
+        "ensure_new_gpo_acls",
+        lambda *_args: (_ for _ in ()).throw(OSError("setfacl failed")),
+    )
+    monkeypatch.setattr(sys, "argv", [
+        str(CREATE_HANDLER),
+        GUID,
+        "example.test",
+    ])
+
+    assert handler.main() == 1
+    assert (policy / "GPT.INI").is_file()
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
         [str(DELETE_HANDLER)],
         [str(DELETE_HANDLER), "invalid-guid", "example.test"],
         [str(DELETE_HANDLER), GUID, "invalid/domain"],
