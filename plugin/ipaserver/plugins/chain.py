@@ -26,6 +26,17 @@ OBJECT_TYPE_MAPPING = {
 }
 
 GP_LOOKUP_ATTRIBUTES = ['displayName', 'cn']
+GPO_VALIDATION_ATTRIBUTES = GP_LOOKUP_ATTRIBUTES + ['objectclass']
+
+
+def _require_object_class(entry, expected, field, value):
+    classes = entry.get('objectclass') or entry.get('objectClass') or []
+    if any(str(item).lower() == expected.lower() for item in classes):
+        return
+    raise errors.ValidationError(
+        name=field,
+        error=_("Object '{}' is not a {}").format(value, expected),
+    )
 
 def verify_gpo_schema(ldap, api):
     """
@@ -318,11 +329,18 @@ class chain(LDAPObject):
                     if attr_name in OBJECT_TYPE_MAPPING:
                         attrs = [OBJECT_TYPE_MAPPING[attr_name][1]]
                     elif attr_name == 'gplink':
-                        attrs = GP_LOOKUP_ATTRIBUTES
+                        attrs = GPO_VALIDATION_ATTRIBUTES
                     else:
                         attrs = ['cn']
                     ldap = self.api.Backend.ldap2
-                    ldap.get_entry(DN(name), attrs_list=attrs)
+                    entry = ldap.get_entry(DN(name), attrs_list=attrs)
+                    if attr_name == 'gplink':
+                        _require_object_class(
+                            entry,
+                            'groupPolicyContainer',
+                            attr_name,
+                            name,
+                        )
                 return name
 
             if attr_name in OBJECT_TYPE_MAPPING:
@@ -341,6 +359,8 @@ class chain(LDAPObject):
                 obj_name = OBJECT_TYPE_MAPPING.get(attr_name, [attr_name])[0]
                 raise errors.NotFound(reason=_("{} '{}' not found").format(obj_name.title(), name))
             return name
+        except errors.ValidationError:
+            raise
         except Exception as e:
             if strict:
                 obj_name = OBJECT_TYPE_MAPPING.get(attr_name, [attr_name])[0]
@@ -1044,9 +1064,15 @@ class chain_add_gpo(LDAPAddMember):
                         gpo_displayname = self._extract_displayname_from_value(gpo_value)
                         if is_dn(gpo_displayname):
                             gpo_dn = DN(gpo_displayname)
-                            ldap.get_entry(
+                            gpo_entry = ldap.get_entry(
                                 gpo_dn,
-                                attrs_list=GP_LOOKUP_ATTRIBUTES,
+                                attrs_list=GPO_VALIDATION_ATTRIBUTES,
+                            )
+                            _require_object_class(
+                                gpo_entry,
+                                'groupPolicyContainer',
+                                'gpo',
+                                gpo_displayname,
                             )
                         else:
                             gpo_dn = self.obj.find_gp_by_displayname(

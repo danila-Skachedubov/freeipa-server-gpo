@@ -208,6 +208,10 @@ def test_convert_dns_in_entries_updates_fields_and_runs_extra_processing(
 
 def _chain_subject():
     ldap = MagicMock()
+    ldap.get_entry.return_value = {
+        "displayName": ["Workstation policy"],
+        "objectclass": ["top", "groupPolicyContainer"],
+    }
     group = MagicMock()
     hostgroup = MagicMock()
     subject = SimpleNamespace(
@@ -280,7 +284,7 @@ def test_resolve_object_name_delegates_gpo_display_name_lookup():
     [
         ("usergroup", USER_GROUP_DN, ["cn"]),
         ("computergroup", COMPUTER_GROUP_DN, ["cn"]),
-        ("gplink", GPO_DN, ["displayName", "cn"]),
+        ("gplink", GPO_DN, ["displayName", "cn", "objectclass"]),
     ],
 )
 def test_strict_explicit_dn_is_verified_in_ldap(attr_name, dn, attrs):
@@ -298,6 +302,31 @@ def test_strict_explicit_dn_is_verified_in_ldap(attr_name, dn, attrs):
     group.get_dn.assert_not_called()
     hostgroup.get_dn.assert_not_called()
     subject.find_gp_by_displayname.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "objectclasses",
+    [[], ["top", "groupOfNames"]],
+)
+def test_strict_explicit_gpo_dn_rejects_non_gpo_object(objectclasses):
+    subject, ldap, group, hostgroup = _chain_subject()
+    ldap.get_entry.return_value = {
+        "cn": ["ordinary-group"],
+        "objectclass": objectclasses,
+    }
+
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain.resolve_object_name(
+            subject,
+            "gplink",
+            str(GPO_DN),
+            strict=True,
+        )
+
+    assert failure.value.name == "gplink"
+    assert "groupPolicyContainer" in failure.value.error
+    group.get_dn.assert_not_called()
+    hostgroup.get_dn.assert_not_called()
 
 
 def test_non_strict_explicit_dn_is_preserved_without_ldap_lookup():
@@ -2222,7 +2251,11 @@ def test_chain_add_gpo_pre_callback_accepts_verified_explicit_dn(
     subject = _association_subject()
     subject._extract_displayname_from_value = lambda value: str(value)
     chain_entry = Entry(FIRST_DN, cn=["primary"])
-    gpo_entry = Entry(GPO_DN, displayName=["Policy A"])
+    gpo_entry = Entry(
+        GPO_DN,
+        displayName=["Policy A"],
+        objectclass=["top", "groupPolicyContainer"],
+    )
     ldap = MagicMock()
     ldap.get_entry.side_effect = [chain_entry, gpo_entry]
     found = {"gplink": {"gpo": [str(GPO_DN)]}}
@@ -2239,9 +2272,37 @@ def test_chain_add_gpo_pre_callback_accepts_verified_explicit_dn(
     assert found == {"gplink": {"gpo": [GPO_DN]}}
     ldap.get_entry.assert_any_call(
         GPO_DN,
-        attrs_list=["displayName", "cn"],
+        attrs_list=["displayName", "cn", "objectclass"],
     )
     subject.obj.find_gp_by_displayname.assert_not_called()
+
+
+def test_chain_add_gpo_pre_callback_rejects_non_gpo_explicit_dn(monkeypatch):
+    monkeypatch.setattr(CHAIN, "verify_gpo_schema", MagicMock())
+    subject = _association_subject()
+    subject._extract_displayname_from_value = lambda value: str(value)
+    chain_entry = Entry(FIRST_DN, cn=["primary"])
+    group_entry = Entry(
+        GPO_DN,
+        cn=["ordinary-group"],
+        objectclass=["top", "groupOfNames"],
+    )
+    ldap = MagicMock()
+    ldap.get_entry.side_effect = [chain_entry, group_entry]
+    found = {"gplink": {"gpo": [str(GPO_DN)]}}
+
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain_add_gpo.pre_callback(
+            subject,
+            ldap,
+            FIRST_DN,
+            found,
+            {},
+            "primary",
+        )
+
+    assert failure.value.name == "gpo"
+    assert "groupPolicyContainer" in failure.value.error
 
 
 def test_chain_add_gpo_pre_callback_translates_missing_chain(monkeypatch):
