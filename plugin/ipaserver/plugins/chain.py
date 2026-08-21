@@ -94,6 +94,20 @@ def is_dn(value):
     """Check if the string looks like a DN."""
     return str(value).lower().startswith('cn=')
 
+def _chain_is_active(chain_name, chain_dn, active_chains):
+    """Match an active chain by canonical name or raw distinguished name."""
+    normalized_name = str(chain_name).casefold() if chain_name else None
+    for active_chain in _normalize_to_list(active_chains):
+        if normalized_name and str(active_chain).casefold() == normalized_name:
+            return True
+        if chain_dn and is_dn(active_chain):
+            try:
+                if DN(active_chain) == DN(chain_dn):
+                    return True
+            except Exception:
+                continue
+    return False
+
 def get_display_name(entry):
     """Get displayName or fallback to cn or DN string."""
     display_names = _normalize_to_list(entry.get('displayName'))
@@ -367,12 +381,17 @@ class chain_show(LDAPRetrieve):
     """Display information about a Group Policy Chain."""
 
     def post_callback(self, ldap, dn, entry_attrs, *keys, **options):
-        chain_name = keys[0] if keys else None
+        chain_name = _first_value(
+            entry_attrs.get('cn'),
+            keys[0] if keys else None,
+        )
         if chain_name:
             try:
-                gpmaster_result = api.Command.gpmaster_show()
+                gpmaster_result = api.Command.gpmaster_show(raw=True)
                 active_chains = gpmaster_result['result'].get('chainlist', [])
-                entry_attrs['active'] = [chain_name in active_chains]
+                entry_attrs['active'] = [
+                    _chain_is_active(chain_name, dn, active_chains)
+                ]
             except Exception:
                 entry_attrs['active'] = [False]
 
@@ -381,27 +400,39 @@ class chain_show(LDAPRetrieve):
 class chain_toggle_base(Command):
     def _toggle_chain(self, cn, enable=True):
         try:
-            gpmaster_result = api.Command.gpmaster_show()
+            chain_result = api.Command.chain_show(cn, raw=True)['result']
+            canonical_name = _first_value(chain_result.get('cn'), cn)
+            chain_dn = chain_result.get('dn')
+
+            gpmaster_result = api.Command.gpmaster_show(raw=True)
             current_chains = gpmaster_result['result'].get('chainlist', [])
-            is_active = cn in current_chains
+            is_active = _chain_is_active(
+                canonical_name,
+                chain_dn,
+                current_chains,
+            )
 
             if enable and is_active:
                 raise errors.ValidationError(
                     name='chain',
-                    error=_("Chain '{}' is already enabled").format(cn)
+                    error=_("Chain '{}' is already enabled").format(
+                        canonical_name
+                    )
                 )
             if not enable and not is_active:
                 raise errors.ValidationError(
                     name='chain',
-                    error=_("Chain '{}' is already disabled").format(cn)
+                    error=_("Chain '{}' is already disabled").format(
+                        canonical_name
+                    )
                 )
 
             if enable:
-                api.Command.gpmaster_mod(add_chain=[cn])
+                api.Command.gpmaster_mod(add_chain=[canonical_name])
             else:
-                api.Command.gpmaster_mod(remove_chain=[cn])
+                api.Command.gpmaster_mod(remove_chain=[canonical_name])
 
-            updated_chain = api.Command.chain_show(cn)
+            updated_chain = api.Command.chain_show(canonical_name)
             return {'result': updated_chain['result']}
 
         except Exception as exc:

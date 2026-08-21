@@ -444,6 +444,9 @@ def _command_api(monkeypatch):
         gpmaster_mod=MagicMock(),
         chain_show=MagicMock(),
     )
+    commands.chain_show.return_value = {
+        "result": {"cn": ["primary"], "dn": FIRST_DN}
+    }
     monkeypatch.setattr(CHAIN, "api", SimpleNamespace(Command=commands))
     return commands
 
@@ -482,7 +485,32 @@ def test_chain_show_sets_computed_active_state(
     assert result == FIRST_DN
     assert entry["active"] == [expected]
     subject.obj.convert_attribute_members.assert_not_called()
-    commands.gpmaster_show.assert_called_once_with()
+    commands.gpmaster_show.assert_called_once_with(raw=True)
+
+
+@pytest.mark.parametrize(
+    "active_chain",
+    ["PRIMARY", str(FIRST_DN), str(FIRST_DN).upper()],
+)
+def test_chain_show_matches_canonical_name_and_raw_dn(
+    monkeypatch,
+    active_chain,
+):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": [active_chain]}
+    }
+    entry = {"cn": ["primary"]}
+
+    CHAIN.chain_show.post_callback(
+        SimpleNamespace(),
+        MagicMock(),
+        FIRST_DN,
+        entry,
+        "PRIMARY",
+    )
+
+    assert entry["active"] == [True]
 
 
 def test_chain_show_raw_mode_preserves_members(monkeypatch):
@@ -562,9 +590,10 @@ def test_toggle_chain_updates_gpmaster_and_returns_fresh_entry(
     commands.gpmaster_show.return_value = {
         "result": {"chainlist": current_chains}
     }
-    commands.chain_show.return_value = {
-        "result": {"cn": ["primary"], "active": [enable]}
-    }
+    commands.chain_show.side_effect = [
+        {"result": {"cn": ["primary"], "dn": FIRST_DN}},
+        {"result": {"cn": ["primary"], "active": [enable]}},
+    ]
 
     result = CHAIN.chain_toggle_base._toggle_chain(
         SimpleNamespace(),
@@ -576,7 +605,10 @@ def test_toggle_chain_updates_gpmaster_and_returns_fresh_entry(
         "result": {"cn": ["primary"], "active": [enable]}
     }
     commands.gpmaster_mod.assert_called_once_with(**modification)
-    commands.chain_show.assert_called_once_with("primary")
+    assert commands.chain_show.call_args_list == [
+        call("primary", raw=True),
+        call("primary"),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -605,7 +637,7 @@ def test_toggle_chain_rejects_state_that_is_already_set(
         )
 
     commands.gpmaster_mod.assert_not_called()
-    commands.chain_show.assert_not_called()
+    commands.chain_show.assert_called_once_with("primary", raw=True)
 
 
 @pytest.mark.parametrize("enable", [True, False])
@@ -623,7 +655,7 @@ def test_toggle_chain_propagates_gpmaster_update_failure(monkeypatch, enable):
             enable=enable,
         )
 
-    commands.chain_show.assert_not_called()
+    commands.chain_show.assert_called_once_with("primary", raw=True)
 
 
 def test_toggle_chain_propagates_gpmaster_read_failure(monkeypatch):
@@ -637,13 +669,16 @@ def test_toggle_chain_propagates_gpmaster_read_failure(monkeypatch):
         )
 
     commands.gpmaster_mod.assert_not_called()
-    commands.chain_show.assert_not_called()
+    commands.chain_show.assert_called_once_with("primary", raw=True)
 
 
 def test_toggle_chain_propagates_refresh_failure_after_update(monkeypatch):
     commands = _command_api(monkeypatch)
     commands.gpmaster_show.return_value = {"result": {"chainlist": []}}
-    commands.chain_show.side_effect = RuntimeError("refresh failed")
+    commands.chain_show.side_effect = [
+        {"result": {"cn": ["primary"], "dn": FIRST_DN}},
+        RuntimeError("refresh failed"),
+    ]
 
     with pytest.raises(RuntimeError, match="refresh failed"):
         CHAIN.chain_toggle_base._toggle_chain(
@@ -653,6 +688,51 @@ def test_toggle_chain_propagates_refresh_failure_after_update(monkeypatch):
         )
 
     commands.gpmaster_mod.assert_called_once_with(add_chain=["primary"])
+
+
+def test_toggle_chain_propagates_missing_chain_before_master_lookup(
+    monkeypatch,
+):
+    commands = _command_api(monkeypatch)
+    commands.chain_show.side_effect = errors.NotFound(reason="missing chain")
+
+    with pytest.raises(errors.NotFound, match="missing chain"):
+        CHAIN.chain_toggle_base._toggle_chain(
+            SimpleNamespace(),
+            "missing",
+            enable=False,
+        )
+
+    commands.gpmaster_show.assert_not_called()
+    commands.gpmaster_mod.assert_not_called()
+
+
+def test_toggle_chain_uses_canonical_name_and_raw_master_dn(monkeypatch):
+    commands = _command_api(monkeypatch)
+    commands.chain_show.side_effect = [
+        {"result": {"cn": ["primary"], "dn": FIRST_DN}},
+        {"result": {"cn": ["primary"], "active": [False]}},
+    ]
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": [str(FIRST_DN)]}
+    }
+
+    result = CHAIN.chain_toggle_base._toggle_chain(
+        SimpleNamespace(),
+        "PRIMARY",
+        enable=False,
+    )
+
+    assert result == {
+        "result": {"cn": ["primary"], "active": [False]}
+    }
+    commands.gpmaster_mod.assert_called_once_with(
+        remove_chain=["primary"]
+    )
+    assert commands.chain_show.call_args_list == [
+        call("PRIMARY", raw=True),
+        call("primary"),
+    ]
 
 
 @pytest.mark.parametrize(
