@@ -394,3 +394,135 @@ def test_validate_move_rejects_inactive_chain(option_name, error_name):
         )
 
     assert failure.value.name == error_name
+
+
+def _command_subject(entry=None):
+    ldap = MagicMock()
+    ldap.get_entry.return_value = entry or {}
+    obj = MagicMock()
+    obj.get_gpmaster_dn.return_value = MASTER_DN
+    obj.default_attributes = ["cn", "chainlist", "pdcemulator"]
+    subject = SimpleNamespace(
+        api=SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap)),
+        obj=obj,
+    )
+    return subject, obj, ldap
+
+
+def test_show_returns_flattened_values_and_readable_chain_names():
+    subject, obj, _ldap = _command_subject(
+        {
+            "cn": ["grouppolicymaster"],
+            "chainlist": [str(CHAIN_DN)],
+            "pdcemulator": ["dc1.example.test"],
+        }
+    )
+    obj.convert_chain_dns_to_names.return_value = ["primary"]
+
+    result = GPMASTER.gpmaster_show.execute(subject)
+
+    assert result == {
+        "result": {
+            "cn": "grouppolicymaster",
+            "chainlist": ["primary"],
+            "pdcemulator": "dc1.example.test",
+        },
+        "value": "grouppolicymaster",
+        "summary": None,
+    }
+    obj.convert_chain_dns_to_names.assert_called_once()
+
+
+def test_show_raw_preserves_chain_dns():
+    subject, obj, _ldap = _command_subject(
+        {"cn": ["grouppolicymaster"], "chainlist": [str(CHAIN_DN)]}
+    )
+
+    result = GPMASTER.gpmaster_show.execute(subject, raw=True)
+
+    assert result["result"]["chainlist"] == [str(CHAIN_DN)]
+    obj.convert_chain_dns_to_names.assert_not_called()
+
+
+def test_show_translates_missing_master():
+    subject, _obj, ldap = _command_subject()
+    ldap.get_entry.side_effect = errors.NotFound(reason="missing")
+
+    with pytest.raises(errors.NotFound):
+        GPMASTER.gpmaster_show.execute(subject)
+
+
+@pytest.mark.parametrize(
+    ("entry", "expected"),
+    [
+        ({"pdcemulator": ["dc1.example.test"]}, "dc1.example.test"),
+        ({}, "Not configured"),
+        ({"pdcemulator": []}, "Not configured"),
+    ],
+)
+def test_show_pdc_returns_configured_or_default_value(entry, expected):
+    subject, _obj, _ldap = _command_subject(entry)
+
+    assert GPMASTER.gpmaster_show_pdc.execute(subject) == {
+        "result": {"pdc_emulator": expected}
+    }
+
+
+def test_show_pdc_translates_missing_master():
+    subject, _obj, ldap = _command_subject()
+    ldap.get_entry.side_effect = errors.NotFound(reason="missing")
+
+    with pytest.raises(errors.NotFound):
+        GPMASTER.gpmaster_show_pdc.execute(subject)
+
+
+def test_move_execute_returns_converted_and_flattened_result():
+    subject, obj, ldap = _command_subject(
+        {
+            "cn": ["grouppolicymaster"],
+            "chainlist": [str(CHAIN_DN)],
+            "pdcemulator": ["dc1.example.test"],
+        }
+    )
+    subject._do_move_operation = MagicMock()
+    subject.msg_summary = 'Modified Group Policy Master "%(value)s"'
+    obj.convert_chain_dns_to_names.return_value = ["primary"]
+    options = {"moveup_chain": "primary"}
+
+    result = GPMASTER.gpmaster_mod.execute(subject, "custom-master", **options)
+
+    subject._do_move_operation.assert_called_once_with(
+        ldap, MASTER_DN, ("custom-master",), options
+    )
+    assert result == {
+        "result": {
+            "cn": "grouppolicymaster",
+            "chainlist": ["primary"],
+            "pdcemulator": "dc1.example.test",
+        },
+        "value": "custom-master",
+        "summary": 'Modified Group Policy Master "custom-master"',
+    }
+
+
+def test_pre_callback_runs_add_remove_and_standard_handlers_in_order():
+    subject, _obj, ldap = _command_subject({"chainlist": [str(CHAIN_DN)]})
+    calls = []
+    subject._handle_add_operations = MagicMock(
+        side_effect=lambda *_args: calls.append("add")
+    )
+    subject._handle_remove_operations = MagicMock(
+        side_effect=lambda *_args: calls.append("remove")
+    )
+    subject._handle_standard_modifications = MagicMock(
+        side_effect=lambda *_args: calls.append("standard")
+    )
+    entry_attrs = {}
+    options = {"add_chain": "primary"}
+
+    result = GPMASTER.gpmaster_mod.pre_callback(
+        subject, ldap, MASTER_DN, entry_attrs, [], "grouppolicymaster", **options
+    )
+
+    assert result == MASTER_DN
+    assert calls == ["add", "remove", "standard"]
