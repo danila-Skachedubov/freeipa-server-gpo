@@ -19,6 +19,7 @@ def test_parse_options_configures_parser_and_returns_safe_options(monkeypatch):
     monkeypatch.setattr(cli, "IPAOptionParser", parser_factory)
     monkeypatch.setattr(cli, "admin_cleanup_global_argv", cleanup)
     monkeypatch.setattr(cli.sys, "argv", argv)
+    monkeypatch.setattr(cli, "_", lambda text: text)
 
     result = cli.parse_options()
 

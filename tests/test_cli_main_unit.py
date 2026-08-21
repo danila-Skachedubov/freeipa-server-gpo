@@ -14,6 +14,7 @@ def _prepare_main(monkeypatch, *, check_only=False, connected=True):
     actions = MagicMock()
 
     monkeypatch.setattr(cli, "api", api)
+    monkeypatch.setattr(cli, "_", lambda text: text)
     monkeypatch.setattr(
         cli, "parse_options", MagicMock(return_value=({}, options))
     )
@@ -45,6 +46,7 @@ def test_main_stops_when_environment_setup_fails(monkeypatch):
     monkeypatch.setattr(cli, "parse_options", parse_options)
     monkeypatch.setattr(cli, "setup_environment", setup_environment)
     monkeypatch.setattr(cli, "IPAChecker", checker_factory)
+    monkeypatch.setattr(cli, "_", lambda text: text)
 
     assert cli.main() == 1
     setup_environment.assert_called_once_with(parse_options.return_value[1])
