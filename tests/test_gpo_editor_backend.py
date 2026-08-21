@@ -704,6 +704,39 @@ def test_atomic_compare_failure_is_a_structured_publication_conflict(monkeypatch
     assert "file_sys_path" not in str(failure.value.details)
 
 
+def test_non_comparison_ldap_failure_uses_freeipa_error_handler():
+    events = []
+
+    class ErrorHandler:
+        def __enter__(self):
+            events.append("enter")
+
+        def __exit__(self, exc_type, exc, traceback):
+            events.append(("exit", exc_type, exc))
+            return False
+
+    class FailingBackend(PublicationBackend):
+        def modify_ext_s(self, dn, modifications, serverctrls=None):
+            raise ldap.SERVER_DOWN({"desc": "Can't contact LDAP server"})
+
+        def error_handler(self):
+            return ErrorHandler()
+
+    backend = FailingBackend()
+    context = editor_context()
+
+    with pytest.raises(ldap.SERVER_DOWN) as failure:
+        GPO._apply_publication_plan(
+            backend, context, plan(), context.snapshot, context.presence
+        )
+
+    assert events == [
+        "enter",
+        ("exit", ldap.SERVER_DOWN, failure.value),
+    ]
+    assert backend.removed == [DN_VALUE]
+
+
 class CommitWorkspace:
     def __init__(self, commit_result, pending=None):
         self.commit_result = commit_result
@@ -816,6 +849,52 @@ def test_dirty_commit_applies_one_plan_rereads_and_acknowledges(monkeypatch):
     assert workspace.acks == [("token", after)]
     assert result["changed"] is True
     assert result["snapshot"]["version_number"] == 1
+
+
+def test_dirty_commit_acknowledgement_conflict_keeps_pending_state(monkeypatch):
+    before = snapshot()
+    after = snapshot(version=1, machine="M")
+    exact_plan = plan()
+
+    class ConflictingWorkspace(CommitWorkspace):
+        def acknowledge_external(self, token, resulting):
+            self.acks.append((token, resulting))
+            error = RuntimeError("stale acknowledgement")
+            error.code = "conflict"
+            raise error
+
+    pending = {
+        "phase": "awaiting_directory_publication",
+        "plan": exact_plan,
+        "precondition": before,
+    }
+    workspace = ConflictingWorkspace({
+        "directory": "external_handoff",
+        "files": {
+            "paths": [{"path": "Machine/Registry.pol", "revision": "r"}],
+            "affected_scopes": {"computer": True, "user": False},
+        },
+        "publication_plan": exact_plan,
+    }, pending=pending)
+    reads = iter(((before, {}), (after, {})))
+    monkeypatch.setattr(GPO, "_read_gpc_snapshot", lambda *args: next(reads))
+    applied = []
+    monkeypatch.setattr(
+        GPO, "_apply_publication_plan", lambda *args: applied.append(args)
+    )
+    context = editor_context(before)
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._commit_external_once(workspace, object(), context)
+
+    assert failure.value.category == "publication_conflict"
+    assert failure.value.details == {
+        "safe_next_actions": ["reconcile", "operator_intervention"]
+    }
+    assert len(applied) == 1
+    assert workspace.acks == [("token", after)]
+    assert workspace.pending is pending
+    assert context.snapshot == before
 
 
 @pytest.mark.parametrize(
