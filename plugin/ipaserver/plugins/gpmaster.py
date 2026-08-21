@@ -1,5 +1,7 @@
 import logging
 
+import ldap as ldap_module
+
 from ipalib import api, errors, _, Str, output
 from ipalib.plugable import Registry
 from ipapython.dn import DN
@@ -372,12 +374,17 @@ class gpmaster_mod(LDAPUpdate):
         if current_chains == original_chains:
             return
 
-        entry['chainlist'] = []
-        ldap.update_entry(entry)
-
-        entry = ldap.get_entry(dn)
-        entry['chainlist'] = current_chains
-        ldap.update_entry(entry)
+        ldap.modify_ext_s(
+            str(dn),
+            [
+                (ldap_module.MOD_DELETE, 'chainList', None),
+                (
+                    ldap_module.MOD_ADD,
+                    'chainList',
+                    [ldap.encode(value) for value in current_chains],
+                ),
+            ],
+        )
 
     def _validate_move_operations(self, ldap, dn, options):
         """Validate that only active chains can be moved."""

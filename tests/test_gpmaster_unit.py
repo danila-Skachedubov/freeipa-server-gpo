@@ -1,6 +1,7 @@
 """Focused unit tests for the Group Policy Master FreeIPA plugin."""
 
 import importlib.util
+import ldap as python_ldap
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call
@@ -459,7 +460,7 @@ def test_standard_modifications_set_pdc_and_resolve_chainlist():
 class MoveLdap:
     def __init__(self, chains):
         self.master = {"chainlist": list(chains)}
-        self.updated_chainlists = []
+        self.modifications = []
         self.chain_names = {
             str(CHAIN_DN): "primary",
             str(SECOND_CHAIN_DN): "fallback",
@@ -470,8 +471,15 @@ class MoveLdap:
             return self.master
         return {"cn": [self.chain_names[str(dn)]]}
 
-    def update_entry(self, entry):
-        self.updated_chainlists.append(list(entry.get("chainlist", [])))
+    @staticmethod
+    def encode(value):
+        return str(value).encode()
+
+    def modify_ext_s(self, dn, modifications):
+        self.modifications.append((dn, modifications))
+        self.master["chainlist"] = [
+            value.decode() for value in modifications[1][2]
+        ]
 
 
 def _move_subject(ldap):
@@ -494,7 +502,7 @@ def _move_subject(ldap):
         ),
     ],
 )
-def test_move_operation_reorders_with_two_ldap_updates(options, expected):
+def test_move_operation_reorders_with_one_atomic_ldap_modify(options, expected):
     ldap = MoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
     subject = _move_subject(ldap)
 
@@ -505,8 +513,42 @@ def test_move_operation_reorders_with_two_ldap_updates(options, expected):
     subject._validate_move_operations.assert_called_once_with(
         ldap, MASTER_DN, options
     )
-    assert ldap.updated_chainlists == [[], expected]
+    assert ldap.modifications == [
+        (
+            str(MASTER_DN),
+            [
+                (python_ldap.MOD_DELETE, "chainList", None),
+                (
+                    python_ldap.MOD_ADD,
+                    "chainList",
+                    [value.encode() for value in expected],
+                ),
+            ],
+        )
+    ]
     assert ldap.master["chainlist"] == expected
+
+
+def test_move_operation_atomic_modify_failure_preserves_original_chains():
+    class FailingMoveLdap(MoveLdap):
+        def modify_ext_s(self, dn, modifications):
+            self.modifications.append((dn, modifications))
+            raise RuntimeError("atomic modify failed")
+
+    backend = FailingMoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
+    subject = _move_subject(backend)
+
+    with pytest.raises(RuntimeError, match="atomic modify failed"):
+        GPMASTER.gpmaster_mod._do_move_operation(
+            subject,
+            backend,
+            MASTER_DN,
+            (),
+            {"moveup_chain": "fallback"},
+        )
+
+    assert backend.master["chainlist"] == [CHAIN_DN, SECOND_CHAIN_DN]
+    assert len(backend.modifications) == 1
 
 
 def test_move_operation_skips_ldap_updates_for_short_list():
@@ -521,7 +563,7 @@ def test_move_operation_skips_ldap_updates_for_short_list():
     subject._validate_move_operations.assert_called_once_with(
         ldap, MASTER_DN, options
     )
-    assert ldap.updated_chainlists == []
+    assert ldap.modifications == []
 
 
 @pytest.mark.parametrize(
@@ -542,7 +584,7 @@ def test_move_operation_skips_ldap_updates_at_list_boundary(options):
     subject._validate_move_operations.assert_called_once_with(
         ldap, MASTER_DN, options
     )
-    assert ldap.updated_chainlists == []
+    assert ldap.modifications == []
     assert ldap.master["chainlist"] == [CHAIN_DN, SECOND_CHAIN_DN]
 
 
@@ -608,9 +650,9 @@ def test_empty_moveup_option_does_not_override_movedown_direction():
         subject, ldap, MASTER_DN, (), options
     )
 
-    assert ldap.updated_chainlists == [
-        [],
-        [str(SECOND_CHAIN_DN), str(CHAIN_DN)],
+    assert len(ldap.modifications) == 1
+    assert ldap.master["chainlist"] == [
+        str(SECOND_CHAIN_DN), str(CHAIN_DN)
     ]
 
 
