@@ -1,7 +1,6 @@
 """Focused unit tests for installer filesystem safety checks."""
 
 import os
-import pwd
 import subprocess
 from types import SimpleNamespace
 
@@ -17,6 +16,21 @@ from ipa_gpo_install.filesystem import (
     ensure_new_gpo_acls,
     ensure_policies_root_acl,
 )
+
+
+TEST_USER = "ipaapi-test"
+TEST_GROUP = "ipaapi-test"
+
+
+def _mock_current_identity(monkeypatch):
+    monkeypatch.setattr(
+        "ipa_gpo_install.filesystem.pwd.getpwnam",
+        lambda _name: SimpleNamespace(pw_uid=os.getuid()),
+    )
+    monkeypatch.setattr(
+        "ipa_gpo_install.filesystem.grp.getgrnam",
+        lambda _name: SimpleNamespace(gr_gid=os.getgid()),
+    )
 
 
 def test_run_checked_passes_safe_subprocess_options():
@@ -91,22 +105,15 @@ def test_state_directory_status_reports_missing_path(tmp_path):
     assert reason
 
 
-def test_state_directory_status_rejects_wrong_mode(tmp_path):
+def test_state_directory_status_rejects_wrong_mode(tmp_path, monkeypatch):
     state = tmp_path / "state"
     state.mkdir(mode=0o755)
     os.chmod(state, 0o755)
 
-    username = pwd.getpwuid(os.getuid()).pw_name
-    with (
-        pytest.MonkeyPatch.context() as monkeypatch,
-    ):
-        monkeypatch.setattr(
-            "ipa_gpo_install.filesystem.grp.getgrnam",
-            lambda _name: SimpleNamespace(gr_gid=os.getgid()),
-        )
-        healthy, reason = editor_state_directory_status(
-            state, username, "current-group"
-        )
+    _mock_current_identity(monkeypatch)
+    healthy, reason = editor_state_directory_status(
+        state, TEST_USER, TEST_GROUP
+    )
 
     assert healthy is False
     assert reason == "mode is not 0700"
@@ -236,14 +243,10 @@ def test_directory_editor_acl_applies_access_and_default_acl(tmp_path):
 def test_state_directory_status_rejects_regular_file(tmp_path, monkeypatch):
     state = tmp_path / "state"
     state.write_text("not a directory", encoding="utf-8")
-    username = pwd.getpwuid(os.getuid()).pw_name
-    monkeypatch.setattr(
-        "ipa_gpo_install.filesystem.grp.getgrnam",
-        lambda _name: SimpleNamespace(gr_gid=os.getgid()),
-    )
+    _mock_current_identity(monkeypatch)
 
     healthy, reason = editor_state_directory_status(
-        state, username, "current-group"
+        state, TEST_USER, TEST_GROUP
     )
 
     assert healthy is False
@@ -254,14 +257,10 @@ def test_state_directory_status_accepts_healthy_directory(tmp_path, monkeypatch)
     state = tmp_path / "state"
     state.mkdir(mode=0o700)
     os.chmod(state, 0o700)
-    username = pwd.getpwuid(os.getuid()).pw_name
-    monkeypatch.setattr(
-        "ipa_gpo_install.filesystem.grp.getgrnam",
-        lambda _name: SimpleNamespace(gr_gid=os.getgid()),
-    )
+    _mock_current_identity(monkeypatch)
 
     healthy, reason = editor_state_directory_status(
-        state, username, "current-group"
+        state, TEST_USER, TEST_GROUP
     )
 
     assert healthy is True

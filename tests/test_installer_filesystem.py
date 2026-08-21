@@ -2,10 +2,10 @@
 
 import importlib.util
 import os
-import pwd
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -25,24 +25,28 @@ CREATE_HANDLER = (
     / "plugin/dbus_handlers/org.freeipa.server.create-gpo-structure"
 )
 GUID = "{11111111-2222-3333-4444-555555555555}"
+TEST_USER = "ipaapi-test"
+TEST_GROUP = "ipaapi-test"
 
 
 def test_state_directory_is_private_and_preserves_pending_records(
     tmp_path, monkeypatch
 ):
     state = tmp_path / "gpo-editor-state"
-    username = pwd.getpwuid(os.getuid()).pw_name
-    groupname = "current-group"
+    monkeypatch.setattr(
+        "ipa_gpo_install.filesystem.pwd.getpwnam",
+        lambda _name: SimpleNamespace(pw_uid=os.getuid()),
+    )
     monkeypatch.setattr(
         "ipa_gpo_install.filesystem.grp.getgrnam",
-        lambda _name: type("Group", (), {"gr_gid": os.getgid()})(),
+        lambda _name: SimpleNamespace(gr_gid=os.getgid()),
     )
 
-    ensure_editor_state_directory(state, username, groupname)
+    ensure_editor_state_directory(state, TEST_USER, TEST_GROUP)
     pending = state / "pending-publication.json"
     pending.write_text('{"token": "preserve-me"}', encoding="utf-8")
 
-    ensure_editor_state_directory(state, username, groupname)
+    ensure_editor_state_directory(state, TEST_USER, TEST_GROUP)
 
     info = state.stat()
     assert info.st_mode & 0o777 == 0o700
@@ -52,7 +56,6 @@ def test_state_directory_is_private_and_preserves_pending_records(
 
 
 def test_new_gpo_acl_provisioning_is_bounded_to_the_fresh_tree(tmp_path):
-    username = pwd.getpwuid(os.getuid()).pw_name
     policies = tmp_path / "Policies"
     machine = policies / GUID / "Machine"
     machine.mkdir(parents=True)
@@ -66,7 +69,7 @@ def test_new_gpo_acl_provisioning_is_bounded_to_the_fresh_tree(tmp_path):
         calls.append(command)
         return subprocess.CompletedProcess(command, 0, "", "")
 
-    ensure_new_gpo_acls(policies, policies / GUID, username, runner)
+    ensure_new_gpo_acls(policies, policies / GUID, TEST_USER, runner)
 
     targets = [
         path for command in calls for path in command
@@ -78,11 +81,11 @@ def test_new_gpo_acl_provisioning_is_bounded_to_the_fresh_tree(tmp_path):
     assert str(user) in targets
     assert str(existing) not in targets
     assert any(
-        "u:{}:r-x,d:u:{}:rwx".format(username, username) in command
+        "u:{0}:r-x,d:u:{0}:rwx".format(TEST_USER) in command
         for command in calls
     )
     assert any(
-        "u:{}:rwx,d:u:{}:rwx".format(username, username) in command
+        "u:{0}:rwx,d:u:{0}:rwx".format(TEST_USER) in command
         for command in calls
     )
 
@@ -97,7 +100,7 @@ def test_new_gpo_acl_provisioning_rejects_symlink_child(tmp_path):
         ensure_new_gpo_acls(
             policies,
             policies / GUID,
-            pwd.getpwuid(os.getuid()).pw_name,
+            TEST_USER,
             runner=lambda *_args, **_kwargs: subprocess.CompletedProcess([], 0),
         )
 
