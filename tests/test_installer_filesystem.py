@@ -24,6 +24,10 @@ CREATE_HANDLER = (
     REPOSITORY
     / "plugin/dbus_handlers/org.freeipa.server.create-gpo-structure"
 )
+DELETE_HANDLER = (
+    REPOSITORY
+    / "plugin/dbus_handlers/org.freeipa.server.delete-gpo-structure"
+)
 GUID = "{11111111-2222-3333-4444-555555555555}"
 TEST_USER = "ipaapi-test"
 TEST_GROUP = "ipaapi-test"
@@ -105,17 +109,25 @@ def test_new_gpo_acl_provisioning_rejects_symlink_child(tmp_path):
         )
 
 
-def _load_create_handler():
+def _load_handler(path, module_name):
     spec = importlib.util.spec_from_file_location(
-        "create_gpo_structure_test", CREATE_HANDLER
+        module_name, path
     )
     if spec is None or spec.loader is None:
         from importlib.machinery import SourceFileLoader
-        loader = SourceFileLoader("create_gpo_structure_test", str(CREATE_HANDLER))
+        loader = SourceFileLoader(module_name, str(path))
         spec = importlib.util.spec_from_loader(loader.name, loader)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _load_create_handler():
+    return _load_handler(CREATE_HANDLER, "create_gpo_structure_test")
+
+
+def _load_delete_handler():
+    return _load_handler(DELETE_HANDLER, "delete_gpo_structure_test")
 
 
 def test_new_gpo_handler_applies_editor_acls_after_creation(tmp_path, monkeypatch):
@@ -153,6 +165,98 @@ def test_new_gpo_handler_applies_editor_acls_after_creation(tmp_path, monkeypatc
     assert (policy / "GPT.INI").read_text(encoding="utf-8") == (
         "[General]\ndisplayName=Example policy\nVersion=0\n"
     )
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        [str(DELETE_HANDLER)],
+        [str(DELETE_HANDLER), "invalid-guid", "example.test"],
+        [str(DELETE_HANDLER), GUID, "invalid/domain"],
+    ],
+)
+def test_delete_gpo_handler_rejects_invalid_arguments(monkeypatch, argv):
+    handler = _load_delete_handler()
+    get_policy_path = SimpleNamespace(calls=[])
+
+    def policy_path(*args):
+        get_policy_path.calls.append(args)
+        return "/must/not/be/used"
+
+    monkeypatch.setattr(handler, "get_policy_path", policy_path)
+    monkeypatch.setattr(sys, "argv", argv)
+
+    assert handler.main() == 1
+    assert get_policy_path.calls == []
+
+
+def test_delete_gpo_handler_accepts_already_absent_directory(
+    tmp_path,
+    monkeypatch,
+):
+    handler = _load_delete_handler()
+    missing = tmp_path / GUID
+    monkeypatch.setattr(
+        handler,
+        "get_policy_path",
+        lambda _domain, _guid: str(missing),
+    )
+    monkeypatch.setattr(sys, "argv", [
+        str(DELETE_HANDLER),
+        GUID,
+        "example.test",
+    ])
+
+    assert handler.main() == 0
+
+
+def test_delete_gpo_handler_removes_only_resolved_policy_tree(
+    tmp_path,
+    monkeypatch,
+):
+    handler = _load_delete_handler()
+    policy = tmp_path / GUID
+    policy.mkdir()
+    sibling = tmp_path / "keep"
+    sibling.mkdir()
+    monkeypatch.setattr(
+        handler,
+        "get_policy_path",
+        lambda _domain, _guid: str(policy),
+    )
+    monkeypatch.setattr(sys, "argv", [
+        str(DELETE_HANDLER),
+        GUID,
+        "example.test",
+    ])
+
+    assert handler.main() == 0
+    assert not policy.exists()
+    assert sibling.is_dir()
+
+
+def test_delete_gpo_handler_reports_removal_failure(tmp_path, monkeypatch):
+    handler = _load_delete_handler()
+    policy = tmp_path / GUID
+    policy.mkdir()
+    monkeypatch.setattr(
+        handler,
+        "get_policy_path",
+        lambda _domain, _guid: str(policy),
+    )
+    monkeypatch.setattr(
+        handler.shutil,
+        "rmtree",
+        lambda _path: (_ for _ in ()).throw(OSError("filesystem busy")),
+    )
+    monkeypatch.setattr(sys, "argv", [
+        str(DELETE_HANDLER),
+        GUID,
+        "example.test",
+    ])
+
+    assert handler.main() == 1
+    assert policy.is_dir()
 
 
 def test_health_check_samples_existing_gpo_as_editor_identity(
