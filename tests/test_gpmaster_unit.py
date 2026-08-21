@@ -763,10 +763,12 @@ def test_move_execute_returns_converted_and_flattened_result():
     obj.convert_chain_dns_to_names.return_value = ["primary"]
     options = {"moveup_chain": "primary"}
 
-    result = GPMASTER.gpmaster_mod.execute(subject, "custom-master", **options)
+    result = GPMASTER.gpmaster_mod.execute(
+        subject, "grouppolicymaster", **options
+    )
 
     subject._do_move_operation.assert_called_once_with(
-        ldap, MASTER_DN, ("custom-master",), options
+        ldap, MASTER_DN, ("grouppolicymaster",), options
     )
     assert result == {
         "result": {
@@ -774,9 +776,55 @@ def test_move_execute_returns_converted_and_flattened_result():
             "chainlist": ["primary"],
             "pdcemulator": "dc1.example.test",
         },
-        "value": "custom-master",
-        "summary": 'Modified Group Policy Master "custom-master"',
+        "value": "grouppolicymaster",
+        "summary": 'Modified Group Policy Master "grouppolicymaster"',
     }
+
+
+def test_move_execute_rejects_noncanonical_singleton_key_before_ldap():
+    subject, _obj, ldap = _command_subject()
+    subject._do_move_operation = MagicMock()
+
+    with pytest.raises(errors.ValidationError) as failure:
+        GPMASTER.gpmaster_mod.execute(
+            subject, "custom-master", moveup_chain="primary"
+        )
+
+    assert failure.value.name == "cn"
+    assert "grouppolicymaster" in failure.value.error
+    subject._do_move_operation.assert_not_called()
+    ldap.get_entry.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("option_name", "option_value"),
+    [
+        ("pdcemulator", "dc1.example.test"),
+        ("add_chain", "fallback"),
+        ("remove_chain", "primary"),
+        ("chainlist", ["primary"]),
+        ("setattr", "pdcemulator=dc1.example.test"),
+        ("addattr", "chainlist=primary"),
+        ("delattr", "pdcemulator=old.example.test"),
+    ],
+)
+def test_move_execute_rejects_mixed_modifications_before_ldap(
+    option_name,
+    option_value,
+):
+    subject, _obj, ldap = _command_subject()
+    subject._do_move_operation = MagicMock()
+    options = {"moveup_chain": "primary", option_name: option_value}
+
+    with pytest.raises(errors.ValidationError) as failure:
+        GPMASTER.gpmaster_mod.execute(
+            subject, "grouppolicymaster", **options
+        )
+
+    assert failure.value.name == "move_chain"
+    assert option_name in failure.value.error
+    subject._do_move_operation.assert_not_called()
+    ldap.get_entry.assert_not_called()
 
 
 def test_pre_callback_runs_add_remove_and_standard_handlers_in_order():

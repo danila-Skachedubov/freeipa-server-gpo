@@ -270,6 +270,29 @@ class gpmaster_mod(LDAPUpdate):
         """Handle move operations separately, everything else normally."""
         if ('moveup_chain' in options and options['moveup_chain']) or \
            ('movedown_chain' in options and options['movedown_chain']):
+            canonical_key = 'grouppolicymaster'
+            if keys and str(keys[0]).casefold() != canonical_key:
+                raise errors.ValidationError(
+                    name='cn',
+                    error=_("Group Policy Master key must be '{}'.").format(
+                        canonical_key
+                    ),
+                )
+            conflicting = [
+                name for name in (
+                    'pdcemulator', 'add_chain', 'remove_chain', 'chainlist',
+                    'setattr', 'addattr', 'delattr',
+                )
+                if options.get(name)
+            ]
+            if conflicting:
+                raise errors.ValidationError(
+                    name='move_chain',
+                    error=_(
+                        "Chain movement cannot be combined with other "
+                        "modifications: {}"
+                    ).format(', '.join(sorted(conflicting))),
+                )
 
             ldap = self.api.Backend.ldap2
             dn = self.obj.get_gpmaster_dn()
@@ -295,8 +318,8 @@ class gpmaster_mod(LDAPUpdate):
 
             return {
                 'result': result_dict,
-                'value': keys[0] if keys else 'grouppolicymaster',
-                'summary': self.msg_summary % {'value': keys[0] if keys else 'grouppolicymaster'}
+                'value': canonical_key,
+                'summary': self.msg_summary % {'value': canonical_key}
             }
 
         return super(gpmaster_mod, self).execute(*keys, **options)
