@@ -1052,7 +1052,15 @@ def _commit_external_once(workspace, ldap_backend, context):
             'operational',
             'The editor binding returned an unknown directory outcome.',
         )
-    if not paths or not any(affected.values()) or plan is None:
+    if (
+        not paths
+        or not any(affected.values())
+        or plan is None
+        or not isinstance(pending, dict)
+        or pending.get('phase') != 'awaiting_directory_publication'
+        or pending.get('plan') != plan
+        or pending.get('precondition') != starting_snapshot
+    ):
         raise EditorFailure(
             'operational',
             'The editor binding returned an inconsistent external handoff.',

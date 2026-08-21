@@ -585,6 +585,10 @@ def test_dirty_commit_applies_one_plan_rereads_and_acknowledges(monkeypatch):
             "affected_scopes": {"computer": True, "user": False},
         },
         "publication_plan": exact_plan,
+    }, pending={
+        "phase": "awaiting_directory_publication",
+        "plan": exact_plan,
+        "precondition": before,
     })
     reads = iter(((before, {}), (after, {})))
     monkeypatch.setattr(GPO, "_read_gpc_snapshot", lambda *args: next(reads))
@@ -602,6 +606,64 @@ def test_dirty_commit_applies_one_plan_rereads_and_acknowledges(monkeypatch):
     assert workspace.acks == [("token", after)]
     assert result["changed"] is True
     assert result["snapshot"]["version_number"] == 1
+
+
+@pytest.mark.parametrize(
+    "pending_factory",
+    [
+        lambda before, exact_plan: None,
+        lambda before, exact_plan: {
+            "phase": "payload_committed",
+            "plan": exact_plan,
+            "precondition": before,
+        },
+        lambda before, exact_plan: {
+            "phase": "awaiting_directory_publication",
+            "plan": {**exact_plan, "target_version": 2},
+            "precondition": before,
+        },
+        lambda before, exact_plan: {
+            "phase": "awaiting_directory_publication",
+            "plan": exact_plan,
+            "precondition": snapshot(version=99),
+        },
+    ],
+)
+def test_dirty_commit_rejects_inconsistent_recovery_state_before_ldap(
+    monkeypatch,
+    pending_factory,
+):
+    before = snapshot()
+    exact_plan = plan()
+    workspace = CommitWorkspace({
+        "directory": "external_handoff",
+        "files": {
+            "paths": [{"path": "Machine/Registry.pol", "revision": "r"}],
+            "affected_scopes": {"computer": True, "user": False},
+        },
+        "publication_plan": exact_plan,
+    }, pending=pending_factory(before, exact_plan))
+    monkeypatch.setattr(
+        GPO, "_read_gpc_snapshot", lambda *args: (before, {})
+    )
+    applied = []
+    monkeypatch.setattr(
+        GPO,
+        "_apply_publication_plan",
+        lambda *args: applied.append(args),
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._commit_external_once(
+            workspace,
+            object(),
+            editor_context(before),
+        )
+
+    assert failure.value.category == "operational"
+    assert "inconsistent external handoff" in failure.value.message
+    assert applied == []
+    assert workspace.acks == []
 
 
 class RecoveryWorkspace:
