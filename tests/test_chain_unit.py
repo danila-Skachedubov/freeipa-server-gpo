@@ -1016,7 +1016,7 @@ class GpoMoveLdap:
     def encode(value):
         return str(value).encode()
 
-    def modify_ext_s(self, dn, modifications):
+    def modify_s(self, dn, modifications):
         self.modifications.append((dn, modifications))
         self.chain["gplink"] = [
             value.decode() for value in modifications[1][2]
@@ -1049,7 +1049,7 @@ def test_move_gpo_reorders_links(options, expected):
 
     assert ldap.modifications == [
         (
-            str(FIRST_DN),
+            FIRST_DN,
             [
                 (python_ldap.MOD_DELETE, "gpLink", None),
                 (
@@ -1065,7 +1065,7 @@ def test_move_gpo_reorders_links(options, expected):
 
 def test_move_gpo_atomic_modify_failure_preserves_original_links():
     class FailingMoveLdap(GpoMoveLdap):
-        def modify_ext_s(self, dn, modifications):
+        def modify_s(self, dn, modifications):
             self.modifications.append((dn, modifications))
             raise RuntimeError("atomic modify failed")
 

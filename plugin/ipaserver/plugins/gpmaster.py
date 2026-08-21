@@ -374,8 +374,8 @@ class gpmaster_mod(LDAPUpdate):
         if current_chains == original_chains:
             return
 
-        ldap.modify_ext_s(
-            str(dn),
+        ldap.modify_s(
+            dn,
             [
                 (ldap_module.MOD_DELETE, 'chainList', None),
                 (

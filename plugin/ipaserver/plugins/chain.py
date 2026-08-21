@@ -707,8 +707,8 @@ class chain_mod(LDAPUpdate):
         if current_gplinks == original_gplinks:
             return
 
-        ldap.modify_ext_s(
-            str(dn),
+        ldap.modify_s(
+            dn,
             [
                 (ldap_module.MOD_DELETE, 'gpLink', None),
                 (

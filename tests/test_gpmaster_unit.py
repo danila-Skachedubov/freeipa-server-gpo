@@ -506,7 +506,7 @@ class MoveLdap:
     def encode(value):
         return str(value).encode()
 
-    def modify_ext_s(self, dn, modifications):
+    def modify_s(self, dn, modifications):
         self.modifications.append((dn, modifications))
         self.master["chainlist"] = [
             value.decode() for value in modifications[1][2]
@@ -546,7 +546,7 @@ def test_move_operation_reorders_with_one_atomic_ldap_modify(options, expected):
     )
     assert ldap.modifications == [
         (
-            str(MASTER_DN),
+            MASTER_DN,
             [
                 (python_ldap.MOD_DELETE, "chainList", None),
                 (
@@ -562,7 +562,7 @@ def test_move_operation_reorders_with_one_atomic_ldap_modify(options, expected):
 
 def test_move_operation_atomic_modify_failure_preserves_original_chains():
     class FailingMoveLdap(MoveLdap):
-        def modify_ext_s(self, dn, modifications):
+        def modify_s(self, dn, modifications):
             self.modifications.append((dn, modifications))
             raise RuntimeError("atomic modify failed")
 
