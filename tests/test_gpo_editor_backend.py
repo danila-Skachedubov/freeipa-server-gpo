@@ -6,6 +6,7 @@ import importlib.util
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import ldap
 import pytest
@@ -1336,6 +1337,8 @@ class PolicyWorkspace:
         self.fail_update = fail_update
         self.updates = []
         self.comments = []
+        self.cleared_comments = []
+        self.policy_reads = []
 
     def pending_external_publication(self):
         return None
@@ -1350,10 +1353,15 @@ class PolicyWorkspace:
         return {"policy_id": policy_id, "dirty": True}
 
     def get_policy(self, scope, policy_id, locales):
+        self.policy_reads.append((scope, policy_id, locales))
         return {"policy_id": policy_id, "dirty": False, "parameters": []}
 
     def set_policy_comment(self, scope, policy_id, target, text, locales):
         self.comments.append((scope, policy_id, target, text, locales))
+        return {"policy_id": policy_id, "dirty": True}
+
+    def clear_policy_comment(self, scope, policy_id, target, locales):
+        self.cleared_comments.append((scope, policy_id, target, locales))
         return {"policy_id": policy_id, "dirty": True}
 
 
@@ -1774,6 +1782,85 @@ def test_policy_form_update_is_one_workspace_and_one_commit(monkeypatch):
     ]
     assert len(commits) == 1
     assert result["policy"]["policy_id"] == "policy-id"
+
+
+@pytest.mark.parametrize("action", ["set", "clear"])
+def test_policy_comment_only_update_uses_comment_binding_without_policy_update(
+    monkeypatch,
+    action,
+):
+    workspace = PolicyWorkspace()
+    context = editor_context()
+    monkeypatch.setattr(
+        GPO, "_open_workspace", lambda *args, **kwargs: (workspace, runtime())
+    )
+    monkeypatch.setattr(GPO, "_recover_before_mutation", lambda *args: None)
+    commit = MagicMock(return_value={"changed": True})
+    monkeypatch.setattr(GPO, "_commit_external_once", commit)
+    comment = {"action": action, "target": "external"}
+    if action == "set":
+        comment["text"] = "comment only"
+
+    result = GPO.gpo_editor_policy_update.execute(
+        CommandHarness(context),
+        "Test GPO",
+        "user",
+        "policy-id",
+        {"comment": comment},
+        locales=["ru-RU"],
+    )
+
+    assert workspace.updates == []
+    if action == "set":
+        assert workspace.comments == [
+            ("user", "policy-id", "external", "comment only", ["en-US"])
+        ]
+        assert workspace.cleared_comments == []
+    else:
+        assert workspace.comments == []
+        assert workspace.cleared_comments == [
+            ("user", "policy-id", "external", ["en-US"])
+        ]
+    assert len(workspace.policy_reads) == 2
+    commit.assert_called_once()
+    assert result["policy"]["policy_id"] == "policy-id"
+
+
+@pytest.mark.parametrize(
+    ("comment", "field"),
+    [
+        ("not-an-object", "comment"),
+        ({"action": "set", "text": 7}, "comment.text"),
+        ({"action": "unknown"}, "comment.action"),
+    ],
+)
+def test_policy_update_rejects_invalid_comment_before_commit(
+    monkeypatch,
+    comment,
+    field,
+):
+    workspace = PolicyWorkspace()
+    context = editor_context()
+    monkeypatch.setattr(
+        GPO, "_open_workspace", lambda *args, **kwargs: (workspace, runtime())
+    )
+    monkeypatch.setattr(GPO, "_recover_before_mutation", lambda *args: None)
+    commit = MagicMock()
+    monkeypatch.setattr(GPO, "_commit_external_once", commit)
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_policy_update.execute(
+            CommandHarness(context),
+            "Test GPO",
+            "computer",
+            "policy-id",
+            {"comment": comment},
+            locales=["en-US"],
+        )
+
+    assert failure.value.category == "validation"
+    assert failure.value.field == field
+    commit.assert_not_called()
 
 
 def test_policy_mid_form_validation_failure_never_reaches_commit(monkeypatch):
