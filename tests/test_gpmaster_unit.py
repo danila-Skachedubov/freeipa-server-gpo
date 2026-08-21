@@ -2,6 +2,7 @@
 
 import importlib.util
 import ldap as python_ldap
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call
@@ -492,6 +493,7 @@ class MoveLdap:
     def __init__(self, chains):
         self.master = {"chainlist": list(chains)}
         self.modifications = []
+        self.error_handler_calls = 0
         self.chain_names = {
             str(CHAIN_DN): "primary",
             str(SECOND_CHAIN_DN): "fallback",
@@ -505,6 +507,16 @@ class MoveLdap:
     @staticmethod
     def encode(value):
         return str(value).encode()
+
+    @contextmanager
+    def error_handler(self):
+        self.error_handler_calls += 1
+        try:
+            yield
+        except python_ldap.SERVER_DOWN as exc:
+            raise errors.NetworkError(
+                uri="ldap://example.test", error="offline"
+            ) from exc
 
     def modify_s(self, dn, modifications):
         self.modifications.append((dn, modifications))
@@ -558,18 +570,19 @@ def test_move_operation_reorders_with_one_atomic_ldap_modify(options, expected):
         )
     ]
     assert ldap.master["chainlist"] == expected
+    assert ldap.error_handler_calls == 1
 
 
 def test_move_operation_atomic_modify_failure_preserves_original_chains():
     class FailingMoveLdap(MoveLdap):
         def modify_s(self, dn, modifications):
             self.modifications.append((dn, modifications))
-            raise RuntimeError("atomic modify failed")
+            raise python_ldap.SERVER_DOWN({"desc": "Server down"})
 
     backend = FailingMoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
     subject = _move_subject(backend)
 
-    with pytest.raises(RuntimeError, match="atomic modify failed"):
+    with pytest.raises(errors.NetworkError):
         GPMASTER.gpmaster_mod._do_move_operation(
             subject,
             backend,
@@ -580,6 +593,7 @@ def test_move_operation_atomic_modify_failure_preserves_original_chains():
 
     assert backend.master["chainlist"] == [CHAIN_DN, SECOND_CHAIN_DN]
     assert len(backend.modifications) == 1
+    assert backend.error_handler_calls == 1
 
 
 def test_move_operation_skips_ldap_updates_for_short_list():

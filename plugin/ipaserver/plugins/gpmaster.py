@@ -374,17 +374,18 @@ class gpmaster_mod(LDAPUpdate):
         if current_chains == original_chains:
             return
 
-        ldap.modify_s(
-            dn,
-            [
-                (ldap_module.MOD_DELETE, 'chainList', None),
-                (
-                    ldap_module.MOD_ADD,
-                    'chainList',
-                    [ldap.encode(value) for value in current_chains],
-                ),
-            ],
-        )
+        with ldap.error_handler():
+            ldap.modify_s(
+                dn,
+                [
+                    (ldap_module.MOD_DELETE, 'chainList', None),
+                    (
+                        ldap_module.MOD_ADD,
+                        'chainList',
+                        [ldap.encode(value) for value in current_chains],
+                    ),
+                ],
+            )
 
     def _validate_move_operations(self, ldap, dn, options):
         """Validate that only active chains can be moved."""

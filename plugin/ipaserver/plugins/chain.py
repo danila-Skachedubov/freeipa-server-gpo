@@ -728,17 +728,18 @@ class chain_mod(LDAPUpdate):
         if current_gplinks == original_gplinks:
             return
 
-        ldap.modify_s(
-            dn,
-            [
-                (ldap_module.MOD_DELETE, 'gpLink', None),
-                (
-                    ldap_module.MOD_ADD,
-                    'gpLink',
-                    [ldap.encode(value) for value in current_gplinks],
-                ),
-            ],
-        )
+        with ldap.error_handler():
+            ldap.modify_s(
+                dn,
+                [
+                    (ldap_module.MOD_DELETE, 'gpLink', None),
+                    (
+                        ldap_module.MOD_ADD,
+                        'gpLink',
+                        [ldap.encode(value) for value in current_gplinks],
+                    ),
+                ],
+            )
 
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
         """Standard operations only - move operations handled in execute."""

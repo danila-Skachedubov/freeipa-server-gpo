@@ -2,6 +2,7 @@
 
 import importlib.util
 import ldap as python_ldap
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call
@@ -1046,6 +1047,7 @@ class GpoMoveLdap:
     def __init__(self, gplinks):
         self.chain = {"gplink": list(gplinks)}
         self.modifications = []
+        self.error_handler_calls = 0
         self.gpo_entries = {
             str(GPO_DN): Entry(
                 GPO_DN,
@@ -1067,6 +1069,16 @@ class GpoMoveLdap:
     @staticmethod
     def encode(value):
         return str(value).encode()
+
+    @contextmanager
+    def error_handler(self):
+        self.error_handler_calls += 1
+        try:
+            yield
+        except python_ldap.SERVER_DOWN as exc:
+            raise errors.NetworkError(
+                uri="ldap://example.test", error="offline"
+            ) from exc
 
     def modify_s(self, dn, modifications):
         self.modifications.append((dn, modifications))
@@ -1113,17 +1125,18 @@ def test_move_gpo_reorders_links(options, expected):
         )
     ]
     assert ldap.chain["gplink"] == expected
+    assert ldap.error_handler_calls == 1
 
 
 def test_move_gpo_atomic_modify_failure_preserves_original_links():
     class FailingMoveLdap(GpoMoveLdap):
         def modify_s(self, dn, modifications):
             self.modifications.append((dn, modifications))
-            raise RuntimeError("atomic modify failed")
+            raise python_ldap.SERVER_DOWN({"desc": "Server down"})
 
     backend = FailingMoveLdap([GPO_DN, SECOND_GPO_DN])
 
-    with pytest.raises(RuntimeError, match="atomic modify failed"):
+    with pytest.raises(errors.NetworkError):
         CHAIN.chain_mod._do_move_operation(
             SimpleNamespace(),
             backend,
@@ -1134,6 +1147,7 @@ def test_move_gpo_atomic_modify_failure_preserves_original_links():
 
     assert backend.chain["gplink"] == [GPO_DN, SECOND_GPO_DN]
     assert len(backend.modifications) == 1
+    assert backend.error_handler_calls == 1
 
 
 def test_empty_moveup_gpo_does_not_override_movedown_direction():
