@@ -713,10 +713,7 @@ class chain_find(LDAPSearch):
 
     msg_summary = ngettext('%(count)d Group Policy Chain matched',
                           '%(count)d Group Policy Chains matched', 0)
-
-    def __init__(self, *args, **kwargs):
-        super(chain_find, self).__init__(*args, **kwargs)
-        self._ordered_entries = None
+    sort_result_entries = False
 
     def args_options_2_entry(self, *args, **options):
         """Convert search options to LDAP entry attributes for filtering."""
@@ -729,37 +726,46 @@ class chain_find(LDAPSearch):
 
     def post_callback(self, ldap, entries, truncated, *args, **options):
         """Sort chains by GPMaster order."""
+        raw = options.get('raw', False)
+        active_filter_requested = 'active' in options
+        gpmaster_chains = []
 
-        if not options.get('raw', False) and entries:
-            for entry_attrs in entries:
-                entry_attrs['_chain_find_processed'] = True
-
+        if entries and (not raw or active_filter_requested):
             try:
                 gpmaster_result = api.Command.gpmaster_show()
                 gpmaster_chains = gpmaster_result['result'].get('chainlist', [])
             except Exception:
+                if active_filter_requested:
+                    raise
                 gpmaster_chains = []
 
-            self.obj._convert_groups(entries, ldap)
-            self.obj._convert_gpos(entries, ldap)
-
+        if entries and (not raw or active_filter_requested):
             for entry_attrs in entries:
                 chain_name = entry_attrs.get('cn', [None])
                 if chain_name and isinstance(chain_name, list):
                     chain_name = chain_name[0]
-                    entry_attrs['active'] = [chain_name in gpmaster_chains]
-                else:
-                    entry_attrs['active'] = [False]
+                is_active = bool(chain_name and chain_name in gpmaster_chains)
 
-                entry_attrs.pop('gplink_gpo', None)
+                if not raw:
+                    entry_attrs['active'] = [is_active]
 
+        if active_filter_requested:
+            requested_active = bool(options['active'])
+            entries[:] = [
+                entry for entry in entries
+                if bool(
+                    entry.get('cn') and
+                    entry.get('cn')[0] in gpmaster_chains
+                ) == requested_active
+            ]
+
+        if not raw:
             ordered_entries = self._order_by_gpmaster(entries, gpmaster_chains)
         else:
-            ordered_entries = entries
+            ordered_entries = list(entries)
 
         entries.clear()
         entries.extend(ordered_entries)
-        self._ordered_entries = entries[:]
 
         return truncated
 
@@ -795,30 +801,6 @@ class chain_find(LDAPSearch):
                 'truncated': False,
                 'summary': self.msg_summary % {'count': 0}
             }
-        except Exception as e:
-            logger.error("Error in chain_find: %s", str(e))
-            return {
-                'result': [],
-                'count': 0,
-                'truncated': False,
-                'summary': self.msg_summary % {'count': 0}
-            }
-
-        if (self._ordered_entries and 'result' in result and isinstance(result['result'], list)):
-            result_entries = {}
-            for entry in result['result']:
-                cn = entry.get('cn', [])
-                if cn and isinstance(cn, list):
-                    result_entries[cn[0]] = entry
-
-            ordered_result = []
-            for ordered_entry in self._ordered_entries:
-                cn = ordered_entry.get('cn', [])
-                if cn and isinstance(cn, list) and cn[0] in result_entries:
-                    ordered_result.append(result_entries[cn[0]])
-
-            result['result'] = ordered_result
-            result['count'] = len(ordered_result)
 
         return result
 

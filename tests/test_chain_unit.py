@@ -1374,3 +1374,327 @@ def test_chain_mod_standard_modifications_skip_empty_values():
 
     assert entry_attrs == {}
     obj.convert_names_to_dns.assert_not_called()
+
+
+class ChainFindHarness(CHAIN.chain_find):
+    @property
+    def obj(self):
+        return self._test_obj
+
+
+def _chain_find_harness(obj=None):
+    subject = object.__new__(ChainFindHarness)
+    object.__setattr__(subject, "_test_obj", obj or SimpleNamespace())
+    return subject
+
+
+def test_chain_find_converts_filters_and_removes_computed_active(
+    monkeypatch,
+):
+    converted_options = []
+
+    def convert_names_to_dns(options, strict):
+        converted_options.append((dict(options), strict))
+        return {"usergroup": str(USER_GROUP_DN)}
+
+    obj = SimpleNamespace(convert_names_to_dns=MagicMock(
+        side_effect=convert_names_to_dns
+    ))
+    subject = _chain_find_harness(obj)
+    base_calls = []
+
+    def base_args_options(instance, *args, **options):
+        base_calls.append((instance, args, options))
+        return options
+
+    monkeypatch.setattr(
+        CHAIN.LDAPSearch,
+        "args_options_2_entry",
+        base_args_options,
+    )
+
+    result = CHAIN.chain_find.args_options_2_entry(
+        subject,
+        "criteria",
+        usergroup="users",
+        active=True,
+        sizelimit=10,
+    )
+
+    assert result == {
+        "usergroup": str(USER_GROUP_DN),
+        "sizelimit": 10,
+    }
+    assert converted_options == [
+        ({"usergroup": "users", "sizelimit": 10}, False)
+    ]
+    assert base_calls == [
+        (
+            subject,
+            ("criteria",),
+            {"usergroup": str(USER_GROUP_DN), "sizelimit": 10},
+        )
+    ]
+
+
+def _chain_find_post_subject():
+    obj = SimpleNamespace(
+        _convert_groups=MagicMock(),
+        _convert_gpos=MagicMock(),
+    )
+    subject = SimpleNamespace(obj=obj)
+    subject._order_by_gpmaster = lambda entries, order: (
+        CHAIN.chain_find._order_by_gpmaster(subject, entries, order)
+    )
+    return subject, obj
+
+
+def test_chain_find_post_callback_converts_marks_and_orders(monkeypatch):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": ["second", "first"]}
+    }
+    entries = [
+        {"cn": ["third"]},
+        {"cn": ["first"]},
+        {"cn": ["second"]},
+        {"cn": ["alpha"]},
+    ]
+    subject, obj = _chain_find_post_subject()
+    ldap = MagicMock()
+
+    result = CHAIN.chain_find.post_callback(
+        subject,
+        ldap,
+        entries,
+        True,
+    )
+
+    assert result is True
+    assert [entry["cn"][0] for entry in entries] == [
+        "second",
+        "first",
+        "alpha",
+        "third",
+    ]
+    assert [entry["active"] for entry in entries] == [
+        [True],
+        [True],
+        [False],
+        [False],
+    ]
+    assert all("_chain_find_processed" not in entry for entry in entries)
+    obj._convert_groups.assert_not_called()
+    obj._convert_gpos.assert_not_called()
+
+
+def test_chain_find_post_callback_raw_mode_preserves_entries(monkeypatch):
+    commands = _command_api(monkeypatch)
+    entries = [
+        {"cn": ["second"], "gplink": [str(SECOND_GPO_DN)]},
+        {"cn": ["first"], "gplink": [str(GPO_DN)]},
+    ]
+    expected = [dict(entry) for entry in entries]
+    subject, obj = _chain_find_post_subject()
+
+    result = CHAIN.chain_find.post_callback(
+        subject,
+        MagicMock(),
+        entries,
+        False,
+        raw=True,
+    )
+
+    assert result is False
+    assert entries == expected
+    obj._convert_groups.assert_not_called()
+    obj._convert_gpos.assert_not_called()
+    commands.gpmaster_show.assert_not_called()
+
+
+def test_chain_find_post_callback_uses_inactive_fallback_on_gpmaster_error(
+    monkeypatch,
+):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.side_effect = RuntimeError("LDAP unavailable")
+    entries = [{"cn": ["second"]}, {"cn": ["first"]}]
+    subject, _obj = _chain_find_post_subject()
+
+    CHAIN.chain_find.post_callback(
+        subject,
+        MagicMock(),
+        entries,
+        False,
+    )
+
+    assert [entry["cn"][0] for entry in entries] == ["first", "second"]
+    assert [entry["active"] for entry in entries] == [[False], [False]]
+
+
+def test_chain_find_post_callback_handles_empty_result(monkeypatch):
+    commands = _command_api(monkeypatch)
+    entries = []
+    subject, obj = _chain_find_post_subject()
+
+    result = CHAIN.chain_find.post_callback(
+        subject,
+        MagicMock(),
+        entries,
+        False,
+    )
+
+    assert result is False
+    assert entries == []
+    obj._convert_groups.assert_not_called()
+    commands.gpmaster_show.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("requested_active", "expected_names"),
+    [(True, ["second"]), (False, ["first", "third"])],
+)
+def test_chain_find_post_callback_filters_computed_active_state(
+    monkeypatch,
+    requested_active,
+    expected_names,
+):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": ["second"]}
+    }
+    entries = [
+        {"cn": ["third"]},
+        {"cn": ["second"]},
+        {"cn": ["first"]},
+    ]
+    subject, _obj = _chain_find_post_subject()
+
+    CHAIN.chain_find.post_callback(
+        subject,
+        MagicMock(),
+        entries,
+        False,
+        active=requested_active,
+    )
+
+    assert [entry["cn"][0] for entry in entries] == expected_names
+    assert all(entry["active"] == [requested_active] for entry in entries)
+
+
+def test_chain_find_active_filter_propagates_gpmaster_failure(monkeypatch):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.side_effect = RuntimeError("LDAP unavailable")
+    entries = [{"cn": ["first"]}]
+    subject, _obj = _chain_find_post_subject()
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        CHAIN.chain_find.post_callback(
+            subject,
+            MagicMock(),
+            entries,
+            False,
+            active=True,
+        )
+
+
+def test_chain_find_raw_active_filter_preserves_raw_values(monkeypatch):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": ["second"]}
+    }
+    entries = [
+        {"cn": ["first"], "gplink": [str(GPO_DN)]},
+        {"cn": ["second"], "gplink": [str(SECOND_GPO_DN)]},
+    ]
+    subject, obj = _chain_find_post_subject()
+
+    CHAIN.chain_find.post_callback(
+        subject,
+        MagicMock(),
+        entries,
+        False,
+        raw=True,
+        active=True,
+    )
+
+    assert entries == [
+        {"cn": ["second"], "gplink": [str(SECOND_GPO_DN)]}
+    ]
+    obj._convert_groups.assert_not_called()
+    obj._convert_gpos.assert_not_called()
+
+
+def test_chain_find_order_places_active_first_and_sorts_inactive():
+    entries = [
+        {"cn": ["zulu"]},
+        {"cn": ["first"]},
+        {"cn": ["alpha"]},
+        {"cn": ["second"]},
+    ]
+
+    result = CHAIN.chain_find._order_by_gpmaster(
+        SimpleNamespace(),
+        entries,
+        ["second", "first"],
+    )
+
+    assert [entry["cn"][0] for entry in result] == [
+        "second",
+        "first",
+        "alpha",
+        "zulu",
+    ]
+
+
+def test_chain_find_execute_preserves_callback_order_without_shared_state(
+    monkeypatch,
+):
+    base_entries = [
+        {"cn": ["second"], "description": ["Second"]},
+        {"cn": ["first"], "description": ["First"]},
+    ]
+    base_result = {
+        "result": base_entries,
+        "count": 2,
+        "truncated": False,
+    }
+
+    def base_execute(instance, *args, **options):
+        return base_result
+
+    monkeypatch.setattr(CHAIN.LDAPSearch, "execute", base_execute)
+    subject = _chain_find_harness()
+
+    result = CHAIN.chain_find.execute(subject, criteria="all")
+
+    assert CHAIN.chain_find.sort_result_entries is False
+    assert result["result"] == base_entries
+    assert result["count"] == 2
+
+
+def test_chain_find_execute_returns_empty_result_for_not_found(monkeypatch):
+    def base_execute(instance, *args, **options):
+        raise errors.NotFound(reason="missing")
+
+    monkeypatch.setattr(CHAIN.LDAPSearch, "execute", base_execute)
+    subject = _chain_find_harness()
+
+    result = CHAIN.chain_find.execute(subject)
+
+    assert result == {
+        "result": [],
+        "count": 0,
+        "truncated": False,
+        "summary": subject.msg_summary % {"count": 0},
+    }
+
+
+def test_chain_find_execute_propagates_unexpected_backend_error(monkeypatch):
+    def base_execute(instance, *args, **options):
+        raise RuntimeError("LDAP unavailable")
+
+    monkeypatch.setattr(CHAIN.LDAPSearch, "execute", base_execute)
+    subject = _chain_find_harness()
+
+    with pytest.raises(RuntimeError, match="LDAP unavailable"):
+        CHAIN.chain_find.execute(subject)
