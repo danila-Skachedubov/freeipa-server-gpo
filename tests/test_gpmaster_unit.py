@@ -426,6 +426,38 @@ def test_validate_move_rejects_inactive_chain(option_name, error_name):
     assert failure.value.name == error_name
 
 
+def test_validate_move_rejects_conflicting_directions():
+    ldap = MoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
+
+    with pytest.raises(errors.ValidationError) as failure:
+        GPMASTER.gpmaster_mod._validate_move_operations(
+            SimpleNamespace(),
+            ldap,
+            MASTER_DN,
+            {
+                "moveup_chain": "primary",
+                "movedown_chain": "fallback",
+            },
+        )
+
+    assert failure.value.name == "move_chain"
+
+
+def test_empty_moveup_option_does_not_override_movedown_direction():
+    ldap = MoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
+    subject = _move_subject(ldap)
+    options = {"moveup_chain": (), "movedown_chain": "primary"}
+
+    GPMASTER.gpmaster_mod._do_move_operation(
+        subject, ldap, MASTER_DN, (), options
+    )
+
+    assert ldap.updated_chainlists == [
+        [],
+        [str(SECOND_CHAIN_DN), str(CHAIN_DN)],
+    ]
+
+
 def _command_subject(entry=None):
     ldap = MagicMock()
     ldap.get_entry.return_value = entry or {}

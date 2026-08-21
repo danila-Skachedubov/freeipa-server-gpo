@@ -271,7 +271,7 @@ class gpmaster_mod(LDAPUpdate):
             return
 
         chain_names = options.get('moveup_chain') or options.get('movedown_chain')
-        direction = 'up' if 'moveup_chain' in options else 'down'
+        direction = 'up' if options.get('moveup_chain') else 'down'
 
         if isinstance(chain_names, str):
             chain_names = [chain_names]
@@ -313,6 +313,14 @@ class gpmaster_mod(LDAPUpdate):
 
     def _validate_move_operations(self, ldap, dn, options):
         """Validate that only active chains can be moved."""
+        if options.get('moveup_chain') and options.get('movedown_chain'):
+            raise errors.ValidationError(
+                name='move_chain',
+                error=_(
+                    "Cannot move chains up and down in the same operation"
+                )
+            )
+
         entry = ldap.get_entry(dn, attrs_list=['chainlist'])
         current_chains = [str(chain_dn) for chain_dn in entry.get('chainlist', [])]
 
