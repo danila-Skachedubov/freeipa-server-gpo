@@ -277,10 +277,19 @@ class chain(LDAPObject):
 
     def resolve_object_name(self, attr_name, name, strict=False):
         """Universal resolver for names to DN."""
-        if name.startswith(('cn=', 'CN=')):
-            return name
-
         try:
+            if is_dn(name):
+                if strict:
+                    if attr_name in OBJECT_TYPE_MAPPING:
+                        attrs = [OBJECT_TYPE_MAPPING[attr_name][1]]
+                    elif attr_name == 'gplink':
+                        attrs = GP_LOOKUP_ATTRIBUTES
+                    else:
+                        attrs = ['cn']
+                    ldap = self.api.Backend.ldap2
+                    ldap.get_entry(DN(name), attrs_list=attrs)
+                return name
+
             if attr_name in OBJECT_TYPE_MAPPING:
                 obj_type, name_attr = OBJECT_TYPE_MAPPING[attr_name]
                 group_dn = self.api.Object[obj_type].get_dn(name)

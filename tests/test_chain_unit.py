@@ -2,9 +2,11 @@
 
 import importlib.util
 from pathlib import Path
-from unittest.mock import MagicMock
+from types import SimpleNamespace
+from unittest.mock import MagicMock, call
 
 import pytest
+from ipalib import errors
 from ipapython.dn import DN
 
 
@@ -19,6 +21,9 @@ SPEC.loader.exec_module(CHAIN)
 BASEDN = DN(("dc", "example"), ("dc", "test"))
 FIRST_DN = DN(("cn", "first"), ("cn", "groups"), BASEDN)
 SECOND_DN = DN(("cn", "second"), ("cn", "groups"), BASEDN)
+USER_GROUP_DN = DN(("cn", "users"), ("cn", "groups"), BASEDN)
+COMPUTER_GROUP_DN = DN(("cn", "workstations"), ("cn", "hostgroups"), BASEDN)
+GPO_DN = DN(("cn", "policy-guid"), ("cn", "Policies"), ("cn", "System"), BASEDN)
 
 
 class Entry(dict):
@@ -193,3 +198,235 @@ def test_convert_dns_in_entries_updates_fields_and_runs_extra_processing(
         ["Second policy", "unresolved"],
     )
     assert extra_processing.call_args_list[1].args == (entries[1], [])
+
+
+def _chain_subject():
+    ldap = MagicMock()
+    group = MagicMock()
+    hostgroup = MagicMock()
+    subject = SimpleNamespace(
+        api=SimpleNamespace(
+            Backend=SimpleNamespace(ldap2=ldap),
+            Object={"group": group, "hostgroup": hostgroup},
+        ),
+        find_gp_by_displayname=MagicMock(),
+    )
+    return subject, ldap, group, hostgroup
+
+
+@pytest.mark.parametrize(
+    ("attr_name", "name", "object_name", "resolved_dn"),
+    [
+        ("usergroup", "users", "group", USER_GROUP_DN),
+        ("computergroup", "workstations", "hostgroup", COMPUTER_GROUP_DN),
+    ],
+)
+def test_resolve_object_name_uses_freeipa_group_object(
+    attr_name,
+    name,
+    object_name,
+    resolved_dn,
+):
+    subject, ldap, group, hostgroup = _chain_subject()
+    objects = {"group": group, "hostgroup": hostgroup}
+    objects[object_name].get_dn.return_value = resolved_dn
+
+    result = CHAIN.chain.resolve_object_name(subject, attr_name, name)
+
+    assert result == str(resolved_dn)
+    objects[object_name].get_dn.assert_called_once_with(name)
+    ldap.get_entry.assert_not_called()
+
+
+def test_resolve_object_name_strict_mode_verifies_group_in_ldap():
+    subject, ldap, group, _hostgroup = _chain_subject()
+    group.get_dn.return_value = USER_GROUP_DN
+
+    result = CHAIN.chain.resolve_object_name(
+        subject,
+        "usergroup",
+        "users",
+        strict=True,
+    )
+
+    assert result == str(USER_GROUP_DN)
+    ldap.get_entry.assert_called_once_with(USER_GROUP_DN, attrs_list=["cn"])
+
+
+def test_resolve_object_name_delegates_gpo_display_name_lookup():
+    subject, ldap, _group, _hostgroup = _chain_subject()
+    subject.find_gp_by_displayname.return_value = GPO_DN
+
+    result = CHAIN.chain.resolve_object_name(
+        subject,
+        "gplink",
+        "Workstation policy",
+        strict=True,
+    )
+
+    assert result == str(GPO_DN)
+    subject.find_gp_by_displayname.assert_called_once_with("Workstation policy")
+    ldap.get_entry.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("attr_name", "dn", "attrs"),
+    [
+        ("usergroup", USER_GROUP_DN, ["cn"]),
+        ("computergroup", COMPUTER_GROUP_DN, ["cn"]),
+        ("gplink", GPO_DN, ["displayName", "cn"]),
+    ],
+)
+def test_strict_explicit_dn_is_verified_in_ldap(attr_name, dn, attrs):
+    subject, ldap, group, hostgroup = _chain_subject()
+
+    result = CHAIN.chain.resolve_object_name(
+        subject,
+        attr_name,
+        str(dn),
+        strict=True,
+    )
+
+    assert result == str(dn)
+    ldap.get_entry.assert_called_once_with(dn, attrs_list=attrs)
+    group.get_dn.assert_not_called()
+    hostgroup.get_dn.assert_not_called()
+    subject.find_gp_by_displayname.assert_not_called()
+
+
+def test_non_strict_explicit_dn_is_preserved_without_ldap_lookup():
+    subject, ldap, group, hostgroup = _chain_subject()
+
+    result = CHAIN.chain.resolve_object_name(
+        subject,
+        "usergroup",
+        str(USER_GROUP_DN).upper(),
+    )
+
+    assert result == str(USER_GROUP_DN).upper()
+    ldap.get_entry.assert_not_called()
+    group.get_dn.assert_not_called()
+    hostgroup.get_dn.assert_not_called()
+
+
+def test_resolve_object_name_preserves_missing_name_in_non_strict_mode():
+    subject, _ldap, group, _hostgroup = _chain_subject()
+    group.get_dn.side_effect = errors.NotFound(reason="missing")
+
+    assert CHAIN.chain.resolve_object_name(
+        subject,
+        "usergroup",
+        "missing",
+    ) == "missing"
+
+
+def test_resolve_object_name_reports_missing_name_in_strict_mode():
+    subject, _ldap, group, _hostgroup = _chain_subject()
+    group.get_dn.side_effect = errors.NotFound(reason="missing")
+
+    with pytest.raises(errors.NotFound, match="Group 'missing' not found"):
+        CHAIN.chain.resolve_object_name(
+            subject,
+            "usergroup",
+            "missing",
+            strict=True,
+        )
+
+
+def test_resolve_object_name_translates_backend_error_in_strict_mode():
+    subject, _ldap, group, _hostgroup = _chain_subject()
+    group.get_dn.side_effect = RuntimeError("LDAP unavailable")
+
+    with pytest.raises(errors.ValidationError) as failure:
+        CHAIN.chain.resolve_object_name(
+            subject,
+            "usergroup",
+            "users",
+            strict=True,
+        )
+
+    assert failure.value.name == "usergroup"
+    assert "LDAP unavailable" in str(failure.value)
+
+
+@pytest.mark.parametrize(
+    ("gplinks", "expected_names"),
+    [
+        ("first", ["first"]),
+        (("first", "second"), ["first", "second"]),
+        (["first", "second"], ["first", "second"]),
+    ],
+)
+def test_convert_names_to_dns_normalizes_gplink_values(
+    gplinks,
+    expected_names,
+):
+    subject = SimpleNamespace(resolve_object_name=MagicMock())
+    subject.resolve_object_name.side_effect = (
+        lambda attr_name, name, strict: "dn:{}".format(name)
+    )
+
+    result = CHAIN.chain.convert_names_to_dns(
+        subject,
+        {
+            "usergroup": "users",
+            "computergroup": "workstations",
+            "gplink": gplinks,
+        },
+        strict=True,
+    )
+
+    assert result == {
+        "usergroup": "dn:users",
+        "computergroup": "dn:workstations",
+        "gplink": ["dn:{}".format(name) for name in expected_names],
+    }
+    assert subject.resolve_object_name.call_args_list == [
+        call("usergroup", "users", True),
+        call("computergroup", "workstations", True),
+        *[call("gplink", name, True) for name in expected_names],
+    ]
+
+
+def test_convert_names_to_dns_ignores_missing_and_empty_options():
+    subject = SimpleNamespace(resolve_object_name=MagicMock())
+
+    assert CHAIN.chain.convert_names_to_dns(
+        subject,
+        {"usergroup": None, "computergroup": "", "gplink": ()},
+    ) == {}
+    subject.resolve_object_name.assert_not_called()
+
+
+def test_convert_groups_uses_cn_for_both_group_fields(monkeypatch):
+    converter = MagicMock()
+    entries = [{"usergroup": [str(USER_GROUP_DN)]}]
+    ldap = MagicMock()
+    monkeypatch.setattr(CHAIN, "convert_dns_in_entries", converter)
+
+    CHAIN.chain._convert_groups(SimpleNamespace(), entries, ldap)
+
+    converter.assert_called_once_with(
+        entries,
+        ldap,
+        attrs_by_field={"usergroup": ["cn"], "computergroup": ["cn"]},
+    )
+
+
+def test_convert_gpos_populates_association_field(monkeypatch):
+    entries = [{"gplink": [str(GPO_DN)]}]
+    ldap = MagicMock()
+    monkeypatch.setattr(
+        CHAIN,
+        "resolve_dns_to_names",
+        MagicMock(return_value={str(GPO_DN): "Workstation policy"}),
+    )
+
+    CHAIN.chain._convert_gpos(SimpleNamespace(), entries, ldap)
+
+    assert entries == [
+        {
+            "gplink": ["Workstation policy"],
+            "gplink_gpo": ["Workstation policy"],
+        }
+    ]
