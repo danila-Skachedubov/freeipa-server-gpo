@@ -161,6 +161,20 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
         return result;
     }
 
+    function executeAndRemember(method, args, options) {
+        var generation = editorOpenGeneration;
+        var displayName = selectedDisplayName;
+        return execute(method, args, options).then(function(result) {
+            if (
+                generation === editorOpenGeneration
+                && displayName === selectedDisplayName
+            ) {
+                rememberEnvelope(result);
+            }
+            return result;
+        });
+    }
+
     function initialize(displayName) {
         var generation = ++editorOpenGeneration;
         selectedDisplayName = displayName ? String(displayName) : null;
@@ -199,9 +213,9 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
     }
 
     function policyUpdate(scope, policyId, request) {
-        return execute("editor_policy_update", [scope, policyId], withLocales({
+        return executeAndRemember("editor_policy_update", [scope, policyId], withLocales({
             request: clone(request || {})
-        })).then(rememberEnvelope);
+        }));
     }
 
     function preferenceDocuments() {
@@ -219,21 +233,21 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
     }
 
     function preferenceCreate(scope, kind, request) {
-        return execute("editor_preference_create", [scope, kind], {
+        return executeAndRemember("editor_preference_create", [scope, kind], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function preferenceUpdate(scope, kind, request) {
-        return execute("editor_preference_update", [scope, kind], {
+        return executeAndRemember("editor_preference_update", [scope, kind], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function preferenceDelete(scope, kind, identity) {
-        return execute("editor_preference_delete", [scope, kind], {
+        return executeAndRemember("editor_preference_delete", [scope, kind], {
             request: { identity: clone(identity) }
-        }).then(rememberEnvelope);
+        });
     }
 
     function scriptsShow(scope, event) {
@@ -245,61 +259,61 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
     }
 
     function scriptEntryAdd(scope, event, request) {
-        return execute("editor_script_entry_add", [scope, event], {
+        return executeAndRemember("editor_script_entry_add", [scope, event], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function scriptEntryUpdate(scope, event, request) {
-        return execute("editor_script_entry_update", [scope, event], {
+        return executeAndRemember("editor_script_entry_update", [scope, event], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function scriptEntryRemove(scope, event, request) {
-        return execute("editor_script_entry_remove", [scope, event], {
+        return executeAndRemember("editor_script_entry_remove", [scope, event], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function scriptEntriesReorder(scope, event, request) {
-        return execute("editor_script_entries_reorder", [scope, event], {
+        return executeAndRemember("editor_script_entries_reorder", [scope, event], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function scriptOrderUpdate(scope, event, request) {
-        return execute("editor_script_order_update", [scope, event], {
+        return executeAndRemember("editor_script_order_update", [scope, event], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function scriptAssetUpload(scope, event, request) {
-        return execute("editor_script_asset_upload", [scope, event], {
+        return executeAndRemember("editor_script_asset_upload", [scope, event], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function scriptUploadAndAdd(scope, event, request) {
-        return execute("editor_script_upload_and_add", [scope, event], {
+        return executeAndRemember("editor_script_upload_and_add", [scope, event], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function scriptAssetReplace(scope, event, request) {
-        return execute("editor_script_asset_replace", [scope, event], {
+        return executeAndRemember("editor_script_asset_replace", [scope, event], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function scriptAssetDelete(scope, event, request) {
-        return execute("editor_script_asset_delete", [scope, event], {
+        return executeAndRemember("editor_script_asset_delete", [scope, event], {
             request: clone(request || {})
-        }).then(rememberEnvelope);
+        });
     }
 
     function reconcile() {
-        return execute("editor_reconcile", [], {}).then(rememberEnvelope);
+        return executeAndRemember("editor_reconcile", [], {});
     }
 
     return {

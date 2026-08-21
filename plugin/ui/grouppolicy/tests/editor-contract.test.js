@@ -717,6 +717,45 @@ test('API initialize keeps the newest GPO cached when an older request resolves 
     assert.equal(API.getOpenResult().gpo.displayname, 'New policy');
 });
 
+test('API ignores an old mutation envelope after another GPO is initialized', async () => {
+    const calls = [];
+    const rpc = {
+        command(spec) {
+            calls.push(spec);
+            return { execute() {} };
+        }
+    };
+    const API = loadAmd('js/util/API.js', {
+        'freeipa/ipa': { api_version: '2.0' },
+        'freeipa/rpc': rpc,
+        '../locales/translations': { getLanguage: () => 'en' }
+    });
+
+    const oldOpen = API.initialize('Old policy');
+    calls[0].on_success({
+        result: { result: { gpo: { displayname: 'Old policy' } } }
+    });
+    await oldOpen;
+
+    const oldUpdate = API.policyUpdate('computer', 'opaque-policy', {
+        state: 'enabled'
+    });
+    const newOpen = API.initialize('New policy');
+    calls[2].on_success({
+        result: { result: { gpo: { displayname: 'New policy' } } }
+    });
+    await newOpen;
+
+    calls[1].on_success({
+        result: { result: { gpo: { displayname: 'Old policy' } } }
+    });
+    const oldResult = await oldUpdate;
+
+    assert.equal(oldResult.gpo.displayname, 'Old policy');
+    assert.equal(API.getDisplayName(), 'New policy');
+    assert.equal(API.getOpenResult().gpo.displayname, 'New policy');
+});
+
 test('scripts API mirrors every RPC without creating trusted client path state', async () => {
     const calls = [];
     const rpc = {
