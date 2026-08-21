@@ -379,15 +379,9 @@ class chain_toggle_base(Command):
                 )
 
             if enable:
-                try:
-                    api.Command.gpmaster_mod(add_chain=[cn])
-                except Exception:
-                    pass
+                api.Command.gpmaster_mod(add_chain=[cn])
             else:
-                try:
-                    api.Command.gpmaster_mod(remove_chain=[cn])
-                except Exception:
-                    pass
+                api.Command.gpmaster_mod(remove_chain=[cn])
 
             updated_chain = api.Command.chain_show(cn)
             return {'result': updated_chain['result']}

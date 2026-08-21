@@ -430,3 +430,239 @@ def test_convert_gpos_populates_association_field(monkeypatch):
             "gplink_gpo": ["Workstation policy"],
         }
     ]
+
+
+def _command_api(monkeypatch):
+    commands = SimpleNamespace(
+        gpmaster_show=MagicMock(),
+        gpmaster_mod=MagicMock(),
+        chain_show=MagicMock(),
+    )
+    monkeypatch.setattr(CHAIN, "api", SimpleNamespace(Command=commands))
+    return commands
+
+
+@pytest.mark.parametrize(
+    ("active_chains", "expected"),
+    [
+        (["primary", "fallback"], True),
+        (["fallback"], False),
+        ([], False),
+    ],
+)
+def test_chain_show_sets_computed_active_state(
+    monkeypatch,
+    active_chains,
+    expected,
+):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": active_chains}
+    }
+    subject = SimpleNamespace(
+        obj=SimpleNamespace(convert_attribute_members=MagicMock())
+    )
+    ldap = MagicMock()
+    entry = {"cn": ["primary"]}
+
+    result = CHAIN.chain_show.post_callback(
+        subject,
+        ldap,
+        FIRST_DN,
+        entry,
+        "primary",
+    )
+
+    assert result == FIRST_DN
+    assert entry["active"] == [expected]
+    subject.obj.convert_attribute_members.assert_called_once_with(
+        entry,
+        "primary",
+    )
+    commands.gpmaster_show.assert_called_once_with()
+
+
+def test_chain_show_raw_mode_preserves_members(monkeypatch):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {"result": {"chainlist": []}}
+    subject = SimpleNamespace(
+        obj=SimpleNamespace(convert_attribute_members=MagicMock())
+    )
+    entry = {"gplink": [str(GPO_DN)]}
+
+    CHAIN.chain_show.post_callback(
+        subject,
+        MagicMock(),
+        FIRST_DN,
+        entry,
+        "primary",
+        raw=True,
+    )
+
+    assert entry == {"gplink": [str(GPO_DN)], "active": [False]}
+    subject.obj.convert_attribute_members.assert_not_called()
+
+
+def test_chain_show_defaults_to_inactive_when_gpmaster_is_unavailable(
+    monkeypatch,
+):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.side_effect = RuntimeError("LDAP unavailable")
+    subject = SimpleNamespace(
+        obj=SimpleNamespace(convert_attribute_members=MagicMock())
+    )
+    entry = {}
+
+    CHAIN.chain_show.post_callback(
+        subject,
+        MagicMock(),
+        FIRST_DN,
+        entry,
+        "primary",
+    )
+
+    assert entry["active"] == [False]
+
+
+def test_chain_show_without_key_does_not_query_gpmaster(monkeypatch):
+    commands = _command_api(monkeypatch)
+    subject = SimpleNamespace(
+        obj=SimpleNamespace(convert_attribute_members=MagicMock())
+    )
+    entry = {}
+
+    CHAIN.chain_show.post_callback(
+        subject,
+        MagicMock(),
+        FIRST_DN,
+        entry,
+    )
+
+    assert "active" not in entry
+    commands.gpmaster_show.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("enable", "current_chains", "modification"),
+    [
+        (True, ["fallback"], {"add_chain": ["primary"]}),
+        (False, ["primary", "fallback"], {"remove_chain": ["primary"]}),
+    ],
+)
+def test_toggle_chain_updates_gpmaster_and_returns_fresh_entry(
+    monkeypatch,
+    enable,
+    current_chains,
+    modification,
+):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": current_chains}
+    }
+    commands.chain_show.return_value = {
+        "result": {"cn": ["primary"], "active": [enable]}
+    }
+
+    result = CHAIN.chain_toggle_base._toggle_chain(
+        SimpleNamespace(),
+        "primary",
+        enable=enable,
+    )
+
+    assert result == {
+        "result": {"cn": ["primary"], "active": [enable]}
+    }
+    commands.gpmaster_mod.assert_called_once_with(**modification)
+    commands.chain_show.assert_called_once_with("primary")
+
+
+@pytest.mark.parametrize(
+    ("enable", "current_chains", "message"),
+    [
+        (True, ["primary"], "already enabled"),
+        (False, [], "already disabled"),
+    ],
+)
+def test_toggle_chain_rejects_state_that_is_already_set(
+    monkeypatch,
+    enable,
+    current_chains,
+    message,
+):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": current_chains}
+    }
+
+    with pytest.raises(errors.ValidationError, match=message):
+        CHAIN.chain_toggle_base._toggle_chain(
+            SimpleNamespace(),
+            "primary",
+            enable=enable,
+        )
+
+    commands.gpmaster_mod.assert_not_called()
+    commands.chain_show.assert_not_called()
+
+
+@pytest.mark.parametrize("enable", [True, False])
+def test_toggle_chain_propagates_gpmaster_update_failure(monkeypatch, enable):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {
+        "result": {"chainlist": [] if enable else ["primary"]}
+    }
+    commands.gpmaster_mod.side_effect = RuntimeError("update failed")
+
+    with pytest.raises(RuntimeError, match="update failed"):
+        CHAIN.chain_toggle_base._toggle_chain(
+            SimpleNamespace(),
+            "primary",
+            enable=enable,
+        )
+
+    commands.chain_show.assert_not_called()
+
+
+def test_toggle_chain_propagates_gpmaster_read_failure(monkeypatch):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.side_effect = RuntimeError("read failed")
+
+    with pytest.raises(RuntimeError, match="read failed"):
+        CHAIN.chain_toggle_base._toggle_chain(
+            SimpleNamespace(),
+            "primary",
+        )
+
+    commands.gpmaster_mod.assert_not_called()
+    commands.chain_show.assert_not_called()
+
+
+def test_toggle_chain_propagates_refresh_failure_after_update(monkeypatch):
+    commands = _command_api(monkeypatch)
+    commands.gpmaster_show.return_value = {"result": {"chainlist": []}}
+    commands.chain_show.side_effect = RuntimeError("refresh failed")
+
+    with pytest.raises(RuntimeError, match="refresh failed"):
+        CHAIN.chain_toggle_base._toggle_chain(
+            SimpleNamespace(),
+            "primary",
+            enable=True,
+        )
+
+    commands.gpmaster_mod.assert_called_once_with(add_chain=["primary"])
+
+
+@pytest.mark.parametrize(
+    ("command_class", "enable"),
+    [(CHAIN.chain_enable, True), (CHAIN.chain_disable, False)],
+)
+def test_toggle_commands_delegate_with_expected_direction(
+    command_class,
+    enable,
+):
+    subject = SimpleNamespace(_toggle_chain=MagicMock(return_value={"result": {}}))
+
+    result = command_class.execute(subject, "primary", ignored=True)
+
+    assert result == {"result": {}}
+    subject._toggle_chain.assert_called_once_with("primary", enable=enable)
