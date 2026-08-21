@@ -882,12 +882,13 @@ define([
             ];
         }
 
-        function fieldChecked(field) {
+        function fieldCheckedState(field) {
             var v = field && field.value;
-            if (v && typeof v === 'object') {
-                return v.value === true || v.value === 1;
-            }
-            return Boolean(v);
+            var raw = v && typeof v === 'object' ? v.value : v;
+            if (raw === null || raw === undefined) return null;
+            if (raw === true || raw === 1) return true;
+            if (raw === false || raw === 0) return false;
+            return Boolean(raw);
         }
 
         function fieldText(field) {
@@ -909,12 +910,15 @@ define([
             settingsItems().forEach(function(spec) {
                 var field = byId.get(spec.id);
                 var label = (field && field.label) || spec.label;
-                var value = fieldChecked(field);
+                var value = fieldCheckedState(field);
                 dataSlot.appendChild(createElement('div', {
                     className: 'preference__settings-item',
                     children: [
                         createElement('div', { className: 'preference__settings-name', text: label + ':' }),
-                        createElement('div', { className: 'preference__settings-value', text: value ? pt('yes') : pt('no') })
+                        createElement('div', {
+                            className: 'preference__settings-value',
+                            text: value === null ? '' : (value ? pt('yes') : pt('no'))
+                        })
                     ]
                 }).getElement());
             });
