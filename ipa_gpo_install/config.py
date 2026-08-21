@@ -31,6 +31,9 @@ GUID_PATTERN = re.compile(
     r'^\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}'
     r'-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}$'
 )
+DOMAIN_LABEL_PATTERN = re.compile(
+    r'^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$'
+)
 
 
 def is_valid_guid(guid):
@@ -38,10 +41,13 @@ def is_valid_guid(guid):
 
 
 def is_valid_domain(domain):
-    if not domain or '/' in domain or '\\' in domain or '..' in domain:
+    if not isinstance(domain, str) or not domain or len(domain) > 253:
         return False
     parts = domain.split('.')
-    return len(parts) >= 2 and all(p for p in parts)
+    return (
+        len(parts) >= 2
+        and all(DOMAIN_LABEL_PATTERN.fullmatch(part) for part in parts)
+    )
 
 def get_domain_sysvol_path(domain):
     return os.path.join(FREEIPA_SYSVOL_PATH, domain)
