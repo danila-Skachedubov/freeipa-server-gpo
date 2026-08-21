@@ -331,6 +331,64 @@ test('real element creator normalizes every class input into valid DOM tokens', 
     assert.equal(creator.getElement().className, 'gamma epsilon zeta theta iota');
 });
 
+test('resizable enforces live bounds and removes every listener on cleanup', () => {
+    function eventTarget() {
+        const listeners = new Map();
+        return {
+            listeners,
+            addEventListener(type, listener) {
+                listeners.set(type, listener);
+            },
+            removeEventListener(type, listener) {
+                if (listeners.get(type) === listener) listeners.delete(type);
+            },
+            dispatch(type, event = {}) {
+                const listener = listeners.get(type);
+                if (listener) listener(event);
+            }
+        };
+    }
+
+    const divider = eventTarget();
+    const documentTarget = eventTarget();
+    const document = Object.assign(documentTarget, {
+        body: { style: { cursor: '', userSelect: '' } }
+    });
+    const panel = { offsetWidth: 100, style: {} };
+    const container = { offsetWidth: 300 };
+    const module = loadAmd('js/util/resizable.js', {}, { document });
+    const cleanup = module.resizable(divider, panel, container, { minWidth: 80 });
+    let prevented = 0;
+
+    assert.deepEqual([...divider.listeners.keys()], ['mousedown']);
+    assert.deepEqual([...document.listeners.keys()].sort(), ['mousemove', 'mouseup']);
+
+    divider.dispatch('mousedown', {
+        clientX: 10,
+        preventDefault() { prevented += 1; }
+    });
+    assert.equal(document.body.style.cursor, 'col-resize');
+    assert.equal(document.body.style.userSelect, 'none');
+    assert.equal(prevented, 1);
+
+    document.dispatch('mousemove', { clientX: -20 });
+    assert.equal(panel.style.width, undefined);
+    document.dispatch('mousemove', { clientX: 150 });
+    assert.equal(panel.style.width, '240px');
+
+    container.offsetWidth = 220;
+    document.dispatch('mousemove', { clientX: 80 });
+    assert.equal(panel.style.width, '170px');
+    document.dispatch('mouseup');
+    assert.equal(document.body.style.cursor, '');
+    assert.equal(document.body.style.userSelect, '');
+
+    cleanup();
+    cleanup();
+    assert.equal(divider.listeners.size, 0);
+    assert.equal(document.listeners.size, 0);
+});
+
 test('API sends only displayname, opaque ids, structured request, and request locales', async () => {
     const calls = [];
     const rpc = {
