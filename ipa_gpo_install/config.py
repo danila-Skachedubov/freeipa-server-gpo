@@ -34,7 +34,7 @@ GUID_PATTERN = re.compile(
 
 
 def is_valid_guid(guid):
-    return bool(GUID_PATTERN.match(guid))
+    return isinstance(guid, str) and GUID_PATTERN.fullmatch(guid) is not None
 
 
 def is_valid_domain(domain):
