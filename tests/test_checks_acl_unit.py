@@ -227,6 +227,41 @@ def test_policies_access_rejects_representative_gpo_acl(
     assert check_directory.call_args_list[1].args == (policy,)
 
 
+def test_policies_access_rejects_acl_failure_in_second_gpo(
+    monkeypatch, tmp_path
+):
+    policies = tmp_path / "Policies"
+    first = policies / "gpo-a"
+    second = policies / "gpo-b"
+    first.mkdir(parents=True)
+    second.mkdir()
+    checker = _checker_for_policies(monkeypatch, policies)
+    check_directory = MagicMock(side_effect=[True, True, False])
+    monkeypatch.setattr(checker, "_check_editor_directory", check_directory)
+
+    assert checker.check_policies_editor_access() is False
+    assert [call.args[0] for call in check_directory.call_args_list] == [
+        policies,
+        first,
+        second,
+    ]
+
+
+def test_policies_access_rejects_nested_directory_acl_failure(
+    monkeypatch, tmp_path
+):
+    policies = tmp_path / "Policies"
+    policy = policies / "gpo"
+    machine = policy / "Machine"
+    machine.mkdir(parents=True)
+    checker = _checker_for_policies(monkeypatch, policies)
+    check_directory = MagicMock(side_effect=[True, True, False])
+    monkeypatch.setattr(checker, "_check_editor_directory", check_directory)
+
+    assert checker.check_policies_editor_access() is False
+    assert check_directory.call_args_list[-1].args == (machine,)
+
+
 def test_policies_access_checks_fallback_file_when_gpt_ini_is_missing(
     monkeypatch, tmp_path
 ):

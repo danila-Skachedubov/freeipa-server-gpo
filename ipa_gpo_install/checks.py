@@ -357,40 +357,45 @@ class IPAChecker:
                 )
                 return True
 
-            representative = gpo_directories[0]
-            if not self._check_editor_directory(representative):
-                return False
-
-            representative_file = representative / "GPT.INI"
-            if (representative_file.is_symlink()
-                    or not representative_file.is_file()):
-                representative_file = None
+            for gpo_directory in gpo_directories:
                 for current, child_dirs, files in os.walk(
-                        representative, followlinks=False):
-                    child_dirs[:] = [
-                        name for name in child_dirs
-                        if not (Path(current) / name).is_symlink()
-                    ]
-                    for name in sorted(files):
-                        candidate = Path(current) / name
-                        if candidate.is_file() and not candidate.is_symlink():
-                            representative_file = candidate
-                            break
-                    if representative_file is not None:
-                        break
+                        gpo_directory, followlinks=False):
+                    current_path = Path(current)
+                    if (current_path.is_symlink()
+                            or not current_path.is_dir()
+                            or not self._check_editor_directory(current_path)):
+                        return False
 
-            if (representative_file is not None
-                    and not self._identity_can_access(
-                        representative_file, "rw")):
-                self.logger.warning(
-                    _("{} cannot edit representative GPO file {}").format(
-                        GPO_EDITOR_USER, representative_file
-                    )
-                )
-                return False
+                    child_dirs.sort()
+                    for name in child_dirs:
+                        child = current_path / name
+                        if child.is_symlink():
+                            self.logger.warning(
+                                _("GPO directory contains a symlink: {}").format(
+                                    child
+                                )
+                            )
+                            return False
+
+                    for name in sorted(files):
+                        candidate = current_path / name
+                        if candidate.is_symlink() or not candidate.is_file():
+                            self.logger.warning(
+                                _("GPO contains an unsafe file: {}").format(
+                                    candidate
+                                )
+                            )
+                            return False
+                        if not self._identity_can_access(candidate, "rw"):
+                            self.logger.warning(
+                                _("{} cannot edit GPO file {}").format(
+                                    GPO_EDITOR_USER, candidate
+                                )
+                            )
+                            return False
 
             self.logger.info(
-                _("Policies ACLs grant the required GPO editor access")
+                _("Policies ACLs grant access to all existing GPOs")
             )
             return True
         except (OSError, ValueError) as exc:
