@@ -28,6 +28,75 @@ SECOND_CHAIN_DN = DN(
 MASTER_DN = DN(("cn", "grouppolicymaster"), ("cn", "etc"), BASEDN)
 
 
+def test_gpmaster_json_delegates_when_schema_metadata_is_available(
+    monkeypatch,
+):
+    subject = object.__new__(GPMASTER.gpmaster)
+    expected = {"name": "from-base"}
+    monkeypatch.setattr(
+        GPMASTER.LDAPObject,
+        "__json__",
+        MagicMock(return_value=expected),
+    )
+
+    assert GPMASTER.gpmaster.__json__(subject) is expected
+
+
+def test_gpmaster_json_falls_back_when_schema_metadata_is_missing(
+    monkeypatch,
+):
+    subject = object.__new__(GPMASTER.gpmaster)
+    monkeypatch.setattr(
+        GPMASTER.LDAPObject,
+        "__json__",
+        MagicMock(side_effect=KeyError("groupPolicyMaster")),
+    )
+
+    result = GPMASTER.gpmaster.__json__(subject)
+
+    assert result["name"] == "gpmaster"
+    assert result["object_class"] == ["groupPolicyMaster"]
+    assert [parameter["name"] for parameter in result["takes_params"]] == [
+        "cn",
+        "chainlist",
+        "pdcemulator",
+    ]
+    assert result["default_attributes"] == subject.default_attributes
+
+
+def test_gpmaster_json_propagates_unrelated_metadata_failure(monkeypatch):
+    subject = object.__new__(GPMASTER.gpmaster)
+    monkeypatch.setattr(
+        GPMASTER.LDAPObject,
+        "__json__",
+        MagicMock(side_effect=KeyError("unrelated schema")),
+    )
+
+    with pytest.raises(KeyError, match="unrelated schema"):
+        GPMASTER.gpmaster.__json__(subject)
+
+
+def test_gpmaster_finalize_merges_plugin_containers(monkeypatch):
+    subject = object.__new__(GPMASTER.gpmaster)
+    env = SimpleNamespace()
+
+    def merge(**values):
+        for name, value in values.items():
+            setattr(env, name, value)
+
+    env._merge = merge
+    monkeypatch.setattr(GPMASTER.gpmaster, "env", env, raising=False)
+    base_finalize = MagicMock()
+    monkeypatch.setattr(GPMASTER.LDAPObject, "_on_finalize", base_finalize)
+
+    GPMASTER.gpmaster._on_finalize(subject)
+
+    assert env.container_system == DN(("cn", "System"))
+    assert env.container_gpmaster == DN(("cn", "etc"))
+    assert subject.container_dn == env.container_gpmaster
+    base_finalize.assert_called_once_with()
+
+
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
