@@ -20,6 +20,8 @@ SPEC.loader.exec_module(GPMASTER)
 
 BASEDN = DN(("dc", "example"), ("dc", "test"))
 CHAIN_DN = DN(("cn", "primary"), ("cn", "gpo-chains"), BASEDN)
+SECOND_CHAIN_DN = DN(("cn", "fallback"), ("cn", "gpo-chains"), BASEDN)
+MASTER_DN = DN(("cn", "grouppolicymaster"), ("cn", "etc"), BASEDN)
 
 
 @pytest.mark.parametrize(
@@ -288,3 +290,107 @@ def test_standard_modifications_set_pdc_and_resolve_chainlist():
     obj.convert_chain_names_to_dns.assert_called_once_with(
         ["primary"], strict=True
     )
+
+
+class MoveLdap:
+    def __init__(self, chains):
+        self.master = {"chainlist": list(chains)}
+        self.updated_chainlists = []
+        self.chain_names = {
+            str(CHAIN_DN): "primary",
+            str(SECOND_CHAIN_DN): "fallback",
+        }
+
+    def get_entry(self, dn, attrs_list=None):
+        if dn == MASTER_DN:
+            return self.master
+        return {"cn": [self.chain_names[str(dn)]]}
+
+    def update_entry(self, entry):
+        self.updated_chainlists.append(list(entry.get("chainlist", [])))
+
+
+def _move_subject(ldap):
+    return SimpleNamespace(
+        _validate_move_operations=MagicMock(),
+        obj=SimpleNamespace(),
+    )
+
+
+@pytest.mark.parametrize(
+    ("options", "expected"),
+    [
+        (
+            {"moveup_chain": "fallback"},
+            [str(SECOND_CHAIN_DN), str(CHAIN_DN)],
+        ),
+        (
+            {"movedown_chain": "primary"},
+            [str(SECOND_CHAIN_DN), str(CHAIN_DN)],
+        ),
+    ],
+)
+def test_move_operation_reorders_with_two_ldap_updates(options, expected):
+    ldap = MoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
+    subject = _move_subject(ldap)
+
+    GPMASTER.gpmaster_mod._do_move_operation(
+        subject, ldap, MASTER_DN, (), options
+    )
+
+    subject._validate_move_operations.assert_called_once_with(
+        ldap, MASTER_DN, options
+    )
+    assert ldap.updated_chainlists == [[], expected]
+    assert ldap.master["chainlist"] == expected
+
+
+def test_move_operation_skips_ldap_updates_for_short_list():
+    ldap = MoveLdap([CHAIN_DN])
+    subject = _move_subject(ldap)
+    options = {"moveup_chain": "primary"}
+
+    GPMASTER.gpmaster_mod._do_move_operation(
+        subject, ldap, MASTER_DN, (), options
+    )
+
+    subject._validate_move_operations.assert_called_once_with(
+        ldap, MASTER_DN, options
+    )
+    assert ldap.updated_chainlists == []
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"moveup_chain": "primary"},
+        {"movedown_chain": ("fallback",)},
+    ],
+)
+def test_validate_move_accepts_active_chain(options):
+    ldap = MoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
+
+    GPMASTER.gpmaster_mod._validate_move_operations(
+        SimpleNamespace(), ldap, MASTER_DN, options
+    )
+
+
+@pytest.mark.parametrize(
+    ("option_name", "error_name"),
+    [
+        ("moveup_chain", "moveup_chain"),
+        ("movedown_chain", "movedown_chain"),
+    ],
+)
+def test_validate_move_rejects_inactive_chain(option_name, error_name):
+    ldap = MoveLdap([CHAIN_DN, SECOND_CHAIN_DN])
+
+    with pytest.raises(errors.ValidationError) as failure:
+        GPMASTER.gpmaster_mod._validate_move_operations(
+            SimpleNamespace(),
+            ldap,
+            MASTER_DN,
+            {option_name: "inactive"},
+        )
+
+    assert failure.value.name == error_name
