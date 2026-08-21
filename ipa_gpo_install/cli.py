@@ -9,7 +9,6 @@ from typing import Dict, Tuple, Any, Callable
 
 from ipapython.config import IPAOptionParser
 from ipapython.admintool import  admin_cleanup_global_argv
-from ipapython import version
 from ipapython.ipa_log_manager import standard_logging_setup
 from ipalib import api, errors
 from ipaplatform.paths import paths
@@ -18,6 +17,7 @@ from ipaserver.install.installutils import (run_script)
 
 from ipa_gpo_install.checks import IPAChecker
 from ipa_gpo_install.actions import IPAActions
+from ipa_gpo_install import __version__
 from .config import LOG_FILE_PATH, REQUIRED_SCHEMA_CLASSES, LOCALE_DIR
 
 
@@ -40,7 +40,7 @@ logger = logging.getLogger(os.path.basename(__file__))
 
 def parse_options() -> Tuple[Dict, Any]:
     """Parse command line arguments"""
-    parser = IPAOptionParser(version=version.VERSION)
+    parser = IPAOptionParser(version=__version__)
     parser.add_option("--debuglevel", type="int", dest="debuglevel",
                       default=0, metavar="LEVEL",
                       help=_("Debug level: 0=errors, 1=warnings, 2=debug"))

@@ -2,4 +2,4 @@
 """
 A utility for preparing FreeIPA for Group Policy Management.
 """
-__version__ = '0.0.2'
+__version__ = '0.1.0'

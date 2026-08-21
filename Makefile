@@ -1,5 +1,5 @@
 PACKAGE_NAME = freeipa-server-gpo
-VERSION = 0.0.8
+VERSION = $(shell $(PYTHON) -c 'from ipa_gpo_install import __version__; print(__version__)')
 
 PREFIX ?= /usr
 DESTDIR =

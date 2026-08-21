@@ -24,7 +24,7 @@ def test_parse_options_configures_parser_and_returns_safe_options(monkeypatch):
     result = cli.parse_options()
 
     assert result == (safe_options, options)
-    parser_factory.assert_called_once_with(version=cli.version.VERSION)
+    parser_factory.assert_called_once_with(version=cli.__version__)
     assert parser.add_option.call_args_list == [
         call(
             "--debuglevel",
