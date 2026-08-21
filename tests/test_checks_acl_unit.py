@@ -166,3 +166,96 @@ def test_editor_directory_accepts_acl_without_default_when_optional(
         require_default=False,
     ) is True
     access.assert_called_once_with(tmp_path, "rx")
+
+
+def _checker_for_policies(monkeypatch, policies):
+    checker = _checker()
+    checker.api.env.domain = "example.test"
+    monkeypatch.setattr(
+        checks_module, "get_policies_path", lambda _domain: str(policies)
+    )
+    return checker
+
+
+def test_policies_access_rejects_missing_directory(monkeypatch, tmp_path):
+    checker = _checker_for_policies(monkeypatch, tmp_path / "missing")
+    check_directory = MagicMock(return_value=True)
+    monkeypatch.setattr(checker, "_check_editor_directory", check_directory)
+
+    assert checker.check_policies_editor_access() is False
+    check_directory.assert_not_called()
+
+
+def test_policies_access_rejects_root_acl_failure(monkeypatch, tmp_path):
+    policies = tmp_path / "Policies"
+    policies.mkdir()
+    checker = _checker_for_policies(monkeypatch, policies)
+    check_directory = MagicMock(return_value=False)
+    monkeypatch.setattr(checker, "_check_editor_directory", check_directory)
+
+    assert checker.check_policies_editor_access() is False
+    check_directory.assert_called_once_with(
+        policies,
+        access_permissions="r-x",
+        identity_permissions="rx",
+        forbid_write=True,
+    )
+
+
+def test_policies_access_accepts_empty_directory(monkeypatch, tmp_path):
+    policies = tmp_path / "Policies"
+    policies.mkdir()
+    checker = _checker_for_policies(monkeypatch, policies)
+    monkeypatch.setattr(
+        checker, "_check_editor_directory", MagicMock(return_value=True)
+    )
+
+    assert checker.check_policies_editor_access() is True
+
+
+def test_policies_access_rejects_representative_gpo_acl(
+    monkeypatch, tmp_path
+):
+    policies = tmp_path / "Policies"
+    policy = policies / "gpo"
+    policy.mkdir(parents=True)
+    checker = _checker_for_policies(monkeypatch, policies)
+    check_directory = MagicMock(side_effect=[True, False])
+    monkeypatch.setattr(checker, "_check_editor_directory", check_directory)
+
+    assert checker.check_policies_editor_access() is False
+    assert check_directory.call_args_list[1].args == (policy,)
+
+
+def test_policies_access_checks_fallback_file_when_gpt_ini_is_missing(
+    monkeypatch, tmp_path
+):
+    policies = tmp_path / "Policies"
+    policy = policies / "gpo"
+    nested = policy / "Machine"
+    nested.mkdir(parents=True)
+    fallback = nested / "Registry.pol"
+    fallback.write_bytes(b"registry data")
+    checker = _checker_for_policies(monkeypatch, policies)
+    monkeypatch.setattr(
+        checker, "_check_editor_directory", MagicMock(return_value=True)
+    )
+    access = MagicMock(return_value=False)
+    monkeypatch.setattr(checker, "_identity_can_access", access)
+
+    assert checker.check_policies_editor_access() is False
+    access.assert_called_once_with(fallback, "rw")
+
+
+def test_policies_access_handles_filesystem_error(monkeypatch, tmp_path):
+    policies = tmp_path / "Policies"
+    policies.mkdir()
+    checker = _checker_for_policies(monkeypatch, policies)
+    monkeypatch.setattr(
+        checker, "_check_editor_directory", MagicMock(return_value=True)
+    )
+    monkeypatch.setattr(
+        "pathlib.Path.iterdir", MagicMock(side_effect=OSError("read failed"))
+    )
+
+    assert checker.check_policies_editor_access() is False
