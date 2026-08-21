@@ -104,7 +104,7 @@ class gpmaster(LDAPObject):
 
     def resolve_chain_name(self, chain_name, strict=False):
         """Convert chain name to DN."""
-        if chain_name.startswith(('cn=', 'CN=')):
+        if chain_name.lower().startswith('cn='):
             if not strict:
                 return chain_name
             try:
@@ -196,6 +196,22 @@ def _normalize_to_list(value):
         return list(value)
     else:
         return list(value)
+
+
+def _equivalent_dn_index(values, target):
+    """Return the index of an LDAP-equivalent DN, if present."""
+    try:
+        target_dn = DN(target)
+    except Exception:
+        return None
+
+    for index, value in enumerate(values):
+        try:
+            if DN(value) == target_dn:
+                return index
+        except Exception:
+            continue
+    return None
 
 @register()
 class gpmaster_mod(LDAPUpdate):
@@ -407,7 +423,7 @@ class gpmaster_mod(LDAPUpdate):
             for chain_name in chain_names:
                 try:
                     chain_dn = self.obj.resolve_chain_name(chain_name, strict=True)
-                    if chain_dn not in current_chains:
+                    if _equivalent_dn_index(current_chains, chain_dn) is None:
                         current_chains.append(chain_dn)
                 except errors.NotFound:
                     raise errors.NotFound(
@@ -434,8 +450,11 @@ class gpmaster_mod(LDAPUpdate):
 
                 try:
                     chain_dn = self.obj.resolve_chain_name(chain_name, strict=False)
-                    if chain_dn in current_chains:
-                        current_chains.remove(chain_dn)
+                    chain_index = _equivalent_dn_index(
+                        current_chains, chain_dn
+                    )
+                    if chain_index is not None:
+                        current_chains.pop(chain_index)
                         removed = True
                 except Exception:
                     pass

@@ -121,7 +121,14 @@ def _resolver(chain_object=None, ldap=None):
     return subject, chain, backend
 
 
-@pytest.mark.parametrize("chain_dn", [str(CHAIN_DN), str(CHAIN_DN).upper()])
+@pytest.mark.parametrize(
+    "chain_dn",
+    [
+        str(CHAIN_DN),
+        str(CHAIN_DN).upper(),
+        str(CHAIN_DN).replace("cn=", "Cn=").replace("dc=", "Dc="),
+    ],
+)
 def test_non_strict_resolution_preserves_existing_dn(chain_dn):
     subject, chain, ldap = _resolver()
 
@@ -293,6 +300,18 @@ def test_add_chain_appends_new_dn_without_duplicate():
     ]
 
 
+def test_add_chain_does_not_duplicate_equivalent_mixed_case_dn():
+    subject, obj, _ldap = _modifier([CHAIN_DN])
+    obj.resolve_chain_name.return_value = str(CHAIN_DN).upper()
+    entry_attrs = {}
+
+    GPMASTER.gpmaster_mod._handle_add_operations(
+        subject, entry_attrs, {"add_chain": "primary"}
+    )
+
+    assert entry_attrs["chainlist"] == [str(CHAIN_DN)]
+
+
 def test_add_chain_reports_missing_chain():
     subject, obj, _ldap = _modifier()
     obj.resolve_chain_name.side_effect = errors.NotFound(reason="missing")
@@ -321,6 +340,23 @@ def test_remove_chain_rejects_empty_master():
 def test_remove_chain_by_resolved_dn():
     subject, obj, ldap = _modifier()
     obj.resolve_chain_name.return_value = str(CHAIN_DN)
+    entry_attrs = {}
+
+    GPMASTER.gpmaster_mod._handle_remove_operations(
+        subject,
+        ldap,
+        {"chainlist": [CHAIN_DN]},
+        entry_attrs,
+        {"remove_chain": "primary"},
+    )
+
+    assert entry_attrs["chainlist"] == []
+    ldap.get_entry.assert_not_called()
+
+
+def test_remove_chain_matches_equivalent_mixed_case_dn():
+    subject, obj, ldap = _modifier()
+    obj.resolve_chain_name.return_value = str(CHAIN_DN).upper()
     entry_attrs = {}
 
     GPMASTER.gpmaster_mod._handle_remove_operations(
