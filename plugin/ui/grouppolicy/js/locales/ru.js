@@ -157,5 +157,9 @@ define([], function() {
       no: 'Нет',
       yes: 'Да'
     },
+
+    confirmModal: {
+      title: 'Подтверждение'
+    },
   };
 });

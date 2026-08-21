@@ -576,6 +576,8 @@ define([
         var selectedIdentity = null;
         var modalState = null;
         var opening = false;
+        var pendingDiscard = null;
+        var discardModal = null;
         var cleanups = [];
         var formRequestId = 0;
         var itemsRequestId = 0;
@@ -1582,14 +1584,88 @@ define([
             }
         }
 
+        function buildDiscardModal() {
+            if (discardModal) return discardModal;
+            var content = createElement('div', { className: 'policy-changed__modal-content' });
+            var modal = createElement('div', {
+                className: ['policy-changed__modal', 'policy-changed__modal--discard'],
+                children: [
+                    createElement('div', {
+                        className: 'policy-changed__modal-wrapper',
+                        children: [
+                            createElement('div', {
+                                className: 'policy-changed__modal-header',
+                                children: [
+                                    createElement('div', {
+                                        className: 'title',
+                                        text: t('confirmModal.title')
+                                    })
+                                ]
+                            }),
+                            content,
+                            createElement('div', {
+                                className: 'policy-changed__modal-footer',
+                                children: [
+                                    createElement('div', {
+                                        className: ['btn', 'btn-no'],
+                                        text: t('policyChangedModal.no'),
+                                        events: { click: function() { handleDiscardModalChoice(false); } }
+                                    }),
+                                    createElement('div', {
+                                        className: ['btn', 'btn-yes'],
+                                        text: t('policyChangedModal.yes'),
+                                        events: { click: function() { handleDiscardModalChoice(true); } }
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                ]
+            });
+            rootElement.appendChild(modal.getElement());
+            discardModal = { element: modal.getElement(), content: content.getElement() };
+            return discardModal;
+        }
+
+        function showDiscardModal(action) {
+            var modal = buildDiscardModal();
+            pendingDiscard = { action: action };
+            modal.content.textContent = pt(action === 'cancel'
+                ? 'confirmCancelDiscard' : 'confirmCloseDiscard');
+            if (modalState && modalState.formElement) {
+                modalState.formElement.classList.add('gpo-editor-preference-form--confirming');
+            }
+            modal.element.classList.add('active');
+        }
+
+        function hideDiscardModal() {
+            if (discardModal) discardModal.element.classList.remove('active');
+            var confirmingForms = rootElement.querySelectorAll(
+                '.gpo-editor-preference-form--confirming');
+            Array.prototype.forEach.call(confirmingForms, function(formElement) {
+                formElement.classList.remove('gpo-editor-preference-form--confirming');
+            });
+        }
+
+        function handleDiscardModalChoice(confirmed) {
+            var pending = pendingDiscard;
+            pendingDiscard = null;
+            hideDiscardModal();
+            if (!confirmed || !pending) return;
+            closeForm(true, pending.action);
+        }
+
         function closeForm(force, action) {
             var state = modalState;
             if (state && (state.saving || state.reconciling)
                     && action !== 'saved' && action !== 'cleanup') return false;
             if (!force && state && state.formState.dirty) {
-                var key = action === 'cancel' ? 'confirmCancelDiscard' : 'confirmCloseDiscard';
-                if (!window.confirm(pt(key))) return false;
+                if (pendingDiscard) return false;
+                showDiscardModal(action);
+                return false;
             }
+            pendingDiscard = null;
+            hideDiscardModal();
             formRequestId += 1;
             var host = rootElement.querySelector('.gpo-editor-preferences__modal-host');
             if (host) host.innerHTML = '';

@@ -158,5 +158,9 @@ define([], function() {
       yes: 'Yes'
     },
 
+    confirmModal: {
+      title: 'Confirmation'
+    },
+
   };
 });
