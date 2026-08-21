@@ -633,6 +633,21 @@ def _validate_publication_plan(plan, expected_snapshot):
             'operational',
             'The editor binding returned an invalid publication plan.',
         )
+    affected_scopes = plan['affected_scopes']
+    if (
+        not isinstance(plan['machine_extension_names'], str)
+        or not isinstance(plan['user_extension_names'], str)
+        or not isinstance(plan['idempotency_token'], str)
+        or not plan['idempotency_token'].strip()
+        or not isinstance(affected_scopes, dict)
+        or set(affected_scopes) != {'computer', 'user'}
+        or not all(type(value) is bool for value in affected_scopes.values())
+        or not any(affected_scopes.values())
+    ):
+        raise EditorFailure(
+            'operational',
+            'The editor binding returned an invalid publication plan.',
+        )
     if plan['identity'] != expected_snapshot['identity']:
         raise EditorFailure(
             'publication_conflict',
@@ -1052,10 +1067,14 @@ def _commit_external_once(workspace, ldap_backend, context):
             'operational',
             'The editor binding returned an unknown directory outcome.',
         )
+    if not paths or not any(affected.values()) or plan is None:
+        raise EditorFailure(
+            'operational',
+            'The editor binding returned an inconsistent external handoff.',
+        )
+    _validate_publication_plan(plan, starting_snapshot)
     if (
-        not paths
-        or not any(affected.values())
-        or plan is None
+        affected != plan['affected_scopes']
         or not isinstance(pending, dict)
         or pending.get('phase') != 'awaiting_directory_publication'
         or pending.get('plan') != plan

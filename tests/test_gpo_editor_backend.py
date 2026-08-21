@@ -471,6 +471,44 @@ def test_publication_helper_uses_one_atomic_compare_modify_with_exact_values():
     assert backend.removed == [DN_VALUE]
 
 
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("machine_extension_names", {"not": "text"}),
+        ("user_extension_names", ["not", "text"]),
+        ("idempotency_token", ""),
+        ("idempotency_token", 7),
+        ("affected_scopes", {"computer": True}),
+        (
+            "affected_scopes",
+            {"computer": True, "user": False, "other": False},
+        ),
+        ("affected_scopes", {"computer": 1, "user": False}),
+        ("affected_scopes", {"computer": False, "user": False}),
+    ],
+)
+def test_publication_helper_rejects_malformed_plan_before_ldap(
+    field,
+    invalid_value,
+):
+    backend = PublicationBackend()
+    context = editor_context()
+    malformed_plan = {**plan(), field: invalid_value}
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._apply_publication_plan(
+            backend,
+            context,
+            malformed_plan,
+            context.snapshot,
+            context.presence,
+        )
+
+    assert failure.value.category == "operational"
+    assert backend.modifies == []
+    assert backend.removed == []
+
+
 def test_atomic_compare_failure_is_a_structured_publication_conflict(monkeypatch):
     class FailingBackend(PublicationBackend):
         def modify_ext_s(self, dn, modifications, serverctrls=None):
@@ -662,6 +700,45 @@ def test_dirty_commit_rejects_inconsistent_recovery_state_before_ldap(
 
     assert failure.value.category == "operational"
     assert "inconsistent external handoff" in failure.value.message
+    assert applied == []
+    assert workspace.acks == []
+
+
+def test_dirty_commit_rejects_mismatched_file_and_directory_scopes(
+    monkeypatch,
+):
+    before = snapshot()
+    exact_plan = plan()
+    workspace = CommitWorkspace({
+        "directory": "external_handoff",
+        "files": {
+            "paths": [{"path": "User/Registry.pol", "revision": "r"}],
+            "affected_scopes": {"computer": False, "user": True},
+        },
+        "publication_plan": exact_plan,
+    }, pending={
+        "phase": "awaiting_directory_publication",
+        "plan": exact_plan,
+        "precondition": before,
+    })
+    monkeypatch.setattr(
+        GPO, "_read_gpc_snapshot", lambda *args: (before, {})
+    )
+    applied = []
+    monkeypatch.setattr(
+        GPO,
+        "_apply_publication_plan",
+        lambda *args: applied.append(args),
+    )
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._commit_external_once(
+            workspace,
+            object(),
+            editor_context(before),
+        )
+
+    assert failure.value.category == "operational"
     assert applied == []
     assert workspace.acks == []
 
