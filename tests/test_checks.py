@@ -186,6 +186,24 @@ class TestCheckSysvolShare:
         assert checker.check_sysvol_share() is False
 
     @patch('ipa_gpo_install.checks.subprocess.run')
+    def test_similar_share_name_is_not_sysvol(self, mock_run):
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout='[not-sysvol-backup]\n  path = /data\n'
+        )
+        checker = _make_checker()
+        assert checker.check_sysvol_share() is False
+
+    @patch('ipa_gpo_install.checks.subprocess.run')
+    def test_share_name_is_case_insensitive(self, mock_run):
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=' [SYSVOL] \n  path = /var/lib/freeipa/sysvol\n'
+        )
+        checker = _make_checker()
+        assert checker.check_sysvol_share() is True
+
+    @patch('ipa_gpo_install.checks.subprocess.run')
     def test_command_fails(self, mock_run):
         mock_run.return_value = MagicMock(returncode=1, stderr='error')
         checker = _make_checker()

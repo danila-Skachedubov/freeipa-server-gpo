@@ -5,6 +5,7 @@ import subprocess
 import logging
 import gettext
 import locale
+import re
 from pathlib import Path
 
 import ldap
@@ -418,7 +419,11 @@ class IPAChecker:
                 self.logger.error(_("Error listing Samba shares: {}").format(result.stderr))
                 return False
 
-            has_share = "sysvol" in result.stdout
+            has_share = re.search(
+                r"^\s*\[sysvol\]\s*$",
+                result.stdout,
+                flags=re.IGNORECASE | re.MULTILINE,
+            ) is not None
             if has_share:
                 self.logger.info(_("SYSVOL share exists"))
             else:
