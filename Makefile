@@ -18,7 +18,7 @@ test-python:
 	$(PYTHON) -m pytest
 
 test-ui:
-	$(NODE) --test plugin/ui/grouppolicy/tests/editor-contract.test.js
+	$(NODE) --test plugin/ui/grouppolicy/tests/*.test.js
 
 build: compile-po
 	@echo "Building $(PACKAGE_NAME) $(VERSION)..."
