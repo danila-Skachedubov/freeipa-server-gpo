@@ -1745,6 +1745,15 @@ class gpo_add(LDAPCreate):
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
         verify_gpo_schema(ldap, self.api)
         displayname = keys[-1]
+        if ('displayname' in entry_attrs and
+                entry_attrs['displayname'] != displayname):
+            raise errors.ValidationError(
+                name='displayname',
+                error=_(
+                    'displayName supplied as an attribute must match '
+                    'the command argument'
+                )
+            )
         if not re.match(constants.PATTERN_GROUPUSER_NAME, displayname):
             raise errors.ValidationError(
                 name='displayname',
@@ -1759,6 +1768,7 @@ class gpo_add(LDAPCreate):
         except errors.NotFound:
             pass
 
+        entry_attrs['displayname'] = displayname
         guid = '{' + str(uuid.uuid4()).upper() + '}'
         dn = DN(
             ('cn', guid),
@@ -1881,16 +1891,33 @@ class gpo_mod(LDAPUpdate):
         old_entry = self.obj.find_gpo_by_displayname(ldap, keys[0])
         old_dn = old_entry.dn
 
-        if 'rename' in options and options['rename']:
-            new_name = options['rename']
-            if not re.match(constants.PATTERN_GROUPUSER_NAME, new_name):
+        rename_name = options.get('rename')
+        attribute_name = (
+            entry_attrs.get('displayname')
+            if 'displayname' in entry_attrs else None
+        )
+        if (rename_name and attribute_name is not None and
+                rename_name != attribute_name):
+            raise errors.ValidationError(
+                name='displayname',
+                error=_(
+                    'rename and displayName attribute contain conflicting '
+                    'values'
+                )
+            )
+
+        if rename_name or 'displayname' in entry_attrs:
+            new_name = rename_name or attribute_name
+            option_name = 'rename' if rename_name else 'displayname'
+            if (not isinstance(new_name, str) or
+                    not re.match(constants.PATTERN_GROUPUSER_NAME, new_name)):
                 raise errors.ValidationError(
                     name='displayname',
                     error=constants.ERRMSG_GROUPUSER_NAME.format('Group Policy Object')
                 )
             if new_name == keys[0]:
                 raise errors.ValidationError(
-                    name='rename',
+                    name=option_name,
                     error=_("New name must be different from the old one")
                 )
             try:

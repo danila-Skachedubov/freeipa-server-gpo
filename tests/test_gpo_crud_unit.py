@@ -491,6 +491,29 @@ def test_gpo_add_pre_callback_rejects_duplicate_display_name(monkeypatch):
         )
 
 
+def test_gpo_add_pre_callback_rejects_conflicting_display_name_attribute(
+    monkeypatch,
+):
+    subject = _crud_subject()
+    subject.obj.find_gpo_by_displayname.side_effect = errors.NotFound(
+        reason="not found"
+    )
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    with pytest.raises(
+        errors.ValidationError,
+        match="must match the command argument",
+    ):
+        GPO.gpo_add.pre_callback(
+            subject,
+            MagicMock(),
+            GPO_DN,
+            {"displayname": "Policy-Two"},
+            [],
+            "Policy-One",
+        )
+
+
 def test_gpo_add_post_callback_creates_sysvol_structure():
     subject = _crud_subject()
     ldap = MagicMock()
@@ -749,6 +772,96 @@ def test_gpo_mod_accepts_available_rename(monkeypatch):
         call(ldap, "Policy-One"),
         call(ldap, "Policy-Two"),
     ]
+
+
+def test_gpo_mod_accepts_available_display_name_attribute(monkeypatch):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.side_effect = [
+        SimpleNamespace(dn=GPO_DN),
+        errors.NotFound(reason="new name is available"),
+    ]
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    result = GPO.gpo_mod.pre_callback(
+        subject,
+        ldap,
+        GPO_DN,
+        {"displayname": "Policy-Two"},
+        [],
+        "Policy-One",
+        setattr=("displayName=Policy-Two",),
+    )
+
+    assert result == GPO_DN
+    assert subject.obj.find_gpo_by_displayname.call_args_list == [
+        call(ldap, "Policy-One"),
+        call(ldap, "Policy-Two"),
+    ]
+
+
+def test_gpo_mod_rejects_invalid_display_name_attribute(monkeypatch):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.return_value = SimpleNamespace(
+        dn=GPO_DN
+    )
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    with pytest.raises(errors.ValidationError):
+        GPO.gpo_mod.pre_callback(
+            subject,
+            ldap,
+            GPO_DN,
+            {"displayname": "invalid/name"},
+            [],
+            "Policy-One",
+            setattr=("displayName=invalid/name",),
+        )
+
+
+def test_gpo_mod_rejects_duplicate_display_name_attribute(monkeypatch):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.side_effect = [
+        SimpleNamespace(dn=GPO_DN),
+        SimpleNamespace(dn=DN(("cn", "{OTHER}"), CONTAINER_DN, BASEDN)),
+    ]
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    with pytest.raises(errors.DuplicateEntry, match="already exists"):
+        GPO.gpo_mod.pre_callback(
+            subject,
+            ldap,
+            GPO_DN,
+            {"displayname": "Policy-Two"},
+            [],
+            "Policy-One",
+            setattr=("displayName=Policy-Two",),
+        )
+
+
+def test_gpo_mod_rejects_conflicting_rename_and_display_name_attribute(
+    monkeypatch,
+):
+    subject = _crud_subject()
+    ldap = MagicMock()
+    subject.obj.find_gpo_by_displayname.return_value = SimpleNamespace(
+        dn=GPO_DN
+    )
+    monkeypatch.setattr(GPO, "verify_gpo_schema", MagicMock())
+
+    with pytest.raises(errors.ValidationError, match="conflicting values"):
+        GPO.gpo_mod.pre_callback(
+            subject,
+            ldap,
+            GPO_DN,
+            {"displayname": "Policy-Two"},
+            [],
+            "Policy-One",
+            rename="Policy-Three",
+            setattr=("displayName=Policy-Two",),
+        )
 
 
 @pytest.mark.parametrize(
