@@ -1683,23 +1683,7 @@ class gpo(LDAPObject):
             server = dbus.Interface(obj, 'org.freeipa.server')
 
             method = getattr(server, method_name)
-            ret, stdout, stderr = method(*params)
-
-            if ret != 0:
-                error_msg = f"Failed to {method_name.replace('_', ' ')}: {stderr}"
-                logger.error(error_msg)
-
-                if fail_on_error:
-                    raise errors.ExecutionError(
-                        message=_(f'Failed to {method_name.replace("_", " ")}: %(error)s')
-                                % {'error': stderr or _('Unknown error')}
-                    )
-                else:
-                    logger.warning(error_msg)
-                    return stdout if return_stdout else None
-
-            return stdout if return_stdout else None
-
+            response = method(*params)
         except dbus.DBusException as e:
             error_msg = f'Failed to call D-Bus {method_name}: {str(e)}'
             logger.error(error_msg)
@@ -1711,6 +1695,47 @@ class gpo(LDAPObject):
             else:
                 logger.warning(error_msg)
                 return None
+        except Exception as e:
+            error_msg = (
+                f'Unexpected failure calling D-Bus {method_name}: {str(e)}'
+            )
+            logger.error(error_msg)
+
+            if fail_on_error:
+                raise errors.ExecutionError(
+                    message=_('Unexpected D-Bus service failure')
+                )
+            logger.warning(error_msg)
+            return None
+
+        try:
+            ret, stdout, stderr = response
+        except (TypeError, ValueError) as e:
+            error_msg = (
+                f'Invalid response from D-Bus {method_name}: {str(e)}'
+            )
+            logger.error(error_msg)
+
+            if fail_on_error:
+                raise errors.ExecutionError(
+                    message=_('Invalid response from D-Bus service')
+                )
+            logger.warning(error_msg)
+            return None
+
+        if ret != 0:
+            error_msg = f"Failed to {method_name.replace('_', ' ')}: {stderr}"
+            logger.error(error_msg)
+
+            if fail_on_error:
+                raise errors.ExecutionError(
+                    message=_(f'Failed to {method_name.replace("_", " ")}: %(error)s')
+                            % {'error': stderr or _('Unknown error')}
+                )
+            logger.warning(error_msg)
+            return stdout if return_stdout else None
+
+        return stdout if return_stdout else None
 
 @register()
 class gpo_add(LDAPCreate):

@@ -219,6 +219,26 @@ def test_get_bus_initializes_main_loop_and_caches_system_bus(monkeypatch):
     system_bus.assert_called_once_with()
 
 
+def test_get_bus_retries_after_initialization_failure(monkeypatch):
+    main_loop = MagicMock()
+    bus = MagicMock()
+    system_bus = MagicMock(
+        side_effect=[GPO.dbus.DBusException("service offline"), bus]
+    )
+    monkeypatch.setattr(GPO.dbus.mainloop.glib, "DBusGMainLoop", main_loop)
+    monkeypatch.setattr(GPO.dbus, "SystemBus", system_bus)
+    monkeypatch.setattr(GPO, "_bus", None)
+    monkeypatch.setattr(GPO, "_bus_initialized", False)
+
+    with pytest.raises(GPO.dbus.DBusException, match="service offline"):
+        GPO._get_bus()
+
+    assert GPO._bus_initialized is False
+    assert GPO._get_bus() is bus
+    assert main_loop.call_count == 2
+    assert system_bus.call_count == 2
+
+
 def _dbus_subject(monkeypatch, result=(0, "created", "")):
     method = MagicMock(return_value=result)
     server = SimpleNamespace(create_gpo_structure=method)
@@ -336,6 +356,64 @@ def test_call_dbus_method_handles_transport_failure(
                 "Failed to call D-Bus create_gpo_structure: service offline"
             )
         ])
+
+
+@pytest.mark.parametrize("result", [None, (), (0, "stdout"), (0, "out", "", "extra")])
+@pytest.mark.parametrize("fail_on_error", [True, False])
+def test_call_dbus_method_handles_malformed_response(
+    monkeypatch,
+    result,
+    fail_on_error,
+):
+    subject, _method, _bus, _obj, _get_bus, _interface = _dbus_subject(
+        monkeypatch,
+        result=result,
+    )
+
+    if fail_on_error:
+        with pytest.raises(
+            errors.ExecutionError,
+            match="Invalid response from D-Bus service",
+        ):
+            GPO.gpo._call_dbus_method(
+                subject,
+                "create_gpo_structure",
+                fail_on_error=True,
+            )
+    else:
+        assert GPO.gpo._call_dbus_method(
+            subject,
+            "create_gpo_structure",
+            fail_on_error=False,
+        ) is None
+
+
+@pytest.mark.parametrize("fail_on_error", [True, False])
+def test_call_dbus_method_handles_unexpected_method_failure(
+    monkeypatch,
+    fail_on_error,
+):
+    subject, method, _bus, _obj, _get_bus, _interface = _dbus_subject(
+        monkeypatch
+    )
+    method.side_effect = RuntimeError("broken proxy")
+
+    if fail_on_error:
+        with pytest.raises(
+            errors.ExecutionError,
+            match="Unexpected D-Bus service failure",
+        ):
+            GPO.gpo._call_dbus_method(
+                subject,
+                "create_gpo_structure",
+                fail_on_error=True,
+            )
+    else:
+        assert GPO.gpo._call_dbus_method(
+            subject,
+            "create_gpo_structure",
+            fail_on_error=False,
+        ) is None
 
 
 def test_gpo_add_pre_callback_builds_complete_initial_entry(monkeypatch):
