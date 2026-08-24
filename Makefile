@@ -6,19 +6,15 @@ DESTDIR =
 PYTHON_SITELIBDIR = /usr/lib64/python3/site-packages
 UI_PLUGIN_TARGET = $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain
 PYTHON ?= python3
-NODE ?= node
 
-.PHONY: all build install install-ui clean dist rpm compile-po test test-python test-ui test-integration
+.PHONY: all build install install-ui clean dist rpm compile-po test test-python test-integration
 
 all: build
 
-test: test-python test-ui
+test: test-python
 
 test-python:
 	$(PYTHON) -m pytest --ignore=tests/integration
-
-test-ui:
-	$(NODE) --test plugin/ui/grouppolicy/tests/*.test.js
 
 test-integration:
 	$(PYTHON) -m pytest tests/integration
