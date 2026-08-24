@@ -6,8 +6,10 @@ DESTDIR =
 PYTHON_SITELIBDIR = /usr/lib64/python3/site-packages
 UI_PLUGIN_TARGET = $(DESTDIR)$(PREFIX)/share/ipa/ui/js/plugins/chain
 PYTHON ?= python3
+COVERAGE ?= coverage
+COVERAGE_THRESHOLD ?= 93.90
 
-.PHONY: all build install install-ui clean dist rpm compile-po test test-python test-integration
+.PHONY: all build install install-ui clean dist rpm compile-po check-po test test-python test-coverage test-integration
 
 all: build
 
@@ -15,6 +17,12 @@ test: test-python
 
 test-python:
 	$(PYTHON) -m pytest --ignore=tests/integration
+
+test-coverage:
+	$(COVERAGE) erase
+	$(COVERAGE) run --branch -m pytest --ignore=tests/integration
+	$(COVERAGE) report --include='ipa_gpo_install/*.py,plugin/ipaserver/plugins/*.py' --show-missing --precision=2 --fail-under=$(COVERAGE_THRESHOLD)
+	$(COVERAGE) xml --include='ipa_gpo_install/*.py,plugin/ipaserver/plugins/*.py'
 
 test-integration:
 	$(PYTHON) -m pytest tests/integration
@@ -24,6 +32,9 @@ build: compile-po
 
 compile-po:
 	@find locale -name "*.po" -exec sh -c 'msgfmt "$$1" -o "$${1%.po}.mo"' _ {} \; 2>/dev/null || true
+
+check-po:
+	find locale -name "*.po" -exec msgfmt --check -o /dev/null {} \;
 
 install: build install-ui
 	@echo "Installing $(PACKAGE_NAME)..."

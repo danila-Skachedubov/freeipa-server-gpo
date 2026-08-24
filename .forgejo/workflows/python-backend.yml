@@ -1,0 +1,25 @@
+name: Python backend CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit-tests:
+    runs-on: altlinux
+    steps:
+      - name: Check out repository
+        uses: https://data.forgejo.org/actions/checkout@v6
+      - name: Validate translations
+        run: make check-po
+      - name: Run Python unit tests with branch coverage
+        run: make test-coverage
+
+  rpm-build:
+    needs: unit-tests
+    runs-on: altlinux
+    steps:
+      - name: Check out repository
+        uses: https://data.forgejo.org/actions/checkout@v6
+      - name: Build and test RPM
+        run: gear-rpm -ba
