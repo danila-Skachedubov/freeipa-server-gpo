@@ -284,7 +284,57 @@ def test_call_dbus_method_returns_requested_success_value(
         follow_name_owner_changes=True,
     )
     interface.assert_called_once_with(bus_object, "org.freeipa.server")
-    method.assert_called_once_with("{GUID}", "example.test", "Policy")
+    method.assert_called_once_with(
+        "{GUID}",
+        "example.test",
+        "Policy",
+        timeout=GPO.ODDJOB_DBUS_TIMEOUT_SECONDS,
+    )
+
+
+def test_call_dbus_method_uses_bounded_oddjob_timeout(monkeypatch):
+    subject, method, _bus, _obj, _get_bus, _interface = _dbus_subject(
+        monkeypatch
+    )
+
+    GPO.gpo._call_dbus_method(subject, "create_gpo_structure")
+
+    assert GPO.ODDJOB_DBUS_TIMEOUT_SECONDS == 120
+    method.assert_called_once_with(
+        timeout=GPO.ODDJOB_DBUS_TIMEOUT_SECONDS
+    )
+
+
+@pytest.mark.parametrize("fail_on_error", [True, False])
+def test_call_dbus_method_handles_oddjob_timeout(
+    monkeypatch,
+    fail_on_error,
+):
+    subject, method, _bus, _obj, _get_bus, _interface = _dbus_subject(
+        monkeypatch
+    )
+    method.side_effect = GPO.dbus.DBusException("request timed out")
+
+    if fail_on_error:
+        with pytest.raises(
+            errors.ExecutionError,
+            match="Failed to communicate with D-Bus service",
+        ):
+            GPO.gpo._call_dbus_method(
+                subject,
+                "create_gpo_structure",
+                fail_on_error=True,
+            )
+    else:
+        assert GPO.gpo._call_dbus_method(
+            subject,
+            "create_gpo_structure",
+            fail_on_error=False,
+        ) is None
+
+    method.assert_called_once_with(
+        timeout=GPO.ODDJOB_DBUS_TIMEOUT_SECONDS
+    )
 
 
 def test_call_dbus_method_raises_on_failed_required_operation(monkeypatch):

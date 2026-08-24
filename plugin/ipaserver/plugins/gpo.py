@@ -29,6 +29,7 @@ register = Registry()
 
 _bus = None
 _bus_initialized = False
+ODDJOB_DBUS_TIMEOUT_SECONDS = 120
 
 
 def _get_bus():
@@ -1683,7 +1684,10 @@ class gpo(LDAPObject):
             server = dbus.Interface(obj, 'org.freeipa.server')
 
             method = getattr(server, method_name)
-            response = method(*params)
+            response = method(
+                *params,
+                timeout=ODDJOB_DBUS_TIMEOUT_SECONDS,
+            )
         except dbus.DBusException as e:
             error_msg = f'Failed to call D-Bus {method_name}: {str(e)}'
             logger.error(error_msg)
