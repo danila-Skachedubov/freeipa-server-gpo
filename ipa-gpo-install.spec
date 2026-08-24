@@ -11,6 +11,7 @@ ExcludeArch: %ix86
 BuildRequires: rpm-build-python3
 BuildRequires: gettext-tools
 BuildRequires: python3-module-pytest
+BuildRequires: python3-module-coverage
 BuildRequires: python3-module-freeipa
 BuildRequires: python3-module-ipaserver
 BuildRequires: python3-module-dbus
@@ -48,7 +49,8 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 %find_lang ipa-gpo-install
 
 %check
-python3 -m pytest tests/ --ignore=tests/integration --tb=short -ra --color=yes
+%make check-po
+%make test-coverage
 
 %files -f ipa-gpo-install.lang
 %doc README.md

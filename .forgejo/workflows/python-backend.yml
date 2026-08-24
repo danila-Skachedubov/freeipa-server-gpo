@@ -1,25 +1,26 @@
-name: Python backend CI
+name: Build and test package
 
 on:
   push:
+  workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
-  unit-tests:
-    runs-on: altlinux
+  build-package:
+    name: Build package for Sisyphus
+    runs-on: als-tiny
+    container:
+      image: altlinux.space/actions/runner/hasherc:sisyphus
     steps:
-      - name: Check out repository
-        uses: https://data.forgejo.org/actions/checkout@v6
-      - name: Validate translations
-        run: make check-po
-      - name: Run Python unit tests with branch coverage
-        run: make test-coverage
+      - name: Check out repository code
+        uses: actions/checkout@v4
 
-  rpm-build:
-    needs: unit-tests
-    runs-on: altlinux
-    steps:
-      - name: Check out repository
-        uses: https://data.forgejo.org/actions/checkout@v6
-      - name: Build and test RPM
-        run: gear-rpm -ba
+      - name: Build and test RPMs
+        uses: actions/build-rpm-action@main
+
+      - name: Upload packages as CI artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: alt-packages
+          path: ~/.cache/hasherc/freeipa-server-gpo/out/RPMS/**/*.rpm
