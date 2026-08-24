@@ -24,6 +24,57 @@ define([], function() {
             { field: 'metadata.desc', textarea: true }
         ],
         filters: 'general',
+        dependencies: [
+            { field: 'properties.newName', enabledWhen: [
+                { anyOf: [
+                    { source: 'properties.element', notEquals: 'Group' },
+                    { source: 'properties.action', notEquals: 'delete' }
+                ] }
+            ] },
+            { field: 'properties.fullName', enabledWhen: [
+                { anyOf: [
+                    { source: 'properties.element', notEquals: 'Group' },
+                    { source: 'properties.action', notEquals: 'delete' }
+                ] }
+            ] },
+            { field: 'properties.description', enabledWhen: [
+                { anyOf: [
+                    { source: 'properties.element', notEquals: 'Group' },
+                    { source: 'properties.action', notEquals: 'delete' }
+                ] }
+            ] },
+            { field: 'properties.changeLogon', enabledWhen: [
+                { anyOf: [
+                    { source: 'properties.element', notEquals: 'Group' },
+                    { source: 'properties.action', notEquals: 'delete' }
+                ] }
+            ] },
+            { field: 'properties.noChange', enabledWhen: [
+                { anyOf: [
+                    { source: 'properties.element', notEquals: 'Group' },
+                    { source: 'properties.action', notEquals: 'delete' }
+                ] }
+            ] },
+            { field: 'properties.neverExpires', enabledWhen: [
+                { anyOf: [
+                    { source: 'properties.element', notEquals: 'Group' },
+                    { source: 'properties.action', notEquals: 'delete' }
+                ] }
+            ] },
+            { field: 'properties.acctDisabled', enabledWhen: [
+                { anyOf: [
+                    { source: 'properties.element', notEquals: 'Group' },
+                    { source: 'properties.action', notEquals: 'delete' }
+                ] }
+            ] },
+            { field: 'properties.expires', enabledWhen: [
+                { anyOf: [
+                    { source: 'properties.element', notEquals: 'Group' },
+                    { source: 'properties.action', notEquals: 'delete' }
+                ] },
+                { source: 'properties.neverExpires', notEquals: true }
+            ] }
+        ],
         columns: [
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },

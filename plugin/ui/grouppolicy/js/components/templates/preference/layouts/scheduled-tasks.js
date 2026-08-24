@@ -27,6 +27,14 @@ define([], function() {
         ],
         general: [],
         filters: 'basic',
+        dependencies: [
+            { field: 'properties.idleMinutes', enabledWhen: [
+                { source: 'properties.startOnlyIfIdle', equals: true }
+            ] },
+            { field: 'properties.deadlineMinutes', enabledWhen: [
+                { source: 'properties.startOnlyIfIdle', equals: true }
+            ] }
+        ],
         columns: [
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },

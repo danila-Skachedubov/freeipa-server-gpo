@@ -19,6 +19,18 @@ define([], function() {
             { field: 'metadata.desc', textarea: true }
         ],
         filters: 'general',
+        dependencies: [
+            { field: 'properties.section', enabledWhen: [
+                { source: 'properties.path', nonEmpty: true }
+            ] },
+            { field: 'properties.property', enabledWhen: [
+                { source: 'properties.section', nonEmpty: true }
+            ] },
+            { field: 'properties.value', enabledWhen: [
+                { source: 'properties.property', nonEmpty: true },
+                { source: 'properties.action', notEquals: 'delete' }
+            ] }
+        ],
         columns: [
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },

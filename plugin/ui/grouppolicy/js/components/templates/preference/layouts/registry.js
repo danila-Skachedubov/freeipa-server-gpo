@@ -25,6 +25,26 @@ define([], function() {
             { field: 'metadata.desc', textarea: true }
         ],
         filters: 'general',
+        dependencies: [
+            { field: 'properties.name', enabledWhen: [
+                { source: 'properties.default', notEquals: true }
+            ] },
+            { field: 'properties.type', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.value', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.displayDecimal', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.defaultValue', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.bitfield', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] }
+        ],
         columns: [
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },

@@ -22,6 +22,14 @@ define([], function() {
             { field: 'metadata.desc', textarea: true }
         ],
         filters: 'general',
+        dependencies: [
+            { field: 'properties.dsn', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.username', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] }
+        ],
         columns: [
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },

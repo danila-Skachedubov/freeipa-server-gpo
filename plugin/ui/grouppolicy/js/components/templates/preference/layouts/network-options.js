@@ -45,6 +45,45 @@ define([], function() {
             { field: 'metadata.desc', textarea: true }
         ],
         filters: 'general',
+        dependencies: [
+            { field: 'properties.ipAddress', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.useDNS', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.useIPv6', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.dialFirst', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.trayIcon', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.eap', enabledWhen: [
+                { source: 'properties.customSettings', equals: true }
+            ] },
+            { field: 'properties.pap', enabledWhen: [
+                { source: 'properties.customSettings', equals: true }
+            ] },
+            { field: 'properties.spap', enabledWhen: [
+                { source: 'properties.customSettings', equals: true }
+            ] },
+            { field: 'properties.chap', enabledWhen: [
+                { source: 'properties.customSettings', equals: true }
+            ] },
+            { field: 'properties.msChap', enabledWhen: [
+                { source: 'properties.customSettings', equals: true }
+            ] },
+            { field: 'properties.oldMsChap', enabledWhen: [
+                { source: 'properties.customSettings', equals: true },
+                { source: 'properties.msChap', equals: true }
+            ] },
+            { field: 'properties.msChapV2', enabledWhen: [
+                { source: 'properties.customSettings', equals: true }
+            ] }
+        ],
         columns: [
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },

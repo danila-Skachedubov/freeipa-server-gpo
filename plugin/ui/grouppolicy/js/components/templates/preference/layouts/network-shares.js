@@ -25,6 +25,33 @@ define([], function() {
             { field: 'metadata.desc', textarea: true }
         ],
         filters: 'general',
+        dependencies: [
+            { field: 'properties.path', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.comment', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.allRegular', enabledWhen: [
+                { source: 'properties.action', in: ['update', 'delete'] }
+            ] },
+            { field: 'properties.allHidden', enabledWhen: [
+                { source: 'properties.action', in: ['update', 'delete'] }
+            ] },
+            { field: 'properties.allAdminDrive', enabledWhen: [
+                { source: 'properties.action', in: ['update', 'delete'] }
+            ] },
+            { field: 'properties.limitUsers', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] },
+            { field: 'properties.userLimit', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' },
+                { source: 'properties.limitUsers', equals: true }
+            ] },
+            { field: 'properties.abe', enabledWhen: [
+                { source: 'properties.action', notEquals: 'delete' }
+            ] }
+        ],
         columns: [
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },
