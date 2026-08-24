@@ -1831,7 +1831,7 @@ class gpo_del(LDAPDelete):
         entry = self.obj.find_gpo_by_displayname(ldap, keys[0])
         return entry.dn
 
-    def post_callback(self, ldap, dn, entry_attrs, *keys, **options):
+    def post_callback(self, ldap, dn, *keys, **options):
 
         guid = str(dn[0].value)
         domain = self.api.env.domain.lower()

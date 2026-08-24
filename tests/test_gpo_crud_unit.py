@@ -1,6 +1,7 @@
 """Focused unit tests for the FreeIPA Group Policy Object CRUD plugin."""
 
 import importlib.util
+import inspect
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call
@@ -630,7 +631,6 @@ def test_gpo_delete_post_callback_removes_sysvol_best_effort():
         subject,
         MagicMock(),
         GPO_DN,
-        {},
         "Policy One",
     )
 
@@ -640,6 +640,12 @@ def test_gpo_delete_post_callback_removes_sysvol_best_effort():
         GUID,
         "example.test",
         fail_on_error=False,
+    )
+
+
+def test_gpo_delete_post_callback_matches_ldap_delete_contract():
+    assert str(inspect.signature(GPO.gpo_del.post_callback)) == (
+        "(self, ldap, dn, *keys, **options)"
     )
 
 
