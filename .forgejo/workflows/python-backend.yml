@@ -2,6 +2,10 @@ name: Build and test package
 
 on:
   push:
+    branches:
+      - '**'
+    tags:
+      - '*-alt*'
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -16,6 +20,24 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
+      - name: Verify release tag matches RPM version
+        if: ${{ startsWith(forgejo.ref, 'refs/tags/') }}
+        env:
+          RELEASE_REF: ${{ forgejo.ref }}
+        run: |
+          set -euo pipefail
+
+          release_tag="${RELEASE_REF#refs/tags/}"
+          package_version="$(rpmspec \
+            --query \
+            --queryformat '%{VERSION}-%{RELEASE}\n' \
+            ipa-gpo-install.spec | head -n 1)"
+
+          if [ "$release_tag" != "$package_version" ]; then
+            echo "Tag $release_tag does not match RPM version $package_version"
+            exit 1
+          fi
+
       - name: Build and test RPMs
         uses: actions/build-rpm-action@main
 
@@ -24,3 +46,11 @@ jobs:
         with:
           name: alt-packages
           path: ~/.cache/hasherc/freeipa-server-gpo/out/RPMS/**/*.rpm
+
+      - name: Publish release in Forgejo Packages
+        if: ${{ forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/tags/') }}
+        uses: actions/upload-rpm-action@main
+        with:
+          token: ${{ secrets.PACKAGE_TOKEN }}
+          directory: ~/.cache/hasherc/freeipa-server-gpo/out/RPMS
+          group: freeipa-server-gpo
