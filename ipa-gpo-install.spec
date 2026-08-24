@@ -10,6 +10,11 @@ ExcludeArch: %ix86
 
 BuildRequires: rpm-build-python3
 BuildRequires: gettext-tools
+BuildRequires: python3-module-pytest
+BuildRequires: python3-module-freeipa
+BuildRequires: python3-module-ipaserver
+BuildRequires: python3-module-dbus
+BuildRequires: python3-module-ldap
 
 Requires: python3-module-freeipa
 Requires: python3-module-ipaserver
@@ -41,6 +46,9 @@ and creates the necessary directory structure.
 %install
 make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitelibdir
 %find_lang ipa-gpo-install
+
+%check
+python3 -m pytest tests/ --ignore=tests/integration -q
 
 %files -f ipa-gpo-install.lang
 %doc README.md
