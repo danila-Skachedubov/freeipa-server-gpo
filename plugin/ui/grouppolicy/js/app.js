@@ -41,43 +41,6 @@ define([
     var ensureLazyChildren = treeViewListModule.ensureLazyChildren;
     var createElement = elementCreatorModule.createElement;
     var t = translationsModule.t;
-    var lifecycleGeneration = 0;
-    var activeLifecycle = null;
-
-    function destroyLifecycle(lifecycle) {
-        if (!lifecycle || lifecycle.destroyed) return;
-        lifecycle.destroyed = true;
-        if (activeLifecycle === lifecycle) {
-            lifecycleGeneration += 1;
-            activeLifecycle = null;
-        }
-
-        if (lifecycle.treeViewState) {
-            lifecycle.treeViewState.renderRequestId += 1;
-            lifecycle.treeViewState.navigationRequestId += 1;
-            try {
-                lifecycle.treeViewState.cleanupCurrentView();
-            } catch (error) {
-                if (typeof console !== 'undefined' && console.error) {
-                    console.error(error);
-                }
-            }
-            lifecycle.treeViewState.currentView = null;
-        }
-        if (typeof lifecycle.resizeCleanup === 'function') {
-            try {
-                lifecycle.resizeCleanup();
-            } catch (error) {
-                if (typeof console !== 'undefined' && console.error) {
-                    console.error(error);
-                }
-            }
-        }
-    }
-
-    function destroy() {
-        destroyLifecycle(activeLifecycle);
-    }
 
     function createTreeViewState() {
         return {
@@ -323,12 +286,6 @@ define([
                 var headerElement = this.header && this.header.getElement ? this.header.getElement() : null;
                 var preferenceControls = headerElement ? headerElement.querySelector('.gp__control') : null;
                 var editorActions = headerElement ? headerElement.querySelector('.gp__control-actions') : null;
-                var headerOwner = 'editor-view-' + renderRequestId;
-                [preferenceControls, editorActions].forEach(function(control) {
-                    if (control) {
-                        control.setAttribute('data-editor-view-owner', headerOwner);
-                    }
-                });
                 if (preferenceControls) preferenceControls.style.display = 'none';
                 if (editorActions) editorActions.style.display = 'none';
                 var admxActions = headerElement ? headerElement.querySelector('.gp__control-admx') : null;
@@ -368,7 +325,6 @@ define([
                         templateResult = await renderAdmxTemplate({
                             isHelpOpen: this.isHelpOpen,
                             header: this.header,
-                            headerOwner: headerOwner,
                             item: item,
                             isCurrent: function() {
                                 return renderRequestId === this.renderRequestId
@@ -379,7 +335,6 @@ define([
                     } else if (item.template === 'preferences') {
                         templateResult = await renderPreferencesTemplate({
                             header: this.header,
-                            headerOwner: headerOwner,
                             item: item,
                             isCurrent: function() {
                                 return renderRequestId === this.renderRequestId
@@ -562,21 +517,11 @@ define([
     }
 
     function init(options) {
-        destroy();
-        var generation = lifecycleGeneration;
         var container = resolveContainer(options || {});
 
         if (!container) {
             return null;
         }
-
-        var lifecycle = {
-            container: container,
-            treeViewState: null,
-            resizeCleanup: null,
-            destroyed: false
-        };
-        activeLifecycle = lifecycle;
 
         container.innerHTML = '';
 
@@ -586,14 +531,7 @@ define([
         translationsModule.setLanguage(browserLang);
 
         APIModule.initialize(policyName).then(function(openResult) {
-            if (
-                generation !== lifecycleGeneration
-                || activeLifecycle !== lifecycle
-            ) {
-                return;
-            }
             var treeViewState = createTreeViewState();
-            lifecycle.treeViewState = treeViewState;
             var header = renderHeader(container);
             var headerElement = header.getElement();
             var initialPreferenceControls = headerElement.querySelector('.gp__control');
@@ -681,18 +619,12 @@ define([
             policyBtnNo.addEventListener('click', treeViewState.handlePolicyChangedNo.bind(treeViewState));
             policyBtnYes.addEventListener('click', treeViewState.handlePolicyChangedYes.bind(treeViewState));
 
-            lifecycle.resizeCleanup = resizable(
+            resizable(
                 renderedMain.divider.getElement(),
                 renderedMain.treeView.getElement(),
                 renderedMain.main.getElement()
             );
         }).catch(function(error) {
-            if (
-                generation !== lifecycleGeneration
-                || activeLifecycle !== lifecycle
-            ) {
-                return;
-            }
             container.innerHTML = '';
             container.appendChild(editorStatusModule.renderError(error, {
                 onRefresh: function() { init(options); }
@@ -700,14 +632,12 @@ define([
         });
 
         return {
-            container: container,
-            destroy: function() { destroyLifecycle(lifecycle); }
+            container: container
         };
     }
 
     return {
         init: init,
-        destroy: destroy,
         _test: {
             createTreeViewState: createTreeViewState
         }

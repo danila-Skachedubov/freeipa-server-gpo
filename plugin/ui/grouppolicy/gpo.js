@@ -250,15 +250,7 @@ define([
                 '</div>'
             );
 
-            var appLifecycle = null;
-            var modalClosed = false;
             var close_modal = function() {
-                if (modalClosed) return;
-                modalClosed = true;
-                if (appLifecycle && typeof appLifecycle.destroy === 'function') {
-                    appLifecycle.destroy();
-                }
-                appLifecycle = null;
                 modal.remove();
                 backdrop.remove();
                 facet.refresh();
@@ -273,16 +265,12 @@ define([
             $('body').append(backdrop).append(modal);
 
             require(['./js/app'], function(app) {
-                if (modalClosed) return;
                 if (app && typeof app.init === 'function') {
-                    var handle = app.init({
+                    app.init({
                         containerId: 'gp__container',
                         policyName: policyName,
                         path: '/'
                     });
-                    appLifecycle = handle && typeof handle.destroy === 'function'
-                        ? handle
-                        : app;
                     return;
                 }
 
