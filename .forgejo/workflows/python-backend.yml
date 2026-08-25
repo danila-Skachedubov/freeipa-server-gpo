@@ -7,6 +7,12 @@ on:
     tags:
       - '*-alt*'
   workflow_dispatch:
+    inputs:
+      publish_test_package:
+        description: Publish RPM to the test package group
+        required: true
+        type: boolean
+        default: false
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -54,3 +60,11 @@ jobs:
           token: ${{ secrets.PACKAGE_TOKEN }}
           directory: ~/.cache/hasherc/freeipa-server-gpo/out/RPMS
           group: freeipa-server-gpo
+
+      - name: Test publish to Forgejo Packages
+        if: ${{ forgejo.event_name == 'workflow_dispatch' && inputs.publish_test_package }}
+        uses: actions/upload-rpm-action@main
+        with:
+          token: ${{ secrets.PACKAGE_TOKEN }}
+          directory: ~/.cache/hasherc/freeipa-server-gpo/out/RPMS
+          group: freeipa-server-gpo-test
