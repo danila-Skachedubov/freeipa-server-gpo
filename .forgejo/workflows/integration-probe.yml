@@ -1,0 +1,97 @@
+name: Probe integration container support
+
+on:
+  workflow_dispatch:
+
+jobs:
+  container-runtime-probe:
+    name: Probe nested Podman and systemd
+    runs-on: als-huge
+    timeout-minutes: 20
+    container:
+      image: altlinux.space/actions/runner/containers:sisyphus
+      options: --privileged
+
+    steps:
+      - name: Inspect runner container
+        run: |
+          set -euxo pipefail
+
+          id
+          uname -a
+          podman --version
+          podman info
+          findmnt -T /sys/fs/cgroup
+          cat /proc/self/cgroup
+
+      - name: Probe nested Podman
+        run: |
+          set -euxo pipefail
+
+          podman run --rm \
+            registry.altlinux.org/sisyphus/alt:latest \
+            /bin/true
+
+          podman run --rm --privileged \
+            registry.altlinux.org/sisyphus/alt:latest \
+            /usr/bin/id
+
+      - name: Build minimal ALT systemd image
+        run: |
+          set -euxo pipefail
+
+          podman build --tag ipa-gpo-systemd-probe -f - . <<'EOF'
+          FROM registry.altlinux.org/sisyphus/alt:latest
+          RUN apt-get update \
+              && apt-get install -y systemd dbus \
+              && apt-get clean
+          STOPSIGNAL SIGRTMIN+3
+          CMD ["/sbin/init"]
+          EOF
+
+      - name: Probe systemd inside nested container
+        run: |
+          set -euxo pipefail
+
+          podman run --detach \
+            --name ipa-gpo-systemd-probe \
+            --privileged \
+            --systemd=always \
+            ipa-gpo-systemd-probe
+
+          system_state=""
+          for attempt in $(seq 1 30); do
+            system_state="$(podman exec ipa-gpo-systemd-probe \
+              systemctl is-system-running 2>/dev/null || true)"
+            case "$system_state" in
+              running|degraded)
+                break
+                ;;
+            esac
+            sleep 1
+          done
+
+          podman exec ipa-gpo-systemd-probe \
+            systemctl --no-pager --full status || true
+
+          case "$system_state" in
+            running|degraded)
+              echo "Nested systemd reached acceptable state: $system_state"
+              ;;
+            *)
+              echo "Nested systemd did not start: $system_state"
+              exit 1
+              ;;
+          esac
+
+      - name: Collect diagnostics and clean up
+        if: ${{ always() }}
+        run: |
+          set +e
+
+          podman ps --all
+          podman logs ipa-gpo-systemd-probe
+          podman exec ipa-gpo-systemd-probe \
+            journalctl -b --no-pager
+          podman rm --force ipa-gpo-systemd-probe
+          podman image rm ipa-gpo-systemd-probe
