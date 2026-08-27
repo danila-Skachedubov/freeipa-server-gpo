@@ -1,5 +1,5 @@
 Name:           freeipa-server-gpo
-Version:        0.1.0
+Version:        0.1.1
 Release:        alt1
 
 Summary:        Prepare FreeIPA for Group Policy Management
@@ -80,6 +80,17 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
 %_datadir/bash-completion/completions/ipa-gpo-install
 
 %changelog
+* Thu Aug 27 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.1.1-alt1
+- ci: allow manual test package publishing
+- ci: publish tagged RPM releases
+- ci: build RPM in Sisyphus hasher
+- ci: add Python backend checks
+- build: verbose colored pytest output in %check
+- build: run unit tests during package build
+- fix(gpo): bound oddjob D-Bus calls
+- fix(gpo): match LDAP delete callback contract
+- fix(gpo): handle malformed D-Bus responses
+
 * Fri Aug 07 2026 Danila Skachedubov <skachedubov@altlinux.org> 0.1.0-alt1
 - feat: fix info help (thx vladimirovicp)
 - chore(web): temporarily hide Preferences from tree (thx Korney Gedert)
