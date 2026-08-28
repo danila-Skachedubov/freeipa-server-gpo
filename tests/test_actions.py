@@ -282,15 +282,21 @@ class TestConfigureEditorFilesystem:
     """Tests for provisioning the filesystem used by the current editor."""
 
     @patch('ipa_gpo_install.actions.ensure_policies_root_acl')
+    @patch('ipa_gpo_install.actions.ensure_path_traversal_acls')
     @patch('ipa_gpo_install.actions.ensure_editor_state_directory')
     @patch('ipa_gpo_install.actions.get_policies_path')
-    def test_success(self, mock_path, mock_state, mock_acl):
+    def test_success(self, mock_path, mock_state, mock_traversal, mock_acl):
         mock_path.return_value = '/var/lib/freeipa/sysvol/test/Policies'
 
         actions = _make_actions()
 
         assert actions.configure_editor_filesystem() is True
         mock_state.assert_called_once_with()
+        mock_traversal.assert_called_once_with((
+            Path('/var/lib/freeipa'),
+            Path('/var/lib/freeipa/sysvol'),
+            Path('/var/lib/freeipa/sysvol/test'),
+        ))
         mock_acl.assert_called_once()
         assert str(mock_acl.call_args.args[0]).endswith('/test/Policies')
 
@@ -308,12 +314,14 @@ class TestConfigureEditorFilesystem:
         'ipa_gpo_install.actions.ensure_policies_root_acl',
         side_effect=RuntimeError('ACL error'),
     )
+    @patch('ipa_gpo_install.actions.ensure_path_traversal_acls')
     @patch('ipa_gpo_install.actions.ensure_editor_state_directory')
-    def test_policies_acl_failure(self, mock_state, mock_acl):
+    def test_policies_acl_failure(self, mock_state, mock_traversal, mock_acl):
         actions = _make_actions()
 
         assert actions.configure_editor_filesystem() is False
         mock_state.assert_called_once_with()
+        mock_traversal.assert_called_once()
         mock_acl.assert_called_once()
 
 

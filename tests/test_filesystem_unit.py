@@ -14,6 +14,7 @@ from ipa_gpo_install.filesystem import (
     ensure_directory_editor_acl,
     ensure_editor_state_directory,
     ensure_new_gpo_acls,
+    ensure_path_traversal_acls,
     ensure_policies_root_acl,
 )
 
@@ -238,6 +239,41 @@ def test_directory_editor_acl_applies_access_and_default_acl(tmp_path):
             str(directory),
         ]
     ]
+
+
+def test_path_traversal_acls_grant_execute_only(tmp_path):
+    parent = tmp_path / "parent"
+    child = parent / "child"
+    child.mkdir(parents=True)
+    calls = []
+
+    def runner(command, **_kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    ensure_path_traversal_acls([parent, child], "ipaapi", runner=runner)
+
+    assert calls == [[
+        "setfacl",
+        "-m",
+        "u:ipaapi:--x",
+        "--",
+        str(parent),
+        str(child),
+    ]]
+
+
+def test_path_traversal_acls_reject_symlink(tmp_path):
+    real_parent = tmp_path / "real"
+    linked_parent = tmp_path / "linked"
+    real_parent.mkdir()
+    linked_parent.symlink_to(real_parent, target_is_directory=True)
+
+    with pytest.raises(
+        FilesystemConfigurationError,
+        match="ACL parent is not a real directory",
+    ):
+        ensure_path_traversal_acls([linked_parent], "ipaapi")
 
 
 def test_state_directory_status_rejects_regular_file(tmp_path, monkeypatch):
