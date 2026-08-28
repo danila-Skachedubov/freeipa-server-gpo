@@ -7,8 +7,28 @@ on:
       - ci/integration-container-probe
 
 jobs:
+  build-integration-rpm:
+    name: Build RPM for integration probe
+    runs-on: als-tiny
+    container:
+      image: altlinux.space/actions/runner/hasherc:sisyphus
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Build and test RPMs
+        uses: actions/build-rpm-action@main
+
+      - name: Upload integration RPM
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-rpm
+          path: ~/.cache/hasherc/freeipa-server-gpo/out/RPMS/**/*.rpm
+
   container-runtime-probe:
-    name: Install a minimal FreeIPA domain in nested Podman
+    name: Install project RPM in a minimal FreeIPA domain
+    needs: build-integration-rpm
     runs-on: als-huge
     timeout-minutes: 60
     container:
@@ -16,6 +36,33 @@ jobs:
       options: --privileged
 
     steps:
+      - name: Download integration RPM
+        uses: actions/download-artifact@v3
+        with:
+          name: integration-rpm
+          path: /tmp/ipa-gpo-rpms
+
+      - name: Verify integration RPM artifact
+        run: |
+          set -euo pipefail
+
+          mapfile -t project_rpms < <(
+            find /tmp/ipa-gpo-rpms -type f \
+              -name 'freeipa-server-gpo-*.rpm' \
+              ! -name '*.src.rpm' \
+              ! -name '*debuginfo*' \
+              -print
+          )
+
+          if [ "${#project_rpms[@]}" -ne 1 ]; then
+            printf 'Expected exactly one project RPM, found %s:\n' \
+              "${#project_rpms[@]}"
+            find /tmp/ipa-gpo-rpms -type f -print
+            exit 1
+          fi
+
+          rpm -qpi "${project_rpms[0]}"
+
       - name: Inspect runner container
         run: |
           set -euxo pipefail
@@ -192,6 +239,53 @@ jobs:
           podman exec ipa-gpo-freeipa-probe \
             ipa user-show admin
 
+      - name: Install project RPM in IPA server
+        run: |
+          set -euo pipefail
+
+          mapfile -t project_rpms < <(
+            find /tmp/ipa-gpo-rpms -type f \
+              -name 'freeipa-server-gpo-*.rpm' \
+              ! -name '*.src.rpm' \
+              ! -name '*debuginfo*' \
+              -print
+          )
+          test "${#project_rpms[@]}" -eq 1
+
+          podman cp \
+            "${project_rpms[0]}" \
+            ipa-gpo-freeipa-probe:/tmp/freeipa-server-gpo.rpm
+
+          podman exec ipa-gpo-freeipa-probe \
+            apt-get update
+          podman exec ipa-gpo-freeipa-probe \
+            apt-get install -y /tmp/freeipa-server-gpo.rpm
+
+          podman exec ipa-gpo-freeipa-probe \
+            rpm -q freeipa-server-gpo
+          podman exec ipa-gpo-freeipa-probe \
+            rpm -V freeipa-server-gpo
+          podman exec ipa-gpo-freeipa-probe \
+            command -v ipa-gpo-install
+
+      - name: Configure and verify GPO backend
+        run: |
+          set -euo pipefail
+
+          podman exec ipa-gpo-freeipa-probe \
+            ipa-gpo-install --debuglevel=2
+          podman exec ipa-gpo-freeipa-probe \
+            ipa-gpo-install --debuglevel=2 --check-only
+
+          podman exec ipa-gpo-freeipa-probe \
+            ipactl status
+          podman exec ipa-gpo-freeipa-probe \
+            ipa ping
+          podman exec ipa-gpo-freeipa-probe \
+            test -d /var/lib/freeipa/sysvol/ipa.test/Policies
+          podman exec ipa-gpo-freeipa-probe \
+            test -d /var/lib/freeipa/gpo-editor-state
+
       - name: Collect diagnostics and clean up
         if: ${{ always() }}
         run: |
@@ -208,6 +302,10 @@ jobs:
             ipactl status
           podman exec ipa-gpo-freeipa-probe \
             tail -n 300 /var/log/ipaserver-install.log
+          podman exec ipa-gpo-freeipa-probe \
+            tail -n 300 /var/log/freeipa/ipa-gpo-install.log
+          podman exec ipa-gpo-freeipa-probe \
+            rpm -q freeipa-server-gpo
           podman rm --force ipa-gpo-freeipa-probe
           podman rm --force ipa-gpo-systemd-probe
           podman image rm localhost/ipa-gpo-freeipa-probe:latest
