@@ -153,8 +153,9 @@ jobs:
           set -euo pipefail
 
           ipa_hostname="$(podman exec ipa-gpo-freeipa-probe hostname --fqdn)"
-          ipa_addresses="$(podman exec ipa-gpo-freeipa-probe hostname -I)"
-          ipa_address="${ipa_addresses%% *}"
+          ipa_address="$(podman inspect \
+            --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
+            ipa-gpo-freeipa-probe)"
 
           test "$ipa_hostname" = "server.ipa.test"
           test -n "$ipa_address"
