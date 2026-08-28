@@ -2,6 +2,9 @@ name: Probe integration container support
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ci/integration-container-probe
 
 jobs:
   container-runtime-probe:
