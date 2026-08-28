@@ -16,6 +16,7 @@ from ipapython import ipautil
 from .config import (
     FREEIPA_SYSVOL_PATH,
     GPO_EDITOR_STATE_DIR,
+    GPO_EDITOR_GROUP,
     GPO_EDITOR_USER,
     LOCALE_DIR,
     get_domain_sysvol_path,
@@ -280,8 +281,12 @@ class IPAChecker:
         for permission in permissions:
             result = subprocess.run(
                 [
-                    "runuser", "-u", GPO_EDITOR_USER, "--", "test",
-                    flags[permission], str(path),
+                    "setpriv",
+                    "--reuid", GPO_EDITOR_USER,
+                    "--regid", GPO_EDITOR_GROUP,
+                    "--clear-groups",
+                    "--",
+                    "test", flags[permission], str(path),
                 ],
                 capture_output=True,
                 text=True,

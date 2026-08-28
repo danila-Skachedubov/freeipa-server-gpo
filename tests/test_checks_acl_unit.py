@@ -81,11 +81,19 @@ def test_identity_access_checks_every_requested_permission(
     monkeypatch.setattr(checks_module.subprocess, "run", run)
 
     assert IPAChecker._identity_can_access(tmp_path, "rwx") is True
-    assert [call.args[0][5] for call in run.call_args_list] == [
+    assert [call.args[0][-2] for call in run.call_args_list] == [
         "-r",
         "-w",
         "-x",
     ]
+    assert all(call.args[0][0:8] == [
+        "setpriv",
+        "--reuid", "ipaapi",
+        "--regid", "ipaapi",
+        "--clear-groups",
+        "--",
+        "test",
+    ] for call in run.call_args_list)
     assert all(call.args[0][-1] == str(tmp_path) for call in run.call_args_list)
 
 

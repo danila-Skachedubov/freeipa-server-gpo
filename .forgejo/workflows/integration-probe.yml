@@ -317,7 +317,11 @@ jobs:
               /var/lib/freeipa/sysvol/ipa.test \
               /var/lib/freeipa/sysvol/ipa.test/Policies
           podman exec ipa-gpo-freeipa-probe \
-            runuser -u ipaapi -- /bin/sh -c '
+            setpriv \
+              --reuid ipaapi \
+              --regid ipaapi \
+              --clear-groups \
+              -- /bin/sh -c '
               id
               test -r /var/lib/freeipa/sysvol/ipa.test/Policies
               echo "Policies read status: $?"
