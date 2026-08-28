@@ -306,6 +306,24 @@ jobs:
             tail -n 300 /var/log/freeipa/ipa-gpo-install.log
           podman exec ipa-gpo-freeipa-probe \
             rpm -q freeipa-server-gpo
+          podman exec ipa-gpo-freeipa-probe \
+            id ipaapi
+          podman exec ipa-gpo-freeipa-probe \
+            namei -l /var/lib/freeipa/sysvol/ipa.test/Policies
+          podman exec ipa-gpo-freeipa-probe \
+            getfacl -cp \
+              /var/lib/freeipa \
+              /var/lib/freeipa/sysvol \
+              /var/lib/freeipa/sysvol/ipa.test \
+              /var/lib/freeipa/sysvol/ipa.test/Policies
+          podman exec ipa-gpo-freeipa-probe \
+            runuser -u ipaapi -- /bin/sh -c '
+              id
+              test -r /var/lib/freeipa/sysvol/ipa.test/Policies
+              echo "Policies read status: $?"
+              test -x /var/lib/freeipa/sysvol/ipa.test/Policies
+              echo "Policies traverse status: $?"
+            '
           podman rm --force ipa-gpo-freeipa-probe
           podman rm --force ipa-gpo-systemd-probe
           podman image rm localhost/ipa-gpo-freeipa-probe:latest
