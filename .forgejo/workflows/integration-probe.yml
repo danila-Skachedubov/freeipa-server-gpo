@@ -8,9 +8,9 @@ on:
 
 jobs:
   container-runtime-probe:
-    name: Probe nested Podman, systemd, and FreeIPA
+    name: Install a minimal FreeIPA domain in nested Podman
     runs-on: als-huge
-    timeout-minutes: 30
+    timeout-minutes: 60
     container:
       image: altlinux.space/actions/runner/containers:sisyphus
       options: --privileged
@@ -87,14 +87,14 @@ jobs:
               ;;
           esac
 
-      - name: Build minimal ALT FreeIPA image
+      - name: Build ALT FreeIPA server image
         run: |
           set -euxo pipefail
 
           podman build --tag localhost/ipa-gpo-freeipa-probe:latest -f - . <<'EOF'
           FROM localhost/ipa-gpo-systemd-probe:latest
           RUN apt-get update \
-              && apt-get install -y freeipa-server-core \
+              && apt-get install -y freeipa-server \
               && apt-get clean
           EOF
 
@@ -104,7 +104,7 @@ jobs:
 
           podman run --rm \
             localhost/ipa-gpo-freeipa-probe:latest \
-            rpm -q freeipa-server-core
+            rpm -q freeipa-server freeipa-server-core
 
           podman run --rm \
             localhost/ipa-gpo-freeipa-probe:latest \
@@ -116,6 +116,7 @@ jobs:
 
           podman run --detach \
             --name ipa-gpo-freeipa-probe \
+            --hostname server.ipa.test \
             --privileged \
             --systemd=always \
             localhost/ipa-gpo-freeipa-probe:latest
@@ -133,7 +134,7 @@ jobs:
           done
 
           podman exec ipa-gpo-freeipa-probe \
-            rpm -q freeipa-server-core
+            rpm -q freeipa-server freeipa-server-core
           podman exec ipa-gpo-freeipa-probe \
             systemctl is-active dbus.service
 
@@ -147,6 +148,49 @@ jobs:
               ;;
           esac
 
+      - name: Install minimal IPA domain
+        run: |
+          set -euo pipefail
+
+          ipa_hostname="$(podman exec ipa-gpo-freeipa-probe hostname --fqdn)"
+          ipa_addresses="$(podman exec ipa-gpo-freeipa-probe hostname -I)"
+          ipa_address="${ipa_addresses%% *}"
+
+          test "$ipa_hostname" = "server.ipa.test"
+          test -n "$ipa_address"
+
+          podman exec ipa-gpo-freeipa-probe \
+            getent hosts server.ipa.test
+
+          podman exec ipa-gpo-freeipa-probe \
+            ipa-server-install \
+              --unattended \
+              --hostname=server.ipa.test \
+              --ip-address="$ipa_address" \
+              --domain=ipa.test \
+              --realm=IPA.TEST \
+              --ds-password='IpaTest-Directory-42!' \
+              --admin-password='IpaTest-Administrator-42!' \
+              --no-ntp \
+              --no-host-dns \
+              --no-ssh \
+              --no-sshd
+
+      - name: Verify IPA domain
+        run: |
+          set -euo pipefail
+
+          podman exec ipa-gpo-freeipa-probe ipactl status
+
+          printf '%s\n' 'IpaTest-Administrator-42!' | \
+            podman exec --interactive ipa-gpo-freeipa-probe \
+              kinit admin
+
+          podman exec ipa-gpo-freeipa-probe klist
+          podman exec ipa-gpo-freeipa-probe ipa ping
+          podman exec ipa-gpo-freeipa-probe \
+            ipa user-show admin
+
       - name: Collect diagnostics and clean up
         if: ${{ always() }}
         run: |
@@ -159,6 +203,10 @@ jobs:
           podman logs ipa-gpo-freeipa-probe
           podman exec ipa-gpo-freeipa-probe \
             journalctl -b --no-pager
+          podman exec ipa-gpo-freeipa-probe \
+            ipactl status
+          podman exec ipa-gpo-freeipa-probe \
+            tail -n 300 /var/log/ipaserver-install.log
           podman rm --force ipa-gpo-freeipa-probe
           podman rm --force ipa-gpo-systemd-probe
           podman image rm localhost/ipa-gpo-freeipa-probe:latest
