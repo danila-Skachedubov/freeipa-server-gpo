@@ -266,7 +266,7 @@ jobs:
           podman exec ipa-gpo-freeipa-probe \
             rpm -V freeipa-server-gpo
           podman exec ipa-gpo-freeipa-probe \
-            command -v ipa-gpo-install
+            test -x /usr/bin/ipa-gpo-install
 
       - name: Configure and verify GPO backend
         run: |
