@@ -8,9 +8,9 @@ on:
 
 jobs:
   container-runtime-probe:
-    name: Probe nested Podman and systemd
+    name: Probe nested Podman, systemd, and FreeIPA
     runs-on: als-huge
-    timeout-minutes: 20
+    timeout-minutes: 30
     container:
       image: altlinux.space/actions/runner/containers:sisyphus
       options: --privileged
@@ -43,7 +43,7 @@ jobs:
         run: |
           set -euxo pipefail
 
-          podman build --tag ipa-gpo-systemd-probe -f - . <<'EOF'
+          podman build --tag localhost/ipa-gpo-systemd-probe:latest -f - . <<'EOF'
           FROM registry.altlinux.org/sisyphus/alt:latest
           RUN apt-get update \
               && apt-get install -y systemd dbus \
@@ -87,6 +87,66 @@ jobs:
               ;;
           esac
 
+      - name: Build minimal ALT FreeIPA image
+        run: |
+          set -euxo pipefail
+
+          podman build --tag localhost/ipa-gpo-freeipa-probe:latest -f - . <<'EOF'
+          FROM localhost/ipa-gpo-systemd-probe:latest
+          RUN apt-get update \
+              && apt-get install -y freeipa-server-core \
+              && apt-get clean
+          EOF
+
+      - name: Verify FreeIPA package payload
+        run: |
+          set -euxo pipefail
+
+          podman run --rm \
+            localhost/ipa-gpo-freeipa-probe:latest \
+            rpm -q freeipa-server-core
+
+          podman run --rm \
+            localhost/ipa-gpo-freeipa-probe:latest \
+            ipa-server-install --help >/dev/null
+
+      - name: Probe systemd in FreeIPA image
+        run: |
+          set -euxo pipefail
+
+          podman run --detach \
+            --name ipa-gpo-freeipa-probe \
+            --privileged \
+            --systemd=always \
+            localhost/ipa-gpo-freeipa-probe:latest
+
+          system_state=""
+          for attempt in $(seq 1 30); do
+            system_state="$(podman exec ipa-gpo-freeipa-probe \
+              systemctl is-system-running 2>/dev/null || true)"
+            case "$system_state" in
+              running|degraded)
+                break
+                ;;
+            esac
+            sleep 1
+          done
+
+          podman exec ipa-gpo-freeipa-probe \
+            rpm -q freeipa-server-core
+          podman exec ipa-gpo-freeipa-probe \
+            systemctl is-active dbus.service
+
+          case "$system_state" in
+            running|degraded)
+              echo "FreeIPA image reached acceptable state: $system_state"
+              ;;
+            *)
+              echo "FreeIPA image did not start: $system_state"
+              exit 1
+              ;;
+          esac
+
       - name: Collect diagnostics and clean up
         if: ${{ always() }}
         run: |
@@ -96,5 +156,10 @@ jobs:
           podman logs ipa-gpo-systemd-probe
           podman exec ipa-gpo-systemd-probe \
             journalctl -b --no-pager
+          podman logs ipa-gpo-freeipa-probe
+          podman exec ipa-gpo-freeipa-probe \
+            journalctl -b --no-pager
+          podman rm --force ipa-gpo-freeipa-probe
           podman rm --force ipa-gpo-systemd-probe
-          podman image rm ipa-gpo-systemd-probe
+          podman image rm localhost/ipa-gpo-freeipa-probe:latest
+          podman image rm localhost/ipa-gpo-systemd-probe:latest
