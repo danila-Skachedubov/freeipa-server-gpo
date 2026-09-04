@@ -251,7 +251,6 @@
   display: none;
 }
 */
-.preference__modal-tabs .preference__modal-filters,
 .preference__modal-tabs #tab-general .field__input[data-field-id="metadata.name"],
 .preference__modal-tabs #tab-general .field__input[data-field-id="metadata.changed"],
 .preference__modal-tabs #tab-general .field__input[data-field-id="metadata.status"],

@@ -733,6 +733,25 @@
   padding: 0 20px;
   border-top: 1px solid #d1d1d1;
 }
+.gp__preference .targetting__modal {
+  z-index: 1050;
+}
+.gp__preference .targetting__modal .preference__modal-wrapper {
+  width: 600px;
+}
+.gp__preference .targetting__modal .preference__modal-content {
+  padding: 20px;
+}
+.gp__preference .targetting__modal .preference__modal-filters {
+  margin-top: 0;
+}
+.gp__preference .preference__modal .preference__tab-targetting-btn {
+  width: auto;
+  min-width: 80px;
+  padding: 0 10px;
+  align-self: flex-start;
+  margin-bottom: 16px;
+}
 .gp__preference .preference__divider {
   width: 5px;
   height: 100%;
@@ -1161,6 +1180,9 @@
 }
 @media (max-width: 900px) {
   .gp__preference .preference__modal-wrapper {
+    width: calc(100vw - 32px);
+  }
+  .gp__preference .targetting__modal .preference__modal-wrapper {
     width: calc(100vw - 32px);
   }
   .gpo-editor-fields,

@@ -1602,22 +1602,71 @@ define([
                 });
                 var closeAction = function() { closeForm(false, 'close'); };
                 var cancelAction = function() { closeForm(false, 'cancel'); };
+                var filterSection = createElement('div', { className: 'preference__modal-filters' });
+                filterSection.append(createElement('h3', { text: pt('filtersHeading') }));
+                filterSection.append(buildFilterEditor(response, formState, readonly));
+                var targettingModalElement = null;
+                var closeTargettingModal = function() {
+                    if (targettingModalElement) targettingModalElement.classList.remove('active');
+                };
+                var buildTargettingModal = function() {
+                    if (targettingModalElement) return targettingModalElement;
+                    targettingModalElement = createElement('div', {
+                        className: [
+                            'targetting__modal', 'preference__modal',
+                            readonly ? 'preference__modal--readonly' : null
+                        ],
+                        children: [createElement('div', {
+                            className: 'preference__modal-wrapper',
+                            children: [
+                                createElement('div', {
+                                    className: 'preference__modal-header',
+                                    children: [
+                                        createElement('div', {
+                                            className: 'title',
+                                            text: pt('targettingTitle')
+                                        }),
+                                        createElement('button', {
+                                            className: 'close',
+                                            attrs: { type: 'button', 'aria-label': pt('close') },
+                                            events: { click: closeTargettingModal }
+                                        })
+                                    ]
+                                }),
+                                createElement('div', {
+                                    className: 'preference__modal-content',
+                                    children: [filterSection]
+                                }),
+                                createElement('div', {
+                                    className: 'preference__modal-footer',
+                                    children: [
+                                        createElement('button', {
+                                            className: ['button', 'btn-cancel'],
+                                            attrs: { type: 'button' },
+                                            text: pt('close'),
+                                            events: { click: closeTargettingModal }
+                                        })
+                                    ]
+                                })
+                            ]
+                        })]
+                    }).getElement();
+                    if (!readonly) {
+                        targettingModalElement.addEventListener('input', function() {
+                            if (!formState.busy) formState.dirty = true;
+                        });
+                        targettingModalElement.addEventListener('change', function() {
+                            if (!formState.busy) formState.dirty = true;
+                        });
+                    }
+                    return targettingModalElement;
+                };
                 var buildModalContent = function() {
                     var content = createElement('div', { className: 'preference__modal-content' });
                     content.append(validationSlot);
                     content.append(errorSlot);
                     content.append(createElement('div', { className: 'gpo-editor-fields' }));
-                    var filterSection = createElement('div', { className: 'preference__modal-filters' });
-                    filterSection.append(createElement('h3', { text: pt('filtersHeading') }));
-                    filterSection.append(buildFilterEditor(response, formState, readonly));
-                    if (fieldTabs) {
-                        content.append(fieldTabs);
-                        if (fieldTabs.filtersSlot) {
-                            fieldTabs.filtersSlot.append(filterSection);
-                            filterSection = null;
-                        }
-                    }
-                    if (filterSection) content.append(filterSection);
+                    if (fieldTabs) content.append(fieldTabs);
                     return content;
                 };
                 var form = createElement('div', {
@@ -1681,6 +1730,30 @@ define([
                     }
                 }
                 if (parentField && fieldSlot) fieldSlot.appendChild(parentField.getElement());
+                var targettingButton = createElement('button', {
+                    className: ['button', 'preference__tab-targetting-btn'],
+                    attrs: { type: 'button' },
+                    text: pt('targettingButton'),
+                    events: {
+                        click: function() {
+                            var modal = buildTargettingModal();
+                            if (!modal.parentNode) host.appendChild(modal);
+                            modal.classList.add('active');
+                        }
+                    }
+                });
+                var generalTabElement = form.getElement().querySelector('#tab-general');
+                var descriptionField = generalTabElement
+                    && generalTabElement.querySelector('[data-field-id="metadata.desc"]');
+                if (generalTabElement && descriptionField && descriptionField.parentNode) {
+                    descriptionField.parentNode.insertBefore(
+                        targettingButton.getElement(), descriptionField);
+                } else if (generalTabElement) {
+                    generalTabElement.appendChild(targettingButton.getElement());
+                } else {
+                    var formContentSlot = form.getElement().querySelector('.preference__modal-content');
+                    if (formContentSlot) formContentSlot.appendChild(targettingButton.getElement());
+                }
                 if (!readonly) {
                     form.getElement().addEventListener('input', function() {
                         if (!formState.busy) formState.dirty = true;
@@ -1796,6 +1869,13 @@ define([
                 ? 'confirmCancelDiscard' : 'confirmCloseDiscard');
             if (modalState && modalState.formElement) {
                 modalState.formElement.classList.add('gpo-editor-preference-form--confirming');
+                if (modalState.formElement.parentNode) {
+                    var targettingModal = modalState.formElement.parentNode
+                        .querySelector('.targetting__modal');
+                    if (targettingModal) {
+                        targettingModal.classList.add('gpo-editor-preference-form--confirming');
+                    }
+                }
             }
             modal.element.classList.add('active');
         }
@@ -1838,13 +1918,20 @@ define([
 
         function formInteractiveElements(state) {
             var elements = [];
-            ['input', 'select', 'textarea', 'button'].forEach(function(selector) {
-                Array.prototype.forEach.call(
-                    state.formElement.querySelectorAll(selector),
-                    function(element) {
-                        if (elements.indexOf(element) === -1) elements.push(element);
-                    }
-                );
+            var roots = [state.formElement];
+            if (state.formElement.parentNode) {
+                var targettingModal = state.formElement.parentNode.querySelector('.targetting__modal');
+                if (targettingModal) roots.push(targettingModal);
+            }
+            roots.forEach(function(root) {
+                ['input', 'select', 'textarea', 'button'].forEach(function(selector) {
+                    Array.prototype.forEach.call(
+                        root.querySelectorAll(selector),
+                        function(element) {
+                            if (elements.indexOf(element) === -1) elements.push(element);
+                        }
+                    );
+                });
             });
             return elements;
         }

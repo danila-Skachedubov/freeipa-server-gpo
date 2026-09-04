@@ -64,6 +64,8 @@ define([], function() {
         filtersHeading: 'Item-level targeting',
         tabBasic: 'Basic settings',
         tabGeneral: 'General',
+        targettingButton: 'Targetting',
+        targettingTitle: 'Targetting',
         selectFilter: 'Select a filter to view its fields.',
         filterType: 'Filter type',
         addFilter: 'Add filter',

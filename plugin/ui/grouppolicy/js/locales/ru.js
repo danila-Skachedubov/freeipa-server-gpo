@@ -64,6 +64,8 @@ define([], function() {
         filtersHeading: 'Выбор элементов',
         tabBasic: 'Основные настройки',
         tabGeneral: 'Общие',
+        targettingButton: 'Нацеливание',
+        targettingTitle: 'Нацеливание',
         selectFilter: 'Выберите фильтр для просмотра его полей.',
         filterType: 'Тип фильтра',
         addFilter: 'Добавить фильтр',
