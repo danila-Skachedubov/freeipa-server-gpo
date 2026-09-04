@@ -283,8 +283,17 @@ jobs:
           podman exec ipa-gpo-freeipa-probe \
             ipa-gpo-install --debuglevel=2 --check-only
 
+          # AD Trust adds smb and winbind to ``ipactl status``.  Their
+          # availability depends on the current Sisyphus Samba packaging,
+          # while these server-side tests require the same essential service
+          # set enforced by ipa-gpo-install itself.
           podman exec ipa-gpo-freeipa-probe \
-            ipactl status
+            ipactl status || true
+          for service in \
+            dirsrv@IPA-TEST krb5kdc ipa sssd oddjobd; do
+            podman exec ipa-gpo-freeipa-probe \
+              systemctl is-active "$service"
+          done
           podman exec ipa-gpo-freeipa-probe \
             ipa ping
           podman exec ipa-gpo-freeipa-probe \
