@@ -308,6 +308,30 @@ class IPAActions:
             self.logger.error(_("Error restarting oddjob service: {}").format(e))
             return False
 
+    def restart_httpd(self):
+        """Restart Apache so its IPA workers load the installed plugins."""
+        try:
+            self.logger.info(_("Restarting httpd service"))
+
+            restart_cmd = ['systemctl', 'restart', 'httpd']
+            result = ipautil.run(restart_cmd, raiseonerr=False)
+
+            if result.returncode == 0:
+                self.logger.info(_("httpd service restarted successfully"))
+                return True
+
+            error_msg = result.error_output or _("Unknown error")
+            self.logger.error(
+                _("Failed to restart httpd: {}").format(error_msg)
+            )
+            return False
+
+        except Exception as e:
+            self.logger.error(
+                _("Error restarting httpd service: {}").format(e)
+            )
+            return False
+
     def are_plugins_activated(self):
         """
         Check if plugin files are present in target directories.

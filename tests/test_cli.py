@@ -149,6 +149,7 @@ class TestExecuteRequiredActions:
       - are_plugins_activated -> if not, activate_plugins
       - restart_oddjob (always)
       - If !schema_complete -> run_ipa_server_upgrade
+      - restart_httpd (always, after any schema upgrade)
     """
 
     def test_all_checks_pass_minimal_actions(self):
@@ -166,6 +167,7 @@ class TestExecuteRequiredActions:
         actions.install_adtrust.assert_not_called()
         actions.create_sysvol_directory.assert_not_called()
         actions.create_sysvol_share.assert_not_called()
+        actions.restart_httpd.assert_called_once_with()
 
     def test_adtrust_not_installed_triggers_install(self):
         actions = _make_actions()
@@ -228,6 +230,7 @@ class TestExecuteRequiredActions:
         }
         assert cli.execute_required_actions(actions, check_results) is True
         actions.run_ipa_server_upgrade.assert_called_once()
+        actions.restart_httpd.assert_called_once_with()
 
     def test_task_failure_stops_execution(self):
         actions = _make_actions()
@@ -312,3 +315,20 @@ class TestExecuteRequiredActions:
             'schema_complete': False,
         }
         assert cli.execute_required_actions(actions, check_results) is False
+        actions.restart_httpd.assert_not_called()
+
+    def test_httpd_failure_stops(self):
+        actions = _make_actions()
+        actions.are_plugins_activated.return_value = True
+        actions.restart_oddjob.return_value = True
+        actions.restart_httpd.return_value = False
+        actions.configure_editor_filesystem.return_value = True
+        check_results = {
+            'adtrust_enabled': True,
+            'sysvol_directory': True,
+            'sysvol_share': True,
+            'schema_complete': True,
+        }
+
+        assert cli.execute_required_actions(actions, check_results) is False
+        actions.restart_httpd.assert_called_once_with()

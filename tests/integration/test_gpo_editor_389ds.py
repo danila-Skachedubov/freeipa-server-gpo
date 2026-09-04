@@ -842,7 +842,7 @@ def test_atomic_cas_success_conflict_and_absent_attributes(live_server):
 
     success_plan = _publication_plan(
         initial,
-        initial["version_number"] + 1,
+        initial["version_number"] + 0x10001,
         MACHINE_EXTENSION,
         USER_EXTENSION,
     )
@@ -879,7 +879,7 @@ def test_atomic_cas_success_conflict_and_absent_attributes(live_server):
 
     stale_plan = _publication_plan(
         stale,
-        stale["version_number"] + 1,
+        stale["version_number"] + 0x10001,
         "would-overwrite-machine",
         "would-overwrite-user",
     )
@@ -1421,7 +1421,7 @@ def test_installed_high_level_command_flow_is_path_free(
         displayname, locales=["zz-ZZ"]
     )["result"]
     assert opened["locales"] == ["en-US"]
-    assert opened["binding"]["api_version"] == 1
+    assert "binding" not in opened
     assert opened["pending_publication"] is None
 
     policy = api.Command.gpo_editor_policy_show(

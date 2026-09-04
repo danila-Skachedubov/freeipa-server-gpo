@@ -278,6 +278,35 @@ class TestRestartOddjob:
         assert actions.restart_oddjob() is False
 
 
+class TestRestartHttpd:
+    """restart_httpd() restarts the IPA Apache workers."""
+
+    @patch('ipa_gpo_install.actions.ipautil.run')
+    def test_success(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0, error_output='')
+        actions = _make_actions()
+
+        assert actions.restart_httpd() is True
+        mock_run.assert_called_once_with(
+            ['systemctl', 'restart', 'httpd'], raiseonerr=False
+        )
+
+    @patch('ipa_gpo_install.actions.ipautil.run')
+    def test_fails(self, mock_run):
+        mock_run.return_value = MagicMock(
+            returncode=1, error_output='no service'
+        )
+        actions = _make_actions()
+
+        assert actions.restart_httpd() is False
+
+    @patch('ipa_gpo_install.actions.ipautil.run', side_effect=Exception('err'))
+    def test_exception(self, mock_run):
+        actions = _make_actions()
+
+        assert actions.restart_httpd() is False
+
+
 class TestConfigureEditorFilesystem:
     """Tests for provisioning the filesystem used by the current editor."""
 
