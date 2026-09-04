@@ -737,7 +737,7 @@
   z-index: 1050;
 }
 .gp__preference .targetting__modal .preference__modal-wrapper {
-  width: 600px;
+  width: 680px;
 }
 .gp__preference .targetting__modal .preference__modal-content {
   padding: 20px;
@@ -994,13 +994,13 @@
   grid-template-columns: repeat(2, minmax(220px, 1fr));
   gap: 12px 20px;
 }
-.gpo-editor-field {
+/* .gpo-editor-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 5px;
   border: 1px solid transparent;
-}
+} */
 .gpo-editor-field input,
 .gpo-editor-field select,
 .gpo-editor-field textarea {
@@ -1064,6 +1064,13 @@
   padding: 8px;
   border-bottom: 1px solid #d1d1d1;
 }
+
+.gp__preference .gpo-editor-filters .gpo-editor-filter-add,
+.gp__preference .gpo-editor-filters .gpo-editor-filter-replace,
+.gp__preference .gpo-editor-filters .gpo-editor-filter-remove{
+  width: 120px;
+}
+
 .gpo-editor-filters__toolbar--disabled,
 .gpo-editor-filters__toolbar.is-disabled {
   background: #f5f5f5;

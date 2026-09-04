@@ -254,12 +254,41 @@ define([
         };
     }
 
-    function fieldControl(field, forceReadonly, materializeOptionalDefault) {
+    function fieldControl(field, forceReadonly, materializeOptionalDefault, options) {
+        var opts = options || {};
         var builder = buildControlInput(field, forceReadonly, materializeOptionalDefault, false);
+        var wrapSelect = Boolean(opts.wrapSelect) && valueKindIsSelect(builder);
         var element = createElement('div', {
-                className: ['gpo-editor-field', builder.disabled ? 'gpo-editor-field--readonly' : null],
+                className: [
+                    'gpo-editor-field',
+                    wrapSelect ? 'field' : null,
+                    builder.disabled ? 'gpo-editor-field--readonly' : null
+                ],
                 attrs: { 'data-field-id': field.id },
-                children: [
+                children: wrapSelect ? [
+                    createElement('div', {
+                        className: 'field__label',
+                        children: [
+                            createElement('span', {
+                                className: 'gpo-editor-field__label',
+                                children: [
+                                    createElement('span', { text: field.label || field.id }),
+                                    field.required ? createElement('span', {
+                                        className: 'gpo-editor-field__required', text: '*'
+                                    }) : null
+                                ]
+                            })
+                        ]
+                    }),
+                    createElement('div', {
+                        className: 'field__element',
+                        children: [builder.input]
+                    }),
+                    builder.disabled ? createElement('span', {
+                        className: 'gpo-editor-field__hint', text: pt('readonly')
+                    }) : null,
+                    builder.errorElement
+                ] : [
                     createElement('span', {
                         className: 'gpo-editor-field__label',
                         children: [
@@ -1221,7 +1250,8 @@ define([
                     var control = fieldControl(
                         field,
                         readonly || formState.busy,
-                        Boolean(selectedFilter && selectedFilter._temporaryId)
+                        Boolean(selectedFilter && selectedFilter._temporaryId),
+                        { wrapSelect: true }
                     );
                     selectedControls.push(control);
                     slot.appendChild(control.element.getElement());
