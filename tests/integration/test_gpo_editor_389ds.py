@@ -4,17 +4,20 @@ These tests mutate the local server and are skipped unless both safeguards are
 set explicitly::
 
     FREEIPA_GPO_RUN_389DS=1
-    FREEIPA_GPO_INTEGRATION_ACK=CREATE_AND_DELETE_ISOLATED_GPOS
+    FREEIPA_GPO_INTEGRATION_ACK=CREATE_AND_DELETE_ISOLATED_GPOS_AND_CHAINS
 
 ``FREEIPA_GPO_EXPECTED_DOMAIN`` is also required and must equal the configured
 FreeIPA domain.  Each test creates a cryptographically unique GPO through the
 normal ``gpo_add`` command and deletes that exact GPO in fixture teardown.  The
+CLI CRUD test also creates and deletes one cryptographically unique chain.  The
 suite never looks up, opens, or mutates ``Test_Policy``.
 
 Run this file alone, as root on a disposable/local FreeIPA test server, after
 installing the current working tree.  The fixture uses FreeIPA's local root
 LDAPI autobind for its isolated CRUD and publication checks; it does not read
-or create administrator credentials.  Do not enable it in generic CI.
+or create administrator credentials.  The CLI CRUD test additionally requires
+an existing administrator Kerberos ticket.  Enable the suite only on an
+explicitly disposable FreeIPA server, such as the isolated CI container.
 """
 
 from __future__ import annotations
@@ -27,13 +30,14 @@ import multiprocessing
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import uuid
 import warnings
 
 import pytest
 
 
-ACKNOWLEDGEMENT = "CREATE_AND_DELETE_ISOLATED_GPOS"
+ACKNOWLEDGEMENT = "CREATE_AND_DELETE_ISOLATED_GPOS_AND_CHAINS"
 OPTED_IN = (
     os.environ.get("FREEIPA_GPO_RUN_389DS") == "1"
     and os.environ.get("FREEIPA_GPO_INTEGRATION_ACK") == ACKNOWLEDGEMENT
@@ -107,6 +111,30 @@ def _single(value):
         assert len(value) == 1
         return value[0]
     return value
+
+
+def _run_ipa(*arguments, check=True):
+    """Run the installed IPA CLI and retain useful failure diagnostics."""
+    environment = os.environ.copy()
+    environment.setdefault("LC_ALL", "C.UTF-8")
+    result = subprocess.run(
+        ["ipa", *arguments],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+    if check and result.returncode != 0:
+        pytest.fail(
+            "IPA CLI command failed (exit {}): {}\nstdout:\n{}\nstderr:\n{}"
+            .format(
+                result.returncode,
+                " ".join(["ipa", *arguments]),
+                result.stdout,
+                result.stderr,
+            )
+        )
+    return result
 
 
 def _enabled_fixed_element_parameters(policy):
@@ -646,6 +674,153 @@ def live_server():
         finally:
             if connected_here and api.Backend.ldap2.isconnected():
                 api.Backend.ldap2.disconnect()
+
+
+def test_installed_ipa_cli_crud_and_deleted_gpo_unlinks_from_chain(
+    live_server,
+):
+    """Exercise real IPA CLI CRUD and the LDAP referential-integrity path."""
+    from ipalib import errors
+    from ipapython.dn import DN
+
+    suffix = uuid.uuid4().hex
+    initial_gpo = "ci-crud-gpo-{}".format(suffix)
+    renamed_gpo = "ci-crud-gpo-renamed-{}".format(suffix)
+    initial_chain = "ci-crud-chain-{}".format(suffix)
+    renamed_chain = "ci-crud-chain-renamed-{}".format(suffix)
+    gpo_names = [initial_gpo]
+    chain_names = [initial_chain]
+    gpo_created = False
+    chain_created = False
+
+    try:
+        # This is intentionally a separate process: it proves that the
+        # installed ``ipa`` client can discover and execute the plugins.
+        _run_ipa("user-show", "admin")
+        _run_ipa("gpo-add", initial_gpo)
+        gpo_created = True
+
+        gpo_entry = live_server.api.Object.gpo.find_gpo_by_displayname(
+            live_server.ldap, initial_gpo
+        )
+        gpo_dn = gpo_entry.dn
+        gpo_guid = live_server.plugin._canonical_guid(
+            _single(gpo_entry["cn"])
+        )
+        gpo_root = (
+            live_server.plugin.GPO_SYSVOL_ROOT
+            / str(live_server.api.env.domain).lower()
+            / "Policies"
+            / gpo_guid
+        )
+        assert gpo_root.is_dir()
+
+        shown = _run_ipa("gpo-show", initial_gpo, "--raw")
+        found = _run_ipa("gpo-find", initial_gpo, "--raw")
+        assert initial_gpo in shown.stdout
+        assert initial_gpo in found.stdout
+
+        _run_ipa("gpo-mod", initial_gpo, "--rename={}".format(renamed_gpo))
+        gpo_names.append(renamed_gpo)
+        with pytest.raises(errors.NotFound):
+            live_server.api.Object.gpo.find_gpo_by_displayname(
+                live_server.ldap, initial_gpo
+            )
+        renamed_entry = live_server.api.Object.gpo.find_gpo_by_displayname(
+            live_server.ldap, renamed_gpo
+        )
+        assert renamed_entry.dn == gpo_dn
+        assert str(_single(renamed_entry["displayname"])) == renamed_gpo
+
+        _run_ipa(
+            "chain-add",
+            initial_chain,
+            "--desc=Initial CI integration chain",
+        )
+        chain_created = True
+        shown = _run_ipa("chain-show", initial_chain, "--raw")
+        found = _run_ipa("chain-find", initial_chain, "--raw")
+        assert initial_chain in shown.stdout
+        assert initial_chain in found.stdout
+
+        _run_ipa(
+            "chain-mod",
+            initial_chain,
+            "--rename={}".format(renamed_chain),
+            "--desc=Updated CI integration chain",
+        )
+        chain_names.append(renamed_chain)
+        old_chain_dn = live_server.api.Object.chain.get_dn(initial_chain)
+        with pytest.raises(errors.NotFound):
+            live_server.ldap.get_entry(old_chain_dn, attrs_list=["cn"])
+
+        chain_dn = live_server.api.Object.chain.get_dn(renamed_chain)
+        chain_entry = live_server.ldap.get_entry(
+            chain_dn, attrs_list=["cn", "description", "gplink"]
+        )
+        assert str(_single(chain_entry["cn"])) == renamed_chain
+        assert str(_single(chain_entry["description"])) == (
+            "Updated CI integration chain"
+        )
+
+        _run_ipa(
+            "chain-add-gpo",
+            renamed_chain,
+            "--gpos={}".format(renamed_gpo),
+        )
+        chain_entry = live_server.ldap.get_entry(
+            chain_dn, attrs_list=["gplink"]
+        )
+        assert gpo_dn in [DN(str(value)) for value in chain_entry["gplink"]]
+
+        _run_ipa(
+            "chain-remove-gpo",
+            renamed_chain,
+            "--gpos={}".format(renamed_gpo),
+        )
+        chain_entry = live_server.ldap.get_entry(
+            chain_dn, attrs_list=["gplink"]
+        )
+        assert gpo_dn not in [
+            DN(str(value)) for value in chain_entry.get("gplink", [])
+        ]
+
+        # Link it once more, then delete the policy itself.  389-DS must
+        # remove the dangling gpLink value through referential integrity.
+        _run_ipa(
+            "chain-add-gpo",
+            renamed_chain,
+            "--gpos={}".format(renamed_gpo),
+        )
+        _run_ipa("gpo-del", renamed_gpo)
+        gpo_created = False
+        with pytest.raises(errors.NotFound):
+            live_server.api.Object.gpo.find_gpo_by_displayname(
+                live_server.ldap, renamed_gpo
+            )
+        chain_entry = live_server.ldap.get_entry(
+            chain_dn, attrs_list=["gplink"]
+        )
+        assert gpo_dn not in [
+            DN(str(value)) for value in chain_entry.get("gplink", [])
+        ]
+        assert not gpo_root.exists()
+
+        _run_ipa("chain-del", renamed_chain)
+        chain_created = False
+        with pytest.raises(errors.NotFound):
+            live_server.ldap.get_entry(chain_dn, attrs_list=["cn"])
+    finally:
+        # Cleanup is bounded to the cryptographically unique names created by
+        # this test and remains safe after a failure in any intermediate step.
+        if chain_created:
+            for name in reversed(chain_names):
+                if _run_ipa("chain-del", name, check=False).returncode == 0:
+                    break
+        if gpo_created:
+            for name in reversed(gpo_names):
+                if _run_ipa("gpo-del", name, check=False).returncode == 0:
+                    break
 
 
 def test_atomic_cas_success_conflict_and_absent_attributes(live_server):

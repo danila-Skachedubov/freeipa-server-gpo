@@ -1,9 +1,10 @@
-name: Probe integration container support
+name: FreeIPA integration tests
 
 on:
   workflow_dispatch:
   push:
     branches:
+      - master
       - ci/integration-container-probe
 
 jobs:
@@ -27,7 +28,7 @@ jobs:
           path: ~/.cache/hasherc/freeipa-server-gpo/out/RPMS/**/*.rpm
 
   container-runtime-probe:
-    name: Install project RPM in a minimal FreeIPA domain
+    name: Run integration suite in a minimal FreeIPA domain
     needs: build-integration-rpm
     runs-on: als-huge
     timeout-minutes: 60
@@ -36,6 +37,9 @@ jobs:
       options: --privileged
 
     steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
       - name: Download integration RPM
         uses: actions/download-artifact@v3
         with:
@@ -141,7 +145,9 @@ jobs:
           podman build --tag localhost/ipa-gpo-freeipa-probe:latest -f - . <<'EOF'
           FROM localhost/ipa-gpo-systemd-probe:latest
           RUN apt-get update \
-              && apt-get install -y freeipa-server \
+              && apt-get install -y \
+                   freeipa-server \
+                   python3-module-pytest \
               && apt-get clean
           EOF
 
@@ -285,6 +291,28 @@ jobs:
             test -d /var/lib/freeipa/sysvol/ipa.test/Policies
           podman exec ipa-gpo-freeipa-probe \
             test -d /var/lib/freeipa/gpo-editor-state
+
+      - name: Run live FreeIPA integration tests
+        run: |
+          set -euo pipefail
+
+          podman exec ipa-gpo-freeipa-probe klist -s
+          podman exec ipa-gpo-freeipa-probe \
+            mkdir -p /tmp/freeipa-server-gpo/tests
+          podman cp \
+            tests/integration \
+            ipa-gpo-freeipa-probe:/tmp/freeipa-server-gpo/tests/integration
+
+          podman exec \
+            --env FREEIPA_GPO_RUN_389DS=1 \
+            --env FREEIPA_GPO_INTEGRATION_ACK=CREATE_AND_DELETE_ISOLATED_GPOS_AND_CHAINS \
+            --env FREEIPA_GPO_EXPECTED_DOMAIN=ipa.test \
+            --env PYTHONUNBUFFERED=1 \
+            ipa-gpo-freeipa-probe \
+            /bin/sh -c '
+              cd /tmp/freeipa-server-gpo
+              python3 -m pytest -vv --tb=short tests/integration
+            '
 
       - name: Collect diagnostics and clean up
         if: ${{ always() }}
