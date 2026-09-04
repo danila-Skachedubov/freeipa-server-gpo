@@ -8,6 +8,7 @@ import locale
 from pathlib import Path
 
 from ipalib import api
+from ipaplatform.services import knownservices
 from ipapython import ipautil
 from .config import (
     LOCALE_DIR, FREEIPA_BASE_PATH, FREEIPA_SYSVOL_PATH,
@@ -313,18 +314,11 @@ class IPAActions:
         try:
             self.logger.info(_("Restarting httpd service"))
 
-            restart_cmd = ['systemctl', 'restart', 'httpd']
-            result = ipautil.run(restart_cmd, raiseonerr=False)
-
-            if result.returncode == 0:
-                self.logger.info(_("httpd service restarted successfully"))
-                return True
-
-            error_msg = result.error_output or _("Unknown error")
-            self.logger.error(
-                _("Failed to restart httpd: {}").format(error_msg)
-            )
-            return False
+            # FreeIPA maps the logical ``httpd`` service to the native unit
+            # name (``httpd2.service`` on ALT Linux).
+            knownservices.httpd.restart()
+            self.logger.info(_("httpd service restarted successfully"))
+            return True
 
         except Exception as e:
             self.logger.error(

@@ -425,10 +425,6 @@ msgstr "Выполняется перезапуск службы httpd"
 msgid "httpd service restarted successfully"
 msgstr "Служба httpd успешно перезапущена"
 
-#: ipa_gpo_install/actions.py:325
-msgid "Failed to restart httpd: {}"
-msgstr "Не удалось перезапустить службу httpd: {}"
-
 #: ipa_gpo_install/actions.py:331
 msgid "Error restarting httpd service: {}"
 msgstr "Ошибка перезапуска службы httpd: {}"
