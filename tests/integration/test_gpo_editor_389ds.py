@@ -696,7 +696,12 @@ def test_installed_ipa_cli_crud_and_deleted_gpo_unlinks_from_chain(
     try:
         # This is intentionally a separate process: it proves that the
         # installed ``ipa`` client can discover and execute the plugins.
-        _run_ipa("user-show", "admin")
+        # Domain provisioning populated root's client cache before the RPM
+        # existed.  Force FreeIPA's normal schema refresh once, then exercise
+        # all project commands without cache-specific options.
+        _run_ipa(
+            "-e", "force_schema_check=True", "user-show", "admin"
+        )
         _run_ipa("gpo-add", initial_gpo)
         gpo_created = True
 
