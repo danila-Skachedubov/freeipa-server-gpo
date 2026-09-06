@@ -103,8 +103,10 @@ define([
         var inputElement = null;
         var optionalBooleanTouched = false;
         var checkboxValueKind = null;
+        var checkboxControlId = null;
         function checkboxControl(checked) {
             var controlId = 'gpo-preference-field-' + nextFieldControlId++;
+            checkboxControlId = controlId;
             var checkbox = createElement('input', {
                 attrs: {
                     id: controlId,
@@ -217,6 +219,7 @@ define([
             input: input,
             inputElement: inputElement,
             errorElement: errorElement,
+            checkboxControlId: checkboxControlId,
             read: function() {
                 if (disabled || dynamicDisabled
                         || controlKind.indexOf('generated_') === 0) return dto.clone(value);
@@ -258,7 +261,44 @@ define([
         var opts = options || {};
         var builder = buildControlInput(field, forceReadonly, materializeOptionalDefault, false);
         var wrapSelect = Boolean(opts.wrapSelect) && valueKindIsSelect(builder);
-        var element = createElement('div', {
+        var wrapCheckbox = Boolean(opts.wrapCheckbox) && builder.checkboxControlId !== null;
+        var element;
+        if (wrapCheckbox) {
+            element = createElement('div', {
+                className: [
+                    'field',
+                    'gpo-editor-field',
+                    builder.disabled ? 'gpo-editor-field--readonly' : null
+                ],
+                attrs: { 'data-field-id': field.id },
+                children: [
+                    createElement('div', {
+                        className: 'field__label',
+                        children: [
+                            createElement('label', {
+                                className: 'gpo-editor-field__label',
+                                attrs: { 'for': builder.checkboxControlId },
+                                children: [
+                                    createElement('span', { text: field.label || field.id }),
+                                    field.required ? createElement('span', {
+                                        className: 'gpo-editor-field__required', text: '*'
+                                    }) : null
+                                ]
+                            })
+                        ]
+                    }),
+                    createElement('div', {
+                        className: 'field__element',
+                        children: [builder.input]
+                    }),
+                    builder.disabled ? createElement('span', {
+                        className: 'gpo-editor-field__hint', text: pt('readonly')
+                    }) : null,
+                    builder.errorElement
+                ]
+            });
+        } else {
+            element = createElement('div', {
                 className: [
                     'gpo-editor-field',
                     wrapSelect ? 'field' : null,
@@ -305,6 +345,7 @@ define([
                     builder.errorElement
                 ]
             });
+        }
         return {
             id: field.id,
             field: field,
@@ -1251,7 +1292,7 @@ define([
                         field,
                         readonly || formState.busy,
                         Boolean(selectedFilter && selectedFilter._temporaryId),
-                        { wrapSelect: true }
+                        { wrapSelect: true, wrapCheckbox: true }
                     );
                     selectedControls.push(control);
                     slot.appendChild(control.element.getElement());
