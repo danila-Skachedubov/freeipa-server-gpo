@@ -61,7 +61,7 @@ jobs:
           set -euo pipefail
 
           mapfile -d '' -t project_rpms < <(
-            find /root/.cache/hasherc/freeipa-server-gpo/out/RPMS \
+            find -L /root/.cache/hasherc/freeipa-server-gpo/out/RPMS \
               -type f -name 'freeipa-server-gpo-*.rpm' \
               ! -name '*.src.rpm' ! -name '*debuginfo*' -print0
           )
