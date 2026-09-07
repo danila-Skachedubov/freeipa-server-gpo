@@ -267,6 +267,7 @@ define([
             element = createElement('div', {
                 className: [
                     'field',
+                    'field__checkbox',
                     'gpo-editor-field',
                     builder.disabled ? 'gpo-editor-field--readonly' : null
                 ],

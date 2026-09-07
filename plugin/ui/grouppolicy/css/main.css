@@ -961,7 +961,13 @@
 }
 .gpo-editor-boolean input[type="checkbox"] + label {
   cursor: pointer;
+  z-index: 1;
 }
+
+.gpo-editor-boolean input[type="checkbox"] + label:before{
+  margin-right: 0;
+}
+
 .gpo-editor-unsupported {
   max-width: 360px;
   overflow: auto;
@@ -994,13 +1000,6 @@
   grid-template-columns: repeat(2, minmax(220px, 1fr));
   gap: 12px 20px;
 }
-/* .gpo-editor-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 5px;
-  border: 1px solid transparent;
-} */
 .gpo-editor-field input,
 .gpo-editor-field select,
 .gpo-editor-field textarea {
