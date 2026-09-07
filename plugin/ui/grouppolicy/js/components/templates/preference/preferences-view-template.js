@@ -262,6 +262,10 @@ define([
         var builder = buildControlInput(field, forceReadonly, materializeOptionalDefault, false);
         var wrapSelect = Boolean(opts.wrapSelect) && valueKindIsSelect(builder);
         var wrapCheckbox = Boolean(opts.wrapCheckbox) && builder.checkboxControlId !== null;
+        var wrapText = Boolean(opts.wrapText)
+                && builder.checkboxControlId === null
+                && builder.inputElement.tagName === 'INPUT'
+                && String(builder.inputElement.getAttribute('type') || '').toLowerCase() === 'text';
         var element;
         if (wrapCheckbox) {
             element = createElement('div', {
@@ -296,6 +300,39 @@ define([
                         className: 'gpo-editor-field__hint', text: pt('readonly')
                     }) : null,
                     builder.errorElement
+                ]
+            });
+        } else if (wrapText) {
+            element = createElement('div', {
+                className: [
+                    'field',
+                    'field__input',
+                    'gpo-editor-field',
+                    builder.disabled ? 'gpo-editor-field--readonly' : null
+                ],
+                attrs: { 'data-field-id': field.id },
+                children: [
+                    createElement('div', {
+                        className: 'field__label',
+                        children: [
+                            createElement('span', {
+                                className: 'gpo-editor-field__label',
+                                children: [
+                                    createElement('span', { text: field.label || field.id }),
+                                    field.required ? createElement('span', {
+                                        className: 'gpo-editor-field__required', text: '*'
+                                    }) : null
+                                ]
+                            })
+                        ]
+                    }),
+                    createElement('div', {
+                        className: 'field__element',
+                        children: [builder.input, builder.errorElement]
+                    }),
+                    builder.disabled ? createElement('span', {
+                        className: 'gpo-editor-field__hint', text: pt('readonly')
+                    }) : null
                 ]
             });
         } else {
@@ -1293,7 +1330,7 @@ define([
                         field,
                         readonly || formState.busy,
                         Boolean(selectedFilter && selectedFilter._temporaryId),
-                        { wrapSelect: true, wrapCheckbox: true }
+                        { wrapSelect: true, wrapCheckbox: true, wrapText: true }
                     );
                     selectedControls.push(control);
                     slot.appendChild(control.element.getElement());
