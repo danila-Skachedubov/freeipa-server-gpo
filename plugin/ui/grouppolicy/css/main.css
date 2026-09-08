@@ -253,6 +253,7 @@
   background: #d1d1d1;
 }
 .gp__container .field__element {
+  position: relative;
   flex-grow: 1;
 }
 .gp__container .field__element select {
@@ -1020,7 +1021,10 @@
 .gpo-editor-field__error {
   min-height: 14px;
   color: #c9190b;
-  font-size: 11px;
+  position: absolute;
+  right: 3px;
+  bottom: 0px;
+  font-size: 10px;
 }
 .gpo-editor-field--error {
   background: #fff4f4;
@@ -1040,6 +1044,8 @@
   display: none;
   margin-bottom: 10px;
   color: #8c2b2b;
+  text-align: center;
+  padding-top: 10px;
 }
 .gpo-editor-optional-text {
   display: flex;
