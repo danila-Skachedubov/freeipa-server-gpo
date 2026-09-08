@@ -262,10 +262,14 @@ define([
         var builder = buildControlInput(field, forceReadonly, materializeOptionalDefault, false);
         var wrapSelect = Boolean(opts.wrapSelect) && valueKindIsSelect(builder);
         var wrapCheckbox = Boolean(opts.wrapCheckbox) && builder.checkboxControlId !== null;
-        var wrapText = Boolean(opts.wrapText)
-                && builder.checkboxControlId === null
-                && builder.inputElement.tagName === 'INPUT'
-                && String(builder.inputElement.getAttribute('type') || '').toLowerCase() === 'text';
+        var builderIsInput = builder.checkboxControlId === null
+                && builder.inputElement.tagName === 'INPUT';
+        var builderInputType = builderIsInput
+                ? String(builder.inputElement.getAttribute('type') || '').toLowerCase()
+                : '';
+        var wrapText = builderIsInput
+                && (builderInputType === 'number'
+                        || (Boolean(opts.wrapText) && builderInputType === 'text'));
         var element;
         if (wrapCheckbox) {
             element = createElement('div', {
