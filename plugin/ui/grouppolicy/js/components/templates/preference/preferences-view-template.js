@@ -388,20 +388,29 @@ define([
                 ]
             });
         }
+        var lastError = '';
+        function applyError(message) {
+            lastError = message || '';
+            element.getElement().classList.toggle('gpo-editor-field--error', Boolean(message));
+            builder.setInputError(message);
+        }
+        if (!builder.disabled) {
+            builder.inputElement.addEventListener('input', function() {
+                if (lastError) applyError('');
+            });
+        }
         return {
             id: field.id,
             field: field,
             element: element,
             read: builder.read,
-            setError: function(message) {
-                element.getElement().classList.toggle('gpo-editor-field--error', Boolean(message));
-                builder.setInputError(message);
-            },
+            setError: applyError,
             setDynamicDisabled: function(nextDisabled) {
                 if (!builder.setDynamicDisabled(nextDisabled)) return false;
                 element.getElement().classList.toggle(
                     'gpo-editor-field--readonly', Boolean(nextDisabled));
                 if (nextDisabled) {
+                    lastError = '';
                     element.getElement().classList.remove('gpo-editor-field--error');
                     builder.setInputError('');
                 }
@@ -464,20 +473,29 @@ define([
                 ]
             });
         }
+        var lastError = '';
+        function applyError(message) {
+            lastError = message || '';
+            element.getElement().classList.toggle('gpo-editor-field--error', Boolean(message));
+            builder.setInputError(message);
+        }
+        if (!builder.disabled) {
+            builder.inputElement.addEventListener('input', function() {
+                if (lastError) applyError('');
+            });
+        }
         return {
             id: field.id,
             field: field,
             element: element,
             read: builder.read,
-            setError: function(message) {
-                element.getElement().classList.toggle('gpo-editor-field--error', Boolean(message));
-                builder.setInputError(message);
-            },
+            setError: applyError,
             setDynamicDisabled: function(nextDisabled) {
                 if (!builder.setDynamicDisabled(nextDisabled)) return false;
                 element.getElement().classList.toggle(
                     'field--readonly', Boolean(nextDisabled));
                 if (nextDisabled) {
+                    lastError = '';
                     element.getElement().classList.remove('gpo-editor-field--error');
                     builder.setInputError('');
                 }
@@ -1905,6 +1923,11 @@ define([
                     requiresRefresh: false,
                     blockedDescriptors: false
                 };
+                if (modalState.nameInput && !readonly) {
+                    modalState.nameInput.addEventListener('input', function() {
+                        if (modalState.nameError.textContent) setNameError(modalState, '');
+                    });
+                }
                 var duplicates = dto.preferenceFieldIds(fields).duplicates;
                 if (!readonly && duplicates.length) {
                     modalState.blockedDescriptors = true;
