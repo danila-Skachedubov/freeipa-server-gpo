@@ -853,6 +853,8 @@ define([
         var headerElement = config.header && config.header.getElement ? config.header.getElement() : null;
         var headerControls = headerElement ? headerElement.querySelector('.gp__control') : null;
         var headerActions = headerElement ? headerElement.querySelector('.gp__control-actions') : null;
+        var admxActions = headerElement ? headerElement.querySelector('.gp__control-admx') : null;
+        var helpSeparator = headerElement ? headerElement.querySelector('.gp__control-separator') : null;
         var createButton = headerControls ? headerControls.querySelector('.preferences__btn-create') : null;
         var editButton = headerControls ? headerControls.querySelector('.preferences__btn-edit') : null;
         var deleteButton = headerControls ? headerControls.querySelector('.preferences__btn-delete') : null;
@@ -877,8 +879,10 @@ define([
         }
         if (headerActions) {
             headerActions.setAttribute('data-preference-owner', headerOwner);
-            headerActions.style.display = 'none';
+            headerActions.style.display = 'flex';
         }
+        if (admxActions) admxActions.style.display = 'none';
+        if (helpSeparator) helpSeparator.style.display = 'none';
 
         function ownsHeader() {
             return Boolean(headerControls
@@ -1140,7 +1144,9 @@ define([
         }
 
         function buildInfoPanel() {
-            var info = createElement('div', { className: 'preference__info' });
+            var info = createElement('div', {
+                className: ['preference__info', config.isHelpOpen ? 'is-open' : null]
+            });
             var settings = createElement('div', { className: 'preference__settings' });
             settings.append(createElement('div', {
                 className: 'preference__settings-title',
@@ -1242,11 +1248,6 @@ define([
 
         function renderShell() {
             rootElement.innerHTML = '';
-            rootElement.appendChild(buildInfoPanel().getElement());
-            rootElement.appendChild(createElement('div', {
-                className: 'preference__divider',
-                children: [createElement('div', { className: 'divider__line' })]
-            }).getElement());
             var dataTable = createElement('div', { className: 'preference__data-table' });
             dataTable.append(createElement('div', {
                 className: 'gpo-editor-preferences__header',
@@ -1262,6 +1263,7 @@ define([
             dataTable.append(createElement('div', { className: 'gpo-editor-preferences__table' }));
             dataTable.append(createElement('div', { className: 'gpo-editor-preferences__modal-host' }));
             rootElement.appendChild(dataTable.getElement());
+            rootElement.appendChild(buildInfoPanel().getElement());
             resetInfoPanel();
         }
 
@@ -2333,6 +2335,8 @@ define([
                     && headerActions.getAttribute('data-preference-owner') === headerOwner) {
                 headerActions.style.display = '';
                 headerActions.removeAttribute('data-preference-owner');
+                if (admxActions) admxActions.style.display = '';
+                if (helpSeparator) helpSeparator.style.display = '';
             }
         };
         return root;

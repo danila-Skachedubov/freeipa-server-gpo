@@ -195,8 +195,16 @@ define([
                     && this.selectedItem.item.template === 'admx';
             },
 
+            isPreferencesItemSelected: function() {
+                return this.selectedItem
+                    && this.selectedItem.item
+                    && this.selectedItem.item.type === 'file'
+                    && this.selectedItem.item.template === 'preferences';
+            },
+
             isHelpToggleAvailable: function() {
-                return this.isFolderItemSelected() || this.isAdmxItemSelected();
+                return this.isFolderItemSelected() || this.isAdmxItemSelected()
+                    || this.isPreferencesItemSelected();
             },
 
             getCurrentHelpSourceItem: function() {
@@ -252,7 +260,7 @@ define([
                     ? this.workspace.getElement()
                     : null;
                 var helpBlocks = workspaceEl
-                    ? workspaceEl.querySelectorAll('.gp__list-children-help, .gp__admx-help')
+                    ? workspaceEl.querySelectorAll('.gp__list-children-help, .gp__admx-help, .preference__info')
                     : null;
 
                 if (!helpBlocks || helpBlocks.length === 0) {
@@ -336,6 +344,7 @@ define([
                         templateResult = await renderPreferencesTemplate({
                             header: this.header,
                             item: item,
+                            isHelpOpen: this.isHelpOpen,
                             isCurrent: function() {
                                 return renderRequestId === this.renderRequestId
                                     && this.selectedItem
