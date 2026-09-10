@@ -486,7 +486,7 @@
   display: flex;
 }
 .gp__preference .preference__info {
-  background-color: #f5f5f5;
+  /* background-color: #f5f5f5; */
   height: 100%;
   width: 0;
   overflow: hidden;
@@ -495,9 +495,12 @@
   transition: width 0.3s ease, border-left 0.3s ease;
   display: flex;
   flex-direction: column;
+  padding-top: 20px;
+  transition: width 0.3s ease, padding 0.3s ease, border-left 0.3s ease;
 }
 .gp__preference .preference__info.is-open {
-  width: 200px;
+  width: 432px;
+  padding: 20px;
 }
 .gp__preference .preference__data {
   background-color: #fff;
@@ -524,10 +527,10 @@
 .gp__preference .preference__settings-item.empty {
   color: #8b8d8f;
 }
-.gp__preference .preference__settings-name {
+/* .gp__preference .preference__settings-name {
   width: 116px;
   flex-shrink: 0;
-}
+} */
 .gp__preference .preference__settings-value {
   width: 30px;
   flex-shrink: 0;
@@ -562,6 +565,7 @@
 .gp__preference .preference__data-table {
   padding: 0 15px;
   flex: 1 1 0px;
+  overflow: auto;
 }
 
 .gpo-editor-preferences__table{
