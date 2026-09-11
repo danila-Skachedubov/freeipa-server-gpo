@@ -6,6 +6,7 @@ define([
     './components/templates/default-template',
     './components/templates/admx-template',
     './components/templates/folder-template',
+    './components/templates/script-template',
     './components/templates/preference/preferences-view-template',
     './components/tree-view/tree-view-list',
     './util/element-creator',
@@ -20,6 +21,7 @@ define([
     defaultTemplateModule,
     admxTemplateModule,
     folderTemplateModule,
+    scriptsTemplateModule,
     preferencesTemplateModule,
     treeViewListModule,
     elementCreatorModule,
@@ -35,6 +37,7 @@ define([
     var renderAdmxTemplate = admxTemplateModule.renderAdmxTemplate;
     var renderFolderTemplate = folderTemplateModule.renderFolderTemplate;
     var renderHelpBlock = folderTemplateModule.renderHelpBlock;
+    var renderScriptsTemplate = scriptsTemplateModule.renderScriptsTemplate;
     var renderPreferencesTemplate = preferencesTemplateModule.renderPreferencesTemplate;
     var setTreeItemActive = treeViewListModule.setTreeItemActive;
     var setFolderOpenedState = treeViewListModule.setFolderOpenedState;
@@ -351,6 +354,10 @@ define([
                                     && this.selectedItem.item === item;
                             }.bind(this)
                         });
+                    } else if (item.template === 'scripts') {
+                        if (admxActions) admxActions.style.display = 'none';
+                        if (helpSeparator) helpSeparator.style.display = 'none';
+                        templateResult = renderScriptsTemplate({ item: item });
                     } else {
                         templateResult = renderDefaultTemplate();
                     }

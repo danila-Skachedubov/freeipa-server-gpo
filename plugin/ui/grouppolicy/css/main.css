@@ -40,6 +40,31 @@
   color: #e30b0b;
   font-weight: bold;
 }
+.gp__scripts-template {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 24px;
+  padding: 0 32px;
+}
+.gp__scripts-template .scripts-template__title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #363636;
+}
+.gp__scripts-template .scripts-template__buttons {
+  display: flex;
+  gap: 16px;
+}
+.gp__scripts-template .scripts-template__buttons .button {
+  padding: 8px 16px;
+  border: 1px solid #297FB0;
+  border-radius: 4px;
+  color: #363636;
+  cursor: pointer;
+}
 
 @keyframes tree-view-spinner {
   to {

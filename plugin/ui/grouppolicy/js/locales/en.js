@@ -150,7 +150,9 @@ define([], function() {
 
     systemSettings: {
       systemSettings:'System settings',
-      scripts: 'Scripts'
+      scripts: 'Scripts',
+      startupScript: 'Startup script',
+      shutdownScript: 'Shutdown script'
     },
 
     policyChangedModal: {

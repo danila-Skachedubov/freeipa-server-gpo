@@ -150,7 +150,9 @@ define([], function() {
 
     systemSettings: {
       systemSettings:'Настройки Системы',
-      scripts: 'Скрипты'
+      scripts: 'Скрипты',
+      startupScript: 'Сценарий запуска',
+      shutdownScript: 'Сценарий завершения работы'
     },
 
     policyChangedModal: {
