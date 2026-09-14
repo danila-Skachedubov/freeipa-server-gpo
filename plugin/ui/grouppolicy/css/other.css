@@ -142,6 +142,19 @@
   overflow: auto;
 }
 
+.modal.modal-gpui.fade .modal-dialog{
+  transform: scale(0);
+  opacity: 0;
+  transition: 0.5s all;
+}
+.modal.modal-gpui.fade.in .modal-dialog{
+  transform: scale(1);
+  opacity: 1;
+}
+.modal-backdrop.modal-gpui-backdrop.fade{
+  transition: opacity 0.5s;
+}
+
 
 
 /* .preference__modal-tabs .field__checkbox[data-field-id="properties.disabled"],

@@ -231,9 +231,9 @@ define([
                 return;
             }
 
-            var backdrop = $('<div class="modal-backdrop fade in"></div>');
+            var backdrop = $('<div class="modal-backdrop fade modal-gpui-backdrop"></div>');
             var modal = $(
-                '<div class="modal fade in modal-gpui" style="display:block;" tabindex="-1" role="dialog">' +
+                '<div class="modal fade modal-gpui" style="display:block;" tabindex="-1" role="dialog">' +
                     '<div class="modal-dialog" role="document">' +
                         '<div class="modal-content">' +
                             '<div class="modal-header">' +
@@ -251,9 +251,13 @@ define([
             );
 
             var close_modal = function() {
-                modal.remove();
-                backdrop.remove();
-                facet.refresh();
+                modal.removeClass('in');
+                backdrop.removeClass('in');
+                setTimeout(function() {
+                    modal.remove();
+                    backdrop.remove();
+                    facet.refresh();
+                }, 500);
             };
 
             modal.find('.close').on('click', close_modal);
@@ -263,6 +267,9 @@ define([
             modal.find('.modal-title').text('GPUI | ' + policyName);
 
             $('body').append(backdrop).append(modal);
+            void modal[0].offsetHeight;
+            modal.addClass('in');
+            backdrop.addClass('in');
 
             require(['./js/app'], function(app) {
                 if (app && typeof app.init === 'function') {
