@@ -183,13 +183,14 @@ function createScriptsTable(handlers) {
 
 function createTabContent(tabKey, table) {
     var label = createElement('div', { className: 'field__label-global' });
+    var pathLabel = createElement('div', {
+        className: 'field__label-global',
+        text: st('scriptsPathLabel')
+    });
     var placeholders = [label, table.element, createElement('div', { className: 'field__line' })];
 
     if (tabKey === TAB_SCRIPT) {
-        placeholders.push(createElement('div', {
-            className: 'field__label-global',
-            text: st('showFilesHint')
-        }));
+        placeholders.push(pathLabel);
     }
 
     if (tabKey === TAB_POWERSHELL) {
@@ -211,12 +212,8 @@ function createTabContent(tabKey, table) {
             className: 'field__label-global',
             text: st('psRequirement')
         }));
+        placeholders.push(pathLabel);
     }
-
-    placeholders.push(createElement('div', {
-        className: ['btn', 'btn-show-files'],
-        text: st('showFiles')
-    }));
 
     var content = createElement('div', {
         className: ['tab-content', tabKey === TAB_SCRIPT ? 'active' : null],
