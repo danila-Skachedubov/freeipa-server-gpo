@@ -4,10 +4,14 @@ define([
     'freeipa/phases',
     'freeipa/reg',
     'freeipa/navigation',
-    'freeipa/rpc'
-], function(require, IPA, phases, reg, navigation, rpc) {
+    'freeipa/rpc',
+    './js/locales/translations'
+], function(require, IPA, phases, reg, navigation, rpc, translationsModule) {
 
     var exp = IPA.gpo = {};
+
+    translationsModule.setLanguage((navigator.language || 'en').slice(0, 2).toLowerCase());
+    var t = translationsModule.t;
 
     (function loadCSS() {
         var files = [
@@ -55,8 +59,8 @@ define([
                     control_buttons: [
                         {
                             name: 'gpui',
-                            label: 'GPUI',
-                            icon: 'fa-external-link'
+                            label: t('common.edit'),
+                            icon: 'fa-pencil'
                         }
                     ]
                 },
@@ -100,8 +104,8 @@ define([
                     control_buttons: [
                         {
                             name: 'gpui',
-                            label: 'GPUI',
-                            icon: 'fa-external-link'
+                            label: t('common.edit'),
+                            icon: 'fa-pencil'
                         }
                     ]
                 }
@@ -195,7 +199,7 @@ define([
         exp.gpui_action = function(spec) {
         spec = spec || {};
         spec.name = spec.name || 'gpui';
-        spec.label = spec.label || 'GPUI';
+        spec.label = spec.label || t('common.edit');
         spec.enable_cond = spec.enable_cond || [];
 
         var that = IPA.action(spec);
