@@ -150,7 +150,31 @@ define([], function() {
 
     systemSettings: {
       systemSettings:'System settings',
-      scripts: 'Scripts'
+      scripts: 'Scripts',
+      startupScript: 'Startup script',
+      shutdownScript: 'Shutdown script',
+      dialogTitle: 'Settings dialog',
+      tabScript: 'Script',
+      tabPowershell: 'PowerShell scripts',
+      scriptsForStartup: 'Scripts: “Startup” for Local Group Policy',
+      scriptsForShutdown: 'Scripts: “Shutdown” for Local Group Policy',
+      columnName: 'Script name',
+      columnArguments: 'Arguments',
+      up: 'Up',
+      down: 'Down',
+      add: 'Add',
+      edit: 'Edit',
+      remove: 'Remove',
+      scriptsPathLabel: 'The script files stored in this Group Policy object are located at the following path: -',
+      psOrderLabel: 'Run scripts for this object in the following order:',
+      psOrderNotConfigured: 'Not configured',
+      psRequirement: 'PowerShell scripts require Windows 7 or Windows Server 2008 R2 at a minimum',
+      addTitle: 'Add script',
+      editTitle: 'Edit script',
+      nameLabel: 'Script name:',
+      argumentsLabel: 'Script arguments:',
+      nameRequired: 'Enter a script name.',
+      ok: 'OK'
     },
 
     policyChangedModal: {

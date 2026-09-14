@@ -150,7 +150,31 @@ define([], function() {
 
     systemSettings: {
       systemSettings:'Настройки Системы',
-      scripts: 'Скрипты'
+      scripts: 'Скрипты',
+      startupScript: 'Сценарий запуска',
+      shutdownScript: 'Сценарий завершения работы',
+      dialogTitle: 'Диалог настроек',
+      tabScript: 'Сценарий',
+      tabPowershell: 'Скрипты PowerShell',
+      scriptsForStartup: 'Сценарии: “Запуск” для локальной групповой политики',
+      scriptsForShutdown: 'Сценарии: “Завершение работы” для локальной групповой политики',
+      columnName: 'Имя скрипта',
+      columnArguments: 'Аргументы',
+      up: 'Вверх',
+      down: 'Вниз',
+      add: 'Добавить',
+      edit: 'Изменить',
+      remove: 'Удалить',
+      scriptsPathLabel: 'Файлы сценариев, хранящиеся в этом объекте групповой политики, расположены по следующему пути: -',
+      psOrderLabel: 'Запуск скриптов для этого объекта в следующем порядке:',
+      psOrderNotConfigured: 'Не настроено',
+      psRequirement: 'Для сценариев Powershell требуется как минимум Windows 7 или Windows Server 2008 R2',
+      addTitle: 'Добавить скрипт',
+      editTitle: 'Редактировать скрипт',
+      nameLabel: 'Имя скрипта:',
+      argumentsLabel: 'Аргументы скрипта:',
+      nameRequired: 'Введите имя скрипта.',
+      ok: 'Ок'
     },
 
     policyChangedModal: {
