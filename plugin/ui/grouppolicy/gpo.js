@@ -27,6 +27,19 @@ define([
         });
     })();
 
+    var order_control_buttons = exp.order_control_buttons = function(order) {
+        return function(spec) {
+            var rank = {};
+            order.forEach(function(name, i) { rank[name] = i; });
+            spec.control_buttons.sort(function(a, b) {
+                var ra = rank[a.name] !== undefined ? rank[a.name] : order.length;
+                var rb = rank[b.name] !== undefined ? rank[b.name] : order.length;
+                return ra - rb;
+            });
+            return spec;
+        };
+    };
+
     var make_gpo_spec = function() {
         return {
             name: 'gpo',
@@ -36,6 +49,7 @@ define([
                     $type: 'search',
                     name: 'search',
                     label: 'Group Policy Objects',
+                    $pre_ops: [order_control_buttons(['refresh', 'add', 'gpui', 'remove'])],
                     columns: [
                         {
                             name: 'displayname',
@@ -68,6 +82,7 @@ define([
                     $type: 'details',
                     name: 'details',
                     check_rights: false,
+                    $pre_ops: [order_control_buttons(['refresh', 'gpui', 'save', 'revert'])],
                     actions: ['gpo_save', 'revert', 'refresh', 'gpui'],
                     sections: [
                         {

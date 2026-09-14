@@ -644,9 +644,10 @@ define(
                 facet_groups: ['settings', 'member'],
                 facets: [
                     {
-                        $type: 'search',
-                        name: 'search',
-                        label: 'Group Policy Chains',
+                         $type: 'search',
+                         name: 'search',
+                         label: 'Group Policy Chains',
+                         $pre_ops: [gpo_module.order_control_buttons(['refresh', 'add', 'enable', 'disable', 'move_up', 'move_down', 'remove'])],
                         sort_enabled: false,
                         server_sort: true,
                         pagination: false,
