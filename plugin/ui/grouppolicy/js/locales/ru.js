@@ -9,6 +9,21 @@ define([], function() {
       edit: 'Редактировать'
     },
 
+    // Меню
+    menu: {
+      groupPolicy: 'Групповые политики',
+      chains: 'Цепочки',
+      groupPolicyObjects: 'Объекты групповых политик'
+    },
+
+    // Цепочки групповых политик
+    chain: {
+      enable: 'Включить',
+      disable: 'Отключить',
+      moveUp: 'Переместить вверх',
+      moveDown: 'Переместить вниз'
+    },
+
     // Политики
     policies: {
       localGroupPolicy: '[Локальная групповая политика]',

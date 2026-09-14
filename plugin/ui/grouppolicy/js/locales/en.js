@@ -9,6 +9,21 @@ define([], function() {
       edit: 'Edit'
     },
 
+    // Menu
+    menu: {
+      groupPolicy: 'GROUP Policy',
+      chains: 'Chains',
+      groupPolicyObjects: 'Group Policy Objects'
+    },
+
+    // Group Policy Chains
+    chain: {
+      enable: 'Enable',
+      disable: 'Disable',
+      moveUp: 'Move Up',
+      moveDown: 'Move Down'
+    },
+
     // Политики
     policies: {
       localGroupPolicy: '[Local Group Policy]',

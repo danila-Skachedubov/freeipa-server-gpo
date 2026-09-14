@@ -172,3 +172,33 @@
   display: none;
 } 
 
+/* === Drag & Drop reordering for Group Policy Chains === */
+div[name="cn"][draggable="true"] {
+    cursor: grab;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+div[name="cn"][draggable="true"]:active {
+    cursor: grabbing;
+}
+
+div[name="cn"].chain-dnd-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+tr.chain-dnd-source > td {
+    opacity: 0.45;
+}
+
+tbody.chain-dnd-active tr.chain-dnd-insert.chain-dnd-before td:first-child {
+    box-shadow: inset 0 3px 0 0 #0088ce;
+}
+
+tbody.chain-dnd-active tr.chain-dnd-insert.chain-dnd-after td:first-child {
+    box-shadow: inset 0 -3px 0 0 #0088ce;
+} 
+
