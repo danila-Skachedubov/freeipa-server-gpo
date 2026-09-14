@@ -223,7 +223,7 @@ function createTabContent(tabKey, table) {
     return { content: content, label: label };
 }
 
-function createScriptFormModal(kind, initial, onSubmit, host) {
+function createScriptFormModal(kind, initial, onSubmit, host, onClose) {
     var isAdd = kind === 'add';
     var nameInput = createElement('input', { attrs: { type: 'text' } });
     var argumentsInput = createElement('input', { attrs: { type: 'text' } });
@@ -307,7 +307,10 @@ function createScriptFormModal(kind, initial, onSubmit, host) {
     function close() {
         var element = modal.getElement();
         element.classList.remove('active');
-        if (element.parentNode) element.parentNode.removeChild(element);
+        if (onClose) onClose();
+        setTimeout(function() {
+            if (element.parentNode) element.parentNode.removeChild(element);
+        }, 500);
     }
 
     function submit() {
@@ -325,6 +328,7 @@ function createScriptFormModal(kind, initial, onSubmit, host) {
         element: modal,
         open: function() {
             host.append(modal);
+            void modal.getElement().offsetHeight; // принудительный расчёт начальных стилей
             modal.getElement().classList.add('active');
             nameInput.getElement().focus();
         }
@@ -345,6 +349,7 @@ function renderScriptsTemplate(options) {
     var tabContents = {};
     var tabLabels = {};
     var scriptsModal = null;
+    var scriptsOverlay = null;
 
     tables[TAB_SCRIPT] = createScriptsTable({
         onAdd: function() { openScriptFormModal('add'); },
@@ -382,8 +387,11 @@ function renderScriptsTemplate(options) {
         var form = createScriptFormModal(kind, initial, function(name, scriptArguments) {
             if (kind === 'add') table.addRow(name, scriptArguments);
             else table.replaceSelected(name, scriptArguments);
-        }, root);
+        }, root, function() {
+            scriptsModal.getElement().classList.remove('dimmed');
+        });
         form.open();
+        scriptsModal.getElement().classList.add('dimmed');
     }
 
     function openScriptsModal(mode) {
@@ -391,10 +399,12 @@ function renderScriptsTemplate(options) {
         updateModeLabels();
         selectTab(TAB_SCRIPT);
         scriptsModal.getElement().classList.add('active');
+        scriptsOverlay.getElement().classList.add('active');
     }
 
     function closeScriptsModal() {
         scriptsModal.getElement().classList.remove('active');
+        scriptsOverlay.getElement().classList.remove('active');
     }
 
     var tabContentScript = createTabContent(TAB_SCRIPT, tables[TAB_SCRIPT]);
@@ -470,6 +480,11 @@ function renderScriptsTemplate(options) {
         ]
     });
 
+    scriptsOverlay = createElement('div', {
+        className: 'scripts__overlay',
+        events: { click: closeScriptsModal }
+    });
+
     var root = createElement('div', {
         className: 'gp__scripts',
         children: [
@@ -483,6 +498,7 @@ function renderScriptsTemplate(options) {
                 text: st('shutdownScript'),
                 events: { click: function() { openScriptsModal('shutdown'); } }
             }),
+            scriptsOverlay,
             scriptsModal
         ]
     });
