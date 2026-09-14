@@ -40,30 +40,204 @@
   color: #e30b0b;
   font-weight: bold;
 }
-.gp__scripts-template {
-  height: 100%;
+.gp__container .gp__scripts {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 24px;
-  padding: 0 32px;
+  gap: 10px;
+  padding: 20px;
 }
-.gp__scripts-template .scripts-template__title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #363636;
+.gp__container .gp__scripts > .btn {
+  width: auto;
+  min-width: 157px;
+  padding: 0 10px;
+  white-space: nowrap;
 }
-.gp__scripts-template .scripts-template__buttons {
+
+.gp__container .gp__scripts .btn-startup,
+.gp__container .gp__scripts .btn-shutdown{
+  width: 220px;
+}
+
+.gp__container .gp__scripts .btn.disabled,
+.gp__container .scripts__modal .btn.disabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+.gp__container .scripts__modal,
+.gp__container .scripts-add__modal,
+.gp__container .scripts-edit__modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: 0.5s all;
+  z-index: 100;
+  border: 1px solid #d1d1d1;
+  background-color: #fff;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.gp__container .scripts__modal.active,
+.gp__container .scripts-add__modal.active,
+.gp__container .scripts-edit__modal.active {
+  transform: translate(-50%, -50%) scale(1);
+}
+.gp__container .scripts__modal-wrapper {
+  width: 408px;
+}
+.gp__container .scripts__modal-header {
+  background: #f5f5f5;
+  border-bottom: 1px solid #d1d1d1;
+  height: 40px;
   display: flex;
-  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 }
-.gp__scripts-template .scripts-template__buttons .button {
-  padding: 8px 16px;
-  border: 1px solid #297FB0;
-  border-radius: 4px;
+.gp__container .scripts__modal-header .title {
+  font-weight: 600;
   color: #363636;
+}
+.gp__container .scripts__modal-header .close {
+  width: 16px;
+  height: 16px;
+  position: absolute;
   cursor: pointer;
+  right: 12px;
+  top: 12px;
+  background-image: url(../img/svg/close.svg);
+}
+.gp__container .scripts__modal-tabs {
+  height: 492px;
+}
+.gp__container .scripts__modal-tabs .tab-buttons {
+  display: flex;
+  height: 26px;
+}
+.gp__container .scripts__modal-tabs .tab-buttons .scripts__tab-button {
+  width: 50%;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gp__container .scripts__modal-tabs .tab-buttons .scripts__tab-button.active {
+  color: #297fb0;
+}
+.gp__container .scripts__modal-tabs .tab-buttons .scripts__tab-button:not(.active) {
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #d1d1d1;
+  cursor: pointer;
+}
+.gp__container .scripts__modal-tabs .tab-buttons .scripts__tab-button:first-child {
+  border-right: 1px solid #d1d1d1;
+}
+.gp__container .scripts__modal-tabs .tab-content {
+  display: none;
+  flex-direction: column;
+  height: calc(100% - 26px);
+}
+.gp__container .scripts__modal-tabs .tab-content.active {
+  padding: 20px;
+  display: flex;
+}
+.gp__container .scripts__modal-tabs .field__input select {
+  width: 100%;
+  height: 25px;
+}
+.gp__container .scripts__modal-footer {
+  height: 45px;
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 20px;
+  border-top: 1px solid #d1d1d1;
+}
+.gp__container .scripts__modal-wrapper .script__windows {
+  display: flex;
+  gap: 5px;
+}
+.gp__container .scripts__modal-wrapper .script__data {
+  width: 275px;
+  height: 220px;
+  border: 1px solid #d1d1d1;
+  overflow-y: auto;
+}
+.gp__container .scripts__modal-wrapper .script__data table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.gp__container .scripts__modal-wrapper .script__data thead {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+.gp__container .scripts__modal-wrapper .script__data th {
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #495057;
+}
+.gp__container .scripts__modal-wrapper .script__data td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #dee2e6;
+}
+.gp__container .scripts__modal-wrapper .script__data tbody tr {
+  cursor: pointer;
+}
+.gp__container .scripts__modal-wrapper .script__data tbody tr.selected {
+  background-color: #e6f2fb;
+}
+.gp__container .scripts__modal-wrapper .script__controle {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.gp__container .scripts__modal-wrapper .script__controle-top,
+.gp__container .scripts__modal-wrapper .script__controle-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gp__container .scripts__modal-wrapper .script__controle .btn {
+  width: 88px;
+}
+.gp__container .scripts-add__modal .scripts-add__modal-content,
+.gp__container .scripts-edit__modal .scripts-edit__modal-content {
+  padding: 20px;
+}
+.gp__container .scripts-add__modal .field,
+.gp__container .scripts-edit__modal .field {
+  display: flex;
+  align-items: center;
+  padding-bottom: 10px;
+}
+.gp__container .scripts-add__modal .field__label,
+.gp__container .scripts-edit__modal .field__label {
+  padding-right: 10px;
+}
+.gp__container .scripts-add__modal input[type="text"],
+.gp__container .scripts-edit__modal input[type="text"] {
+  width: 100%;
+  height: 25px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  font-size: 12px;
+  background-color: #f5f5f5;
+  border: 1px solid #d1d1d1;
+  border-radius: 3px;
+}
+.gp__container .scripts-add__modal input[type="text"].gpo-editor-field--error,
+.gp__container .scripts-edit__modal input[type="text"].gpo-editor-field--error {
+  border-color: #e30b0b;
+}
+.gp__container .scripts-add__modal .field__error,
+.gp__container .scripts-edit__modal .field__error {
+  color: #e30b0b;
+  font-size: 12px;
+  padding-bottom: 10px;
 }
 
 @keyframes tree-view-spinner {
