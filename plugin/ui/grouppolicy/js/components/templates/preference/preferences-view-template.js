@@ -1741,6 +1741,7 @@ define([
                 var targettingModalElement = null;
                 var closeTargettingModal = function() {
                     if (targettingModalElement) targettingModalElement.classList.remove('active');
+                    form.getElement().classList.remove('dimmed');
                 };
                 var buildTargettingModal = function() {
                     if (targettingModalElement) return targettingModalElement;
@@ -1804,7 +1805,7 @@ define([
                 };
                 var form = createElement('div', {
                     className: [
-                        'preference__modal', 'active', 'gpo-editor-preference-form',
+                        'preference__modal', 'gpo-editor-preference-form',
                         readonly ? 'preference__modal--readonly' : null
                     ],
                     children: [createElement('div', {
@@ -1871,7 +1872,9 @@ define([
                         click: function() {
                             var modal = buildTargettingModal();
                             if (!modal.parentNode) host.appendChild(modal);
+                            void modal.offsetHeight;
                             modal.classList.add('active');
+                            form.getElement().classList.add('dimmed');
                         }
                     }
                 });
@@ -1897,6 +1900,9 @@ define([
                 }
                 host.innerHTML = '';
                 host.appendChild(form.getElement());
+                host.classList.add('active');
+                void form.getElement().offsetHeight;
+                form.getElement().classList.add('active');
                 modalState = {
                     creating: creating,
                     readonly: readonly,
@@ -2015,6 +2021,7 @@ define([
                     }
                 }
             }
+            void modal.element.offsetHeight;
             modal.element.classList.add('active');
         }
 
@@ -2035,6 +2042,21 @@ define([
             closeForm(true, pending.action);
         }
 
+        function closeHostModals(host) {
+            host.classList.remove('active');
+            var modals = Array.prototype.slice.call(host.children);
+            modals.forEach(function(element) {
+                element.classList.remove('active');
+            });
+            setTimeout(function() {
+                modals.forEach(function(element) {
+                    if (!element.classList.contains('active') && element.parentNode === host) {
+                        host.removeChild(element);
+                    }
+                });
+            }, 500);
+        }
+
         function closeForm(force, action) {
             var state = modalState;
             if (state && (state.saving || state.reconciling)
@@ -2048,7 +2070,7 @@ define([
             hideDiscardModal();
             formRequestId += 1;
             var host = rootElement.querySelector('.gpo-editor-preferences__modal-host');
-            if (host) host.innerHTML = '';
+            if (host) closeHostModals(host);
             modalState = null;
             setHeaderState();
             return true;
