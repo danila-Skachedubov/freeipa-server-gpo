@@ -6,16 +6,19 @@ define(
         'freeipa/reg',
         'freeipa/rpc',
         'freeipa/jquery',
-        './gpo'
+        './gpo',
+        './js/locales/translations'
     ],
-    function(IPA, menu, phases, reg, rpc, $, gpo_module) {
+    function(IPA, menu, phases, reg, rpc, $, gpo_module, translationsModule) {
 
         var exp = IPA.grouppolicy = {};
+
+        var t = translationsModule.t;
 
         exp.enable_action = function(spec) {
             spec = spec || {};
             spec.name = spec.name || 'enable';
-            spec.label = spec.label || 'Enable';
+            spec.label = spec.label || t('chain.enable');
             spec.enable_cond = spec.enable_cond || ['item-selected'];
             spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : true;
             spec.confirm_msg = spec.confirm_msg || 'Are you sure you want to enable the selected chain?';
@@ -63,7 +66,7 @@ define(
         exp.disable_action = function(spec) {
             spec = spec || {};
             spec.name = spec.name || 'disable';
-            spec.label = spec.label || 'Disable';
+            spec.label = spec.label || t('chain.disable');
             spec.enable_cond = spec.enable_cond || ['item-selected'];
             spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : true;
             spec.confirm_msg = spec.confirm_msg || 'Are you sure you want to disable the selected chain?';
@@ -111,7 +114,7 @@ define(
         exp.move_up_action = function(spec) {
             spec = spec || {};
             spec.name = spec.name || 'move_up';
-            spec.label = spec.label || 'Move Up';
+            spec.label = spec.label || t('chain.moveUp');
             spec.enable_cond = spec.enable_cond || ['item-selected'];
             spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : false;
 
@@ -154,7 +157,7 @@ define(
         exp.move_down_action = function(spec) {
             spec = spec || {};
             spec.name = spec.name || 'move_down';
-            spec.label = spec.label || 'Move Down';
+            spec.label = spec.label || t('chain.moveDown');
             spec.enable_cond = spec.enable_cond || ['item-selected'];
             spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : false;
 
@@ -688,22 +691,22 @@ define(
                         control_buttons: [
                             {
                                 name: 'enable',
-                                label: 'Enable',
+                                label: t('chain.enable'),
                                 icon: 'fa-check-circle'
                             },
                             {
                                 name: 'disable',
-                                label: 'Disable',
+                                label: t('chain.disable'),
                                 icon: 'fa-times-circle'
                             },
                             {
                                 name: 'move_up',
-                                label: 'Move Up',
+                                label: t('chain.moveUp'),
                                 icon: 'fa-arrow-up'
                             },
                             {
                                 name: 'move_down',
-                                label: 'Move Down',
+                                label: t('chain.moveDown'),
                                 icon: 'fa-arrow-down'
                             }
                         ]
@@ -850,15 +853,15 @@ define(
 
         exp.grouppolicy_menu_spec = {
             name: 'grouppolicy',
-            label: 'GROUP Policy',
+            label: t('menu.groupPolicy'),
             children: [
                 {
                     entity: 'chain',
-                    label: 'Chains'
+                    label: t('menu.chains')
                 },
                 {
                     entity: 'gpo',
-                    label: 'Group Policy Objects'
+                    label: t('menu.groupPolicyObjects')
                 }
             ]
         };
