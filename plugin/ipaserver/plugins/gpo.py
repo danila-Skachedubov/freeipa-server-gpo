@@ -1591,7 +1591,7 @@ class gpo(LDAPObject):
             doc=_('Group Policy Object display name'),
             primary_key=True,
             pattern=constants.PATTERN_GROUPUSER_NAME,
-            pattern_errmsg=constants.ERRMSG_GROUPUSER_NAME.format('Group Policy Object'),
+            pattern_errmsg=constants.ERRMSG_GROUPUSER_NAME.format('gpo'),
         ),
         Str('cn?',
             label=_('Policy GUID'),
@@ -1761,7 +1761,7 @@ class gpo_add(LDAPCreate):
         if not re.match(constants.PATTERN_GROUPUSER_NAME, displayname):
             raise errors.ValidationError(
                 name='displayname',
-                error=constants.ERRMSG_GROUPUSER_NAME.format('Group Policy Object')
+                error=constants.ERRMSG_GROUPUSER_NAME.format('gpo')
             )
         try:
             self.obj.find_gpo_by_displayname(ldap, displayname)
@@ -1917,7 +1917,7 @@ class gpo_mod(LDAPUpdate):
                     not re.match(constants.PATTERN_GROUPUSER_NAME, new_name)):
                 raise errors.ValidationError(
                     name='displayname',
-                    error=constants.ERRMSG_GROUPUSER_NAME.format('Group Policy Object')
+                    error=constants.ERRMSG_GROUPUSER_NAME.format('gpo')
                 )
             if new_name == keys[0]:
                 raise errors.ValidationError(
