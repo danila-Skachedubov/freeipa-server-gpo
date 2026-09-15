@@ -3,14 +3,16 @@ define([
     '../../../util/API',
     '../../../util/editor-dto',
     '../../editor-status',
-    '../../../locales/translations'
-], function(elementCreator, API, dto, editorStatus, translations) {
+    '../../../locales/translations',
+    './layouts/index'
+], function(elementCreator, API, dto, editorStatus, translations, preferenceLayouts) {
     "use strict";
 
     var createElement = elementCreator.createElement;
     var t = translations.t;
     var nextHeaderOwnerId = 1;
     var nextFieldControlId = 1;
+    var PREFERENCE_LAYOUTS = preferenceLayouts;
 
     function pt(key) {
         return t('preferences.editor.' + key);
@@ -47,17 +49,53 @@ define([
         return result;
     }
 
+    function actionLabel(value) {
+        var key = ({ create: 'actionCreate', replace: 'actionReplace',
+            update: 'actionUpdate', delete: 'actionDelete' })[value];
+        return key ? pt(key) : (value === null || value === undefined ? '' : String(value));
+    }
+
+    function itemFieldValue(item, fieldId) {
+        if (!item || !fieldId) return '';
+        if (Array.isArray(item.fields)) {
+            for (var index = 0; index < item.fields.length; index++) {
+                if (item.fields[index] && item.fields[index].id === fieldId) {
+                    return dto.valuePayload(item.fields[index].value);
+                }
+            }
+        }
+        if (item.properties && typeof item.properties === 'object') {
+            var key = String(fieldId).indexOf('properties.') === 0
+                ? String(fieldId).slice('properties.'.length) : String(fieldId);
+            if (Object.prototype.hasOwnProperty.call(item.properties, key)) {
+                var raw = item.properties[key];
+                if (raw && typeof raw === 'object' && 'kind' in raw) return dto.valuePayload(raw);
+                return raw === null || raw === undefined ? '' : String(raw);
+            }
+        }
+        return '';
+    }
+
+    function tableColumns(kind) {
+        var layout = PREFERENCE_LAYOUTS[kind];
+        if (layout && Array.isArray(layout.columns) && layout.columns.length) {
+            return layout.columns;
+        }
+        return null;
+    }
+
     function hiddenFieldControl(field) {
         return {
             id: field.id,
             field: field,
             read: function() { return dto.clone(field.value); },
             setError: function() {},
+            setDynamicDisabled: function() { return false; },
             focus: function() {}
         };
     }
 
-    function fieldControl(field, forceReadonly, materializeOptionalDefault) {
+    function buildControlInput(field, forceReadonly, materializeOptionalDefault, textarea) {
         var value = dto.clone(field.value || { kind: 'text', value: '' });
         var disabled = Boolean(forceReadonly || field.editable === false);
         var controlKind = field.control || '';
@@ -65,8 +103,10 @@ define([
         var inputElement = null;
         var optionalBooleanTouched = false;
         var checkboxValueKind = null;
+        var checkboxControlId = null;
         function checkboxControl(checked) {
             var controlId = 'gpo-preference-field-' + nextFieldControlId++;
+            checkboxControlId = controlId;
             var checkbox = createElement('input', {
                 attrs: {
                     id: controlId,
@@ -127,10 +167,11 @@ define([
                 })
             });
             input.getElement().value = value.value;
-        } else if (value.kind === 'text_list') {
+        } else if (value.kind === 'text_list' || textarea) {
             input = createElement('textarea', {
                 attrs: { disabled: disabled ? 'disabled' : null },
-                text: Array.isArray(value.value) ? value.value.join('\n') : ''
+                text: Array.isArray(value.value) ? value.value.join('\n')
+                    : (value.value === null || value.value === undefined ? '' : String(value.value))
             });
         } else if (value.kind === 'optional_text') {
             input = createElement('input', {
@@ -155,32 +196,33 @@ define([
         }
         if (!inputElement) inputElement = input.getElement();
         var errorElement = createElement('span', { className: 'gpo-editor-field__error' });
-        var element = createElement('div', {
-                className: ['gpo-editor-field', disabled ? 'gpo-editor-field--readonly' : null],
-                attrs: { 'data-field-id': field.id },
-                children: [
-                    createElement('span', {
-                        className: 'gpo-editor-field__label',
-                        children: [
-                            createElement('span', { text: field.label || field.id }),
-                            field.required ? createElement('span', {
-                                className: 'gpo-editor-field__required', text: '*'
-                            }) : null
-                        ]
-                    }),
-                    input,
-                    disabled ? createElement('span', {
-                        className: 'gpo-editor-field__hint', text: pt('readonly')
-                    }) : null,
-                    errorElement
-                ]
-            });
+        var dynamicDisabled = false;
+        function applyBaselineToInput() {
+            if (checkboxValueKind === 'optional_boolean_u8') {
+                inputElement.checked = value.value === 1;
+            } else if (checkboxValueKind === 'optional_boolean') {
+                inputElement.checked = value.value === true;
+            } else if (value.kind === 'boolean') {
+                inputElement.checked = Boolean(value.value);
+            } else if (Array.isArray(value.value)) {
+                inputElement.value = value.value.join('\n');
+            } else {
+                inputElement.value = value.value === null || value.value === undefined
+                    ? '' : value.value;
+            }
+            optionalBooleanTouched = false;
+        }
         return {
-            id: field.id,
-            field: field,
-            element: element,
+            value: value,
+            disabled: disabled,
+            controlKind: controlKind,
+            input: input,
+            inputElement: inputElement,
+            errorElement: errorElement,
+            checkboxControlId: checkboxControlId,
             read: function() {
-                if (disabled || controlKind.indexOf('generated_') === 0) return dto.clone(value);
+                if (disabled || dynamicDisabled
+                        || controlKind.indexOf('generated_') === 0) return dto.clone(value);
                 if (checkboxValueKind && value.value === null
                         && !materializeOptionalDefault && !optionalBooleanTouched) {
                     return dto.clone(value);
@@ -193,18 +235,566 @@ define([
                 }
                 return dto.preferenceValueFromInput(value, inputElement.value, inputElement.checked);
             },
-            setError: function(message) {
-                element.getElement().classList.toggle('gpo-editor-field--error', Boolean(message));
+            setInputError: function(message) {
                 if (inputElement && typeof inputElement.setAttribute === 'function') {
                     if (message) inputElement.setAttribute('aria-invalid', 'true');
                     else inputElement.removeAttribute('aria-invalid');
                 }
                 errorElement.setText(message || '');
             },
+            setDynamicDisabled: function(nextDisabled) {
+                if (controlKind.indexOf('generated_') === 0) return false;
+                var next = Boolean(nextDisabled);
+                if (next === dynamicDisabled) return false;
+                dynamicDisabled = next;
+                inputElement.disabled = Boolean(disabled || dynamicDisabled);
+                if (dynamicDisabled) applyBaselineToInput();
+                return true;
+            },
             focus: function() {
                 if (inputElement && typeof inputElement.focus === 'function') inputElement.focus();
             }
         };
+    }
+
+    function fieldControl(field, forceReadonly, materializeOptionalDefault, options) {
+        var opts = options || {};
+        var builder = buildControlInput(field, forceReadonly, materializeOptionalDefault, false);
+        var wrapSelect = Boolean(opts.wrapSelect) && valueKindIsSelect(builder);
+        var wrapCheckbox = Boolean(opts.wrapCheckbox) && builder.checkboxControlId !== null;
+        var builderIsInput = builder.checkboxControlId === null
+                && builder.inputElement.tagName === 'INPUT';
+        var builderInputType = builderIsInput
+                ? String(builder.inputElement.getAttribute('type') || '').toLowerCase()
+                : '';
+        var wrapText = builderIsInput
+                && (builderInputType === 'number'
+                        || (Boolean(opts.wrapText) && builderInputType === 'text'));
+        var element;
+        if (wrapCheckbox) {
+            element = createElement('div', {
+                className: [
+                    'field',
+                    'field__checkbox',
+                    'gpo-editor-field',
+                    builder.disabled ? 'gpo-editor-field--readonly' : null
+                ],
+                attrs: { 'data-field-id': field.id },
+                children: [
+                    createElement('div', {
+                        className: 'field__label',
+                        children: [
+                            createElement('label', {
+                                className: 'gpo-editor-field__label',
+                                attrs: { 'for': builder.checkboxControlId },
+                                children: [
+                                    createElement('span', { text: field.label || field.id }),
+                                    field.required ? createElement('span', {
+                                        className: 'gpo-editor-field__required', text: '*'
+                                    }) : null
+                                ]
+                            })
+                        ]
+                    }),
+                    createElement('div', {
+                        className: 'field__element',
+                        children: [builder.input]
+                    }),
+                    builder.disabled ? createElement('span', {
+                        className: 'gpo-editor-field__hint', text: pt('readonly')
+                    }) : null,
+                    builder.errorElement
+                ]
+            });
+        } else if (wrapText) {
+            element = createElement('div', {
+                className: [
+                    'field',
+                    'field__input',
+                    'gpo-editor-field',
+                    builder.disabled ? 'gpo-editor-field--readonly' : null
+                ],
+                attrs: { 'data-field-id': field.id },
+                children: [
+                    createElement('div', {
+                        className: 'field__label',
+                        children: [
+                            createElement('span', {
+                                className: 'gpo-editor-field__label',
+                                children: [
+                                    createElement('span', { text: field.label || field.id }),
+                                    field.required ? createElement('span', {
+                                        className: 'gpo-editor-field__required', text: '*'
+                                    }) : null
+                                ]
+                            })
+                        ]
+                    }),
+                    createElement('div', {
+                        className: 'field__element',
+                        children: [builder.input, builder.errorElement]
+                    }),
+                    builder.disabled ? createElement('span', {
+                        className: 'gpo-editor-field__hint', text: pt('readonly')
+                    }) : null
+                ]
+            });
+        } else {
+            element = createElement('div', {
+                className: [
+                    'gpo-editor-field',
+                    wrapSelect ? 'field' : null,
+                    builder.disabled ? 'gpo-editor-field--readonly' : null
+                ],
+                attrs: { 'data-field-id': field.id },
+                children: wrapSelect ? [
+                    createElement('div', {
+                        className: 'field__label',
+                        children: [
+                            createElement('span', {
+                                className: 'gpo-editor-field__label',
+                                children: [
+                                    createElement('span', { text: field.label || field.id }),
+                                    field.required ? createElement('span', {
+                                        className: 'gpo-editor-field__required', text: '*'
+                                    }) : null
+                                ]
+                            })
+                        ]
+                    }),
+                    createElement('div', {
+                        className: 'field__element',
+                        children: [builder.input]
+                    }),
+                    builder.disabled ? createElement('span', {
+                        className: 'gpo-editor-field__hint', text: pt('readonly')
+                    }) : null,
+                    builder.errorElement
+                ] : [
+                    createElement('span', {
+                        className: 'gpo-editor-field__label',
+                        children: [
+                            createElement('span', { text: field.label || field.id }),
+                            field.required ? createElement('span', {
+                                className: 'gpo-editor-field__required', text: '*'
+                            }) : null
+                        ]
+                    }),
+                    builder.input,
+                    builder.disabled ? createElement('span', {
+                        className: 'gpo-editor-field__hint', text: pt('readonly')
+                    }) : null,
+                    builder.errorElement
+                ]
+            });
+        }
+        var lastError = '';
+        function applyError(message) {
+            lastError = message || '';
+            element.getElement().classList.toggle('gpo-editor-field--error', Boolean(message));
+            builder.setInputError(message);
+        }
+        if (!builder.disabled) {
+            builder.inputElement.addEventListener('input', function() {
+                if (lastError) applyError('');
+            });
+        }
+        return {
+            id: field.id,
+            field: field,
+            element: element,
+            read: builder.read,
+            setError: applyError,
+            setDynamicDisabled: function(nextDisabled) {
+                if (!builder.setDynamicDisabled(nextDisabled)) return false;
+                element.getElement().classList.toggle(
+                    'gpo-editor-field--readonly', Boolean(nextDisabled));
+                if (nextDisabled) {
+                    lastError = '';
+                    element.getElement().classList.remove('gpo-editor-field--error');
+                    builder.setInputError('');
+                }
+                return true;
+            },
+            focus: builder.focus
+        };
+    }
+
+    function mockupFieldControl(field, forceReadonly, materializeOptionalDefault, options) {
+        var opts = options || {};
+        var builder = buildControlInput(field, forceReadonly, materializeOptionalDefault, Boolean(opts.textarea));
+        var checkboxLike = builder.value.kind === 'boolean'
+            || builder.value.kind === 'optional_boolean'
+            || builder.controlKind === 'optional_boolean_u8';
+        var element;
+        if (checkboxLike) {
+            element = createElement('div', {
+                className: ['field', 'field__checkbox', builder.disabled ? 'field--readonly' : null],
+                attrs: { 'data-field-id': field.id },
+                children: [
+                    createElement('label', {
+                        children: [
+                            builder.input,
+                            createElement('span', {
+                                className: 'field__label-checkbox',
+                                text: field.label || field.id
+                            })
+                        ]
+                    }),
+                    builder.errorElement
+                ]
+            });
+        } else {
+            var fieldClasses = ['field', 'field__input'];
+            if (opts.textarea) {
+                fieldClasses.push('field__description', 'h-auto');
+            } else if (builder.controlKind === 'directory_path' || builder.controlKind === 'file_path') {
+                fieldClasses.push('field__input--path');
+            } else if (valueKindIsSelect(builder)) {
+                fieldClasses.push('select');
+            }
+            element = createElement('div', {
+                className: fieldClasses,
+                attrs: { 'data-field-id': field.id },
+                children: [
+                    createElement('div', {
+                        className: 'field__label',
+                        children: [
+                            createElement('span', { text: field.label || field.id }),
+                            field.required ? createElement('span', {
+                                className: 'gpo-editor-field__required', text: '*'
+                            }) : null
+                        ]
+                    }),
+                    createElement('div', {
+                        className: 'field__element',
+                        children: [builder.input, builder.errorElement]
+                    })
+                ]
+            });
+        }
+        var lastError = '';
+        function applyError(message) {
+            lastError = message || '';
+            element.getElement().classList.toggle('gpo-editor-field--error', Boolean(message));
+            builder.setInputError(message);
+        }
+        if (!builder.disabled) {
+            builder.inputElement.addEventListener('input', function() {
+                if (lastError) applyError('');
+            });
+        }
+        return {
+            id: field.id,
+            field: field,
+            element: element,
+            read: builder.read,
+            setError: applyError,
+            setDynamicDisabled: function(nextDisabled) {
+                if (!builder.setDynamicDisabled(nextDisabled)) return false;
+                element.getElement().classList.toggle(
+                    'field--readonly', Boolean(nextDisabled));
+                if (nextDisabled) {
+                    lastError = '';
+                    element.getElement().classList.remove('gpo-editor-field--error');
+                    builder.setInputError('');
+                }
+                return true;
+            },
+            focus: builder.focus
+        };
+    }
+
+    function valueKindIsSelect(builder) {
+        return builder.value.kind === 'action'
+            || builder.value.kind === 'filter_combine'
+            || builder.controlKind === 'choice';
+    }
+
+    function dependencyRulesFor(kind) {
+        var layout = PREFERENCE_LAYOUTS[kind];
+        return layout && Array.isArray(layout.dependencies) ? layout.dependencies : [];
+    }
+
+    function conditionTextValue(raw) {
+        if (raw === null || raw === undefined) return '';
+        if (Array.isArray(raw)) return raw.join('\n');
+        return String(raw);
+    }
+
+    function conditionValueIsEmpty(raw) {
+        if (raw === null || raw === undefined) return true;
+        if (typeof raw === 'string') return raw.trim() === '';
+        if (Array.isArray(raw)) return raw.length === 0;
+        return false;
+    }
+
+    function conditionBooleanValue(raw) {
+        return raw === true || raw === 1 || raw === 'true';
+    }
+
+    function conditionCompare(expected, raw) {
+        if (expected === true) return conditionBooleanValue(raw);
+        if (expected === false) return raw === false || raw === 0;
+        return conditionTextValue(raw).toLowerCase()
+            === conditionTextValue(expected).toLowerCase();
+    }
+
+    function conditionHolds(condition, readSource) {
+        if (!condition) return true;
+        if (condition.anyOf !== undefined) {
+            return (Array.isArray(condition.anyOf) ? condition.anyOf : [])
+                .some(function(nested) { return conditionHolds(nested, readSource); });
+        }
+        if (condition.suffix !== undefined) {
+            return conditionTextValue(readSource(condition.source)).toLowerCase()
+                .endsWith(String(condition.suffix).toLowerCase());
+        }
+        if (Object.prototype.hasOwnProperty.call(condition, 'nonEmpty')) {
+            return Boolean(condition.nonEmpty) !== conditionValueIsEmpty(readSource(condition.source));
+        }
+        var raw = readSource(condition.source);
+        if (condition.in !== undefined) {
+            return (Array.isArray(condition.in) ? condition.in : [])
+                .some(function(item) { return conditionCompare(item, raw); });
+        }
+        if (condition.notIn !== undefined) {
+            return !(Array.isArray(condition.notIn) ? condition.notIn : [])
+                .some(function(item) { return conditionCompare(item, raw); });
+        }
+        if (condition.equals !== undefined) {
+            return conditionCompare(condition.equals, raw);
+        }
+        if (condition.notEquals !== undefined) {
+            return !conditionCompare(condition.notEquals, raw);
+        }
+        return true;
+    }
+
+    function ruleEnabled(rule, readSource) {
+        var conditions = Array.isArray(rule && rule.enabledWhen) ? rule.enabledWhen : [];
+        return conditions.every(function(condition) {
+            return conditionHolds(condition, readSource);
+        });
+    }
+
+    function attachFieldDependencies(formElement, controlsById, rules) {
+        var disabledIds = new Set();
+        function sourceValue(fieldId) {
+            var payload = null;
+            (controlsById.get(fieldId) || []).forEach(function(control) {
+                var current = control.read();
+                if (current !== undefined) payload = dto.valuePayload(current);
+            });
+            return payload;
+        }
+        function sync() {
+            var passes = Math.min(rules.length + 1, 12);
+            for (var pass = 0; pass < passes; pass += 1) {
+                var changed = false;
+                var cache = new Map();
+                var nextDisabled = [];
+                var readSource = function(fieldId) {
+                    if (!cache.has(fieldId)) cache.set(fieldId, sourceValue(fieldId));
+                    return cache.get(fieldId);
+                };
+                rules.forEach(function(rule) {
+                    if (!rule || !rule.field) return;
+                    var enabled = ruleEnabled(rule, readSource);
+                    if (!enabled) nextDisabled.push(rule.field);
+                    (controlsById.get(rule.field) || []).forEach(function(control) {
+                        if (control.setDynamicDisabled
+                                && control.setDynamicDisabled(!enabled)) {
+                            changed = true;
+                        }
+                    });
+                });
+                disabledIds.clear();
+                nextDisabled.forEach(function(id) { disabledIds.add(id); });
+                if (!changed) break;
+            }
+        }
+        formElement.addEventListener('input', sync);
+        formElement.addEventListener('change', sync);
+        return { sync: sync, disabledIds: disabledIds };
+    }
+
+    function buildPlaceholderCheckbox(entry) {
+        var label = (entry && entry.label)
+            || (entry && entry.labelKey ? pt(entry.labelKey) : '');
+        var controlId = 'gpo-preference-field-' + nextFieldControlId++;
+        var checkbox = createElement('input', {
+            attrs: {
+                id: controlId,
+                type: 'checkbox',
+                disabled: 'disabled'
+            }
+        });
+        return createElement('div', {
+            className: ['field', 'field__checkbox', 'field--readonly'],
+            children: [
+                createElement('label', {
+                    children: [
+                        createElement('span', {
+                            className: 'gpo-editor-boolean',
+                            children: [
+                                checkbox,
+                                createElement('label', {
+                                    attrs: { 'for': controlId, 'aria-label': label }
+                                })
+                            ]
+                        }),
+                        createElement('span', {
+                            className: 'field__label-checkbox',
+                            text: label
+                        })
+                    ]
+                })
+            ]
+        });
+    }
+
+    function isMetadataField(field) {
+        return String(field && field.id || '').indexOf('metadata.') === 0;
+    }
+
+    function isGeneralTabField(field) {
+        return isMetadataField(field)
+            || (Boolean(field) && field.id === 'properties.disabled');
+    }
+
+    function isBasicTabField(field) {
+        return !isGeneralTabField(field);
+    }
+
+    function orderedTabEntries(fields, layoutEntries, predicate) {
+        var layout = Array.isArray(layoutEntries) ? layoutEntries : [];
+        var belongs = typeof predicate === 'function' ? predicate : function() { return true; };
+        var result = [];
+        var placed = {};
+        layout.forEach(function(entry) {
+            var item = dto.clone(entry || {});
+            if (!item.field) {
+                if (item.line) result.push({ line: true });
+                if (item.placeholder) result.push(item);
+                return;
+            }
+            var field = fields.find(function(candidate) { return candidate.id === item.field; });
+            if (!field || !belongs(field)) return;
+            placed[item.field] = true;
+            result.push(item);
+        });
+        fields.forEach(function(field) {
+            if (placed[field.id] || !belongs(field)) return;
+            result.push({ field: field.id });
+        });
+        return result;
+    }
+
+    function buildFieldTabs(fields, options) {
+        var opts = options || {};
+        var layout = opts.layout || null;
+        var fieldsById = new Map();
+        fields.forEach(function(field) { fieldsById.set(field.id, field); });
+        var basicEntries = orderedTabEntries(fields, layout ? layout.basic : null, isBasicTabField);
+        var generalEntries = orderedTabEntries(fields, layout ? layout.general : null, isGeneralTabField);
+        var fieldOptions = {};
+        basicEntries.concat(generalEntries).forEach(function(entry) {
+            if (entry && entry.field && !fieldOptions[entry.field]) fieldOptions[entry.field] = entry;
+        });
+
+        fields.forEach(function(field) {
+            var control;
+            if (field.hidden) {
+                control = hiddenFieldControl(field);
+            } else if (layout) {
+                control = mockupFieldControl(field, opts.readonly, opts.creating, fieldOptions[field.id] || {});
+            } else {
+                control = fieldControl(field, opts.readonly, opts.creating);
+            }
+            opts.controls.push(control);
+            if (!opts.controlsById.has(field.id)) opts.controlsById.set(field.id, []);
+            opts.controlsById.get(field.id).push(control);
+        });
+
+        function renderable(entries) {
+            return entries.some(function(entry) {
+                if (entry.placeholder) return true;
+                if (!entry.field) return false;
+                var field = fieldsById.get(entry.field);
+                return Boolean(field && !field.hidden);
+            });
+        }
+
+        var basicHasFields = renderable(basicEntries);
+        var generalHasFields = renderable(generalEntries);
+        if (!basicHasFields && !generalHasFields) return null;
+
+        function buildContent(entries) {
+            var content = createElement('div', { className: 'tab-content' });
+            entries.forEach(function(entry) {
+                if (entry.line) {
+                    content.append(createElement('div', { className: 'field__line' }));
+                    return;
+                }
+                if (entry.placeholder) {
+                    content.append(buildPlaceholderCheckbox(entry));
+                    return;
+                }
+                if (!entry.field) return;
+                (opts.controlsById.get(entry.field) || []).forEach(function(control) {
+                    if (control.element) content.append(control.element);
+                });
+            });
+            return content;
+        }
+
+        var basicContent = buildContent(basicEntries);
+        var generalContent = buildContent(generalEntries);
+        basicContent.getElement().id = 'tab-basic';
+        generalContent.getElement().id = 'tab-general';
+        var activeTab = basicHasFields ? 'tab-basic' : 'tab-general';
+        if (activeTab === 'tab-basic') basicContent.getElement().classList.add('active');
+        else generalContent.getElement().classList.add('active');
+
+        var tabs = createElement('div', { className: 'preference__modal-tabs' });
+        var buttons = createElement('div', { className: 'tab-buttons' });
+        [
+            { id: 'tab-basic', enabled: basicHasFields, label: pt('tabBasic') },
+            { id: 'tab-general', enabled: generalHasFields, label: pt('tabGeneral') }
+        ].forEach(function(spec) {
+            if (!spec.enabled) return;
+            buttons.append(createElement('div', {
+                className: ['preference__tab-button', activeTab === spec.id ? 'active' : null],
+                attrs: { 'data-tab': spec.id },
+                text: spec.label,
+                events: { click: function() { activateTab(spec.id); } }
+            }));
+        });
+        tabs.append(buttons);
+        tabs.append(basicContent);
+        tabs.append(generalContent);
+
+        var filtersTab = opts.layout
+            ? (opts.layout.filters === 'basic' ? 'tab-basic'
+                : opts.layout.filters === 'general' ? 'tab-general' : null)
+            : null;
+        tabs.filtersSlot = filtersTab === 'tab-basic' && basicHasFields ? basicContent
+            : filtersTab === 'tab-general' && generalHasFields ? generalContent
+            : null;
+
+        function activateTab(id) {
+            Array.prototype.forEach.call(tabs.getElement().querySelectorAll('.preference__tab-button'),
+                function(button) {
+                    button.classList.toggle('active', button.getAttribute('data-tab') === id);
+                });
+            Array.prototype.forEach.call(tabs.getElement().querySelectorAll('.tab-content'),
+                function(content) {
+                    content.classList.toggle('active', content.id === id);
+                });
+        }
+
+        return tabs;
     }
 
     function editableFields(controls, baseline, changedOnly) {
@@ -263,6 +853,8 @@ define([
         var headerElement = config.header && config.header.getElement ? config.header.getElement() : null;
         var headerControls = headerElement ? headerElement.querySelector('.gp__control') : null;
         var headerActions = headerElement ? headerElement.querySelector('.gp__control-actions') : null;
+        var admxActions = headerElement ? headerElement.querySelector('.gp__control-admx') : null;
+        var helpSeparator = headerElement ? headerElement.querySelector('.gp__control-separator') : null;
         var createButton = headerControls ? headerControls.querySelector('.preferences__btn-create') : null;
         var editButton = headerControls ? headerControls.querySelector('.preferences__btn-edit') : null;
         var deleteButton = headerControls ? headerControls.querySelector('.preferences__btn-delete') : null;
@@ -271,9 +863,15 @@ define([
         var selectedIdentity = null;
         var modalState = null;
         var opening = false;
+        var pendingDiscard = null;
+        var discardModal = null;
         var cleanups = [];
         var formRequestId = 0;
         var itemsRequestId = 0;
+        var infoRequestId = 0;
+        var itemFieldsCache = new Map();
+        var fieldsRequestId = 0;
+        var tableRefreshScheduled = false;
 
         if (headerControls) {
             headerControls.setAttribute('data-preference-owner', headerOwner);
@@ -281,8 +879,10 @@ define([
         }
         if (headerActions) {
             headerActions.setAttribute('data-preference-owner', headerOwner);
-            headerActions.style.display = 'none';
+            headerActions.style.display = 'flex';
         }
+        if (admxActions) admxActions.style.display = 'none';
+        if (helpSeparator) helpSeparator.style.display = 'none';
 
         function ownsHeader() {
             return Boolean(headerControls
@@ -359,65 +959,161 @@ define([
                 }).getElement());
                 return;
             }
+            var columns = tableColumns(item.preferenceKind);
+            var useTemplate = Boolean(columns);
+            var headerCells = useTemplate
+                ? columns.map(function(column) {
+                    return createElement('th', { text: pt(column.labelKey) });
+                })
+                : [
+                    createElement('th', { text: pt('itemColumn') }),
+                    createElement('th', { text: pt('filtersColumn') }),
+                    createElement('th', { text: pt('actionsColumn') })
+                ];
+
+            function buildDataCells(preferenceItem, index) {
+                if (!useTemplate) {
+                    return [
+                        createElement('td', { text: preferenceItem.label }),
+                        createElement('td', { text: preferenceItem.has_filters ? pt('yes') : pt('no') })
+                    ];
+                }
+                return columns.map(function(column) {
+                    var text = '';
+                    if (column.source === 'name') {
+                        text = preferenceItem.label;
+                    } else if (column.source === 'order') {
+                        text = String(index + 1);
+                    } else if (column.source === 'field') {
+                        var value = cachedFieldValue(preferenceItem.identity, column.field);
+                        text = column.format === 'action'
+                            ? actionLabel(value)
+                            : (value === null || value === undefined ? '' : String(value));
+                    }
+                    return createElement('td', { text: text });
+                });
+            }
+
+            function buildActionsCell(preferenceItem) {
+                return createElement('td', {
+                    className: 'gpo-editor-preference-table__actions',
+                    children: [createElement('button', {
+                        className: 'button',
+                        attrs: {
+                            type: 'button',
+                            disabled: opening ? 'disabled' : null
+                        },
+                        text: documentDto.editable ? t('header.edit') : pt('viewTitle'),
+                        events: { click: function(event) {
+                            event.stopPropagation();
+                            selectedIdentity = dto.clone(preferenceItem.identity);
+                            renderTable();
+                            setHeaderState();
+                            void openForm(selectedIdentity);
+                        } }
+                    })]
+                });
+            }
+
+            var bodyRows = items.map(function(preferenceItem, index) {
+                var selected = selectedIdentity !== null && dto.equal(selectedIdentity, preferenceItem.identity);
+                var cells = buildDataCells(preferenceItem, index);
+                if (!useTemplate) cells.push(buildActionsCell(preferenceItem));
+                return createElement('tr', {
+                    className: selected ? 'active' : null,
+                    attrs: { tabindex: '0' },
+                    children: cells,
+                    events: {
+                        click: function() {
+                            selectedIdentity = dto.clone(preferenceItem.identity);
+                            renderTable();
+                            setHeaderState();
+                            void requestInfoPanel(selectedIdentity);
+                        },
+                        dblclick: function() {
+                            selectedIdentity = dto.clone(preferenceItem.identity);
+                            void openForm(selectedIdentity);
+                        },
+                        keydown: function(event) {
+                            if (event.key !== 'Enter' && event.key !== ' ') return;
+                            event.preventDefault();
+                            selectedIdentity = dto.clone(preferenceItem.identity);
+                            renderTable();
+                            setHeaderState();
+                            void openForm(selectedIdentity);
+                        }
+                    }
+                });
+            });
+
             var table = createElement('table', {
                 className: 'preference__table',
                 children: [
-                    createElement('thead', { children: [createElement('tr', { children: [
-                        createElement('th', { text: pt('itemColumn') }),
-                        createElement('th', { text: pt('filtersColumn') }),
-                        createElement('th', { text: pt('actionsColumn') })
-                    ] })] }),
-                    createElement('tbody', { children: items.map(function(preferenceItem) {
-                        var selected = selectedIdentity !== null && dto.equal(selectedIdentity, preferenceItem.identity);
-                        return createElement('tr', {
-                            className: selected ? 'active' : null,
-                            attrs: { tabindex: '0' },
-                            children: [
-                                createElement('td', { text: preferenceItem.label }),
-                                createElement('td', { text: preferenceItem.has_filters ? pt('yes') : pt('no') }),
-                                createElement('td', {
-                                    className: 'gpo-editor-preference-table__actions',
-                                    children: [createElement('button', {
-                                        className: 'button',
-                                        attrs: {
-                                            type: 'button',
-                                            disabled: opening ? 'disabled' : null
-                                        },
-                                        text: documentDto.editable ? t('header.edit') : pt('viewTitle'),
-                                        events: { click: function(event) {
-                                            event.stopPropagation();
-                                            selectedIdentity = dto.clone(preferenceItem.identity);
-                                            renderTable();
-                                            setHeaderState();
-                                            void openForm(selectedIdentity);
-                                        } }
-                                    })]
-                                })
-                            ],
-                            events: {
-                                click: function() {
-                                    selectedIdentity = dto.clone(preferenceItem.identity);
-                                    renderTable();
-                                    setHeaderState();
-                                },
-                                dblclick: function() {
-                                    selectedIdentity = dto.clone(preferenceItem.identity);
-                                    void openForm(selectedIdentity);
-                                },
-                                keydown: function(event) {
-                                    if (event.key !== 'Enter' && event.key !== ' ') return;
-                                    event.preventDefault();
-                                    selectedIdentity = dto.clone(preferenceItem.identity);
-                                    renderTable();
-                                    setHeaderState();
-                                    void openForm(selectedIdentity);
-                                }
-                            }
-                        });
-                    }) })
+                    createElement('thead', { children: [createElement('tr', { children: headerCells })] }),
+                    createElement('tbody', { children: bodyRows })
                 ]
             });
             tableSlot.appendChild(table.getElement());
+        }
+
+        function cacheKey(identity) {
+            return JSON.stringify(identity);
+        }
+
+        function cachedFieldValue(identity, fieldId) {
+            var fields = itemFieldsCache.get(cacheKey(identity));
+            if (!fields) return '';
+            return itemFieldValue({ fields: fields }, fieldId);
+        }
+
+        function scheduleTableRefresh() {
+            if (tableRefreshScheduled) return;
+            tableRefreshScheduled = true;
+            var run = function() {
+                tableRefreshScheduled = false;
+                if (typeof config.isCurrent === 'function' && !config.isCurrent()) return;
+                renderTable();
+            };
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(run);
+            } else {
+                setTimeout(run, 16);
+            }
+        }
+
+        function ensureItemFields(identity) {
+            var key = cacheKey(identity);
+            if (itemFieldsCache.has(key)) {
+                return Promise.resolve(itemFieldsCache.get(key));
+            }
+            var startedGeneration = fieldsRequestId;
+            return API.preferenceShow(item.scope, item.preferenceKind, dto.clone(identity)).then(function(response) {
+                if (startedGeneration !== fieldsRequestId) return null;
+                var fields = dto.clone(response.fields || response.new_item_fields || []).map(function(field) {
+                    return scopeField(field, item.scope);
+                });
+                itemFieldsCache.set(key, fields);
+                return fields;
+            });
+        }
+
+        function prefetchTableFields() {
+            var generation = ++fieldsRequestId;
+            items.forEach(function(preferenceItem) {
+                if (preferenceItem.identity === null || preferenceItem.identity === undefined) return;
+                if (itemFieldsCache.has(cacheKey(preferenceItem.identity))) return;
+                void ensureItemFields(preferenceItem.identity).then(function(fields) {
+                    if (!fields) return;
+                    if (generation !== fieldsRequestId) return;
+                    if (typeof config.isCurrent === 'function' && !config.isCurrent()) return;
+                    scheduleTableRefresh();
+                });
+            });
+        }
+
+        function invalidateCachedFields(identity) {
+            itemFieldsCache.delete(cacheKey(identity));
+            fieldsRequestId += 1;
         }
 
         async function loadItems() {
@@ -434,6 +1130,12 @@ define([
                 if (errorSlot) errorSlot.innerHTML = '';
                 renderTable();
                 setHeaderState();
+                void prefetchTableFields();
+                if (selectedIdentity !== null) {
+                    void requestInfoPanel(selectedIdentity);
+                } else {
+                    resetInfoPanel();
+                }
             } catch (error) {
                 if (requestId !== itemsRequestId
                         || typeof config.isCurrent === 'function' && !config.isCurrent()) return;
@@ -441,9 +1143,113 @@ define([
             }
         }
 
+        function buildInfoPanel() {
+            var info = createElement('div', {
+                className: ['preference__info', config.isHelpOpen ? 'is-open' : null]
+            });
+            var settings = createElement('div', { className: 'preference__settings' });
+            settings.append(createElement('div', {
+                className: 'preference__settings-title',
+                text: pt('settingsTitle')
+            }));
+            settings.append(createElement('div', { className: 'preference__settings-data' }));
+            info.append(settings);
+            var description = createElement('div', { className: 'preference__description' });
+            description.append(createElement('div', {
+                className: 'preference__description-title',
+                text: pt('descriptionTitle')
+            }));
+            description.append(createElement('div', {
+                className: ['preference__description-data', 'empty'],
+                text: pt('noDescription')
+            }));
+            info.append(description);
+            return info;
+        }
+
+        function settingsItems() {
+            return [
+                { id: 'metadata.bypassErrors', label: pt('settingBypassErrors') },
+                { id: 'metadata.removePolicy', label: pt('settingRemovePolicy') },
+                { id: 'properties.disabled', label: pt('settingDisabled') }
+            ];
+        }
+
+        function fieldCheckedState(field) {
+            var v = field && field.value;
+            var raw = v && typeof v === 'object' ? v.value : v;
+            if (raw === null || raw === undefined) return null;
+            if (raw === true || raw === 1) return true;
+            if (raw === false || raw === 0) return false;
+            return Boolean(raw);
+        }
+
+        function fieldText(field) {
+            var v = field && field.value;
+            var raw = v && typeof v === 'object' ? v.value : v;
+            if (Array.isArray(raw)) return raw.join('\n');
+            return raw === null || raw === undefined ? '' : String(raw);
+        }
+
+        function renderInfoPanel(fields) {
+            var dataSlot = rootElement.querySelector('.preference__settings-data');
+            var descSlot = rootElement.querySelector('.preference__description-data');
+            if (!dataSlot || !descSlot) return;
+            var byId = new Map();
+            (Array.isArray(fields) ? fields : []).forEach(function(field) {
+                if (field && field.id !== undefined && !byId.has(field.id)) byId.set(field.id, field);
+            });
+            dataSlot.innerHTML = '';
+            settingsItems().forEach(function(spec) {
+                var field = byId.get(spec.id);
+                var label = (field && field.label) || spec.label;
+                var value = fieldCheckedState(field);
+                dataSlot.appendChild(createElement('div', {
+                    className: 'preference__settings-item',
+                    children: [
+                        createElement('div', { className: 'preference__settings-name', text: label + ':' }),
+                        createElement('div', {
+                            className: 'preference__settings-value',
+                            text: value === null ? '' : (value ? pt('yes') : pt('no'))
+                        })
+                    ]
+                }).getElement());
+            });
+            var descField = byId.get('metadata.desc');
+            var descText = fieldText(descField);
+            descSlot.innerHTML = '';
+            if (descText) {
+                descSlot.classList.remove('empty');
+                descSlot.textContent = descText;
+            } else {
+                descSlot.classList.add('empty');
+                descSlot.textContent = pt('noDescription');
+            }
+        }
+
+        function resetInfoPanel() {
+            renderInfoPanel([]);
+        }
+
+        async function requestInfoPanel(identity) {
+            var requestId = ++infoRequestId;
+            try {
+                var fields = await ensureItemFields(identity);
+                if (requestId !== infoRequestId
+                        || typeof config.isCurrent === 'function' && !config.isCurrent()) return;
+                if (fields) renderInfoPanel(fields);
+                else resetInfoPanel();
+            } catch (error) {
+                if (requestId !== infoRequestId
+                        || typeof config.isCurrent === 'function' && !config.isCurrent()) return;
+                resetInfoPanel();
+            }
+        }
+
         function renderShell() {
             rootElement.innerHTML = '';
-            rootElement.appendChild(createElement('div', {
+            var dataTable = createElement('div', { className: 'preference__data-table' });
+            dataTable.append(createElement('div', {
                 className: 'gpo-editor-preferences__header',
                 children: [
                     createElement('h2', { text: documentDto.label || item.preferenceKind }),
@@ -452,10 +1258,13 @@ define([
                         text: documentDto.editable ? pt('documentEditable') : pt('documentReadOnly')
                     })
                 ]
-            }).getElement());
-            rootElement.appendChild(createElement('div', { className: 'gpo-editor-preferences__error' }).getElement());
-            rootElement.appendChild(createElement('div', { className: 'gpo-editor-preferences__table' }).getElement());
-            rootElement.appendChild(createElement('div', { className: 'gpo-editor-preferences__modal-host' }).getElement());
+            }));
+            dataTable.append(createElement('div', { className: 'gpo-editor-preferences__error' }));
+            dataTable.append(createElement('div', { className: 'gpo-editor-preferences__table' }));
+            dataTable.append(createElement('div', { className: 'gpo-editor-preferences__modal-host' }));
+            rootElement.appendChild(dataTable.getElement());
+            rootElement.appendChild(buildInfoPanel().getElement());
+            resetInfoPanel();
         }
 
         function buildFilterEditor(showResult, formState, readonly) {
@@ -544,7 +1353,8 @@ define([
                     var control = fieldControl(
                         field,
                         readonly || formState.busy,
-                        Boolean(selectedFilter && selectedFilter._temporaryId)
+                        Boolean(selectedFilter && selectedFilter._temporaryId),
+                        { wrapSelect: true, wrapCheckbox: true, wrapText: true }
                     );
                     selectedControls.push(control);
                     slot.appendChild(control.element.getElement());
@@ -829,10 +1639,21 @@ define([
                     : (response.fields || [])).map(function(field) {
                         return scopeField(field, item.scope);
                     });
+                if (!creating) {
+                    infoRequestId += 1;
+                    renderInfoPanel(fields);
+                }
                 var parentCandidates = creating && Array.isArray(response.parent_candidates)
                     ? dto.clone(response.parent_candidates) : [];
                 var controls = [];
                 var controlsById = new Map();
+                var fieldTabs = buildFieldTabs(fields, {
+                    controls: controls,
+                    controlsById: controlsById,
+                    readonly: readonly,
+                    creating: creating,
+                    layout: PREFERENCE_LAYOUTS[item.preferenceKind] || null
+                });
                 var formState = {
                     dirty: false,
                     busy: false,
@@ -860,22 +1681,21 @@ define([
                         }
                     });
                     nameError = createElement('span', { className: 'gpo-editor-field__error' });
-                    nameField = createElement('label', {
-                        className: ['gpo-editor-field', readonly ? 'gpo-editor-field--readonly' : null],
+                    nameField = createElement('div', {
+                        className: ['field', 'field__input', readonly ? 'field--readonly' : null],
                         attrs: { 'data-field-id': 'name' },
                         children: [
-                            createElement('span', {
-                                className: 'gpo-editor-field__label',
+                            createElement('div', {
+                                className: 'field__label',
                                 children: [
                                     createElement('span', { text: pt('rename') }),
                                     createElement('span', { className: 'gpo-editor-field__required', text: '*' })
                                 ]
                             }),
-                            nameInput,
-                            readonly ? createElement('span', {
-                                className: 'gpo-editor-field__hint', text: pt('readonly')
-                            }) : null,
-                            nameError
+                            createElement('div', {
+                                className: 'field__element',
+                                children: [nameInput, nameError]
+                            })
                         ]
                     });
                 }
@@ -915,9 +1735,77 @@ define([
                 });
                 var closeAction = function() { closeForm(false, 'close'); };
                 var cancelAction = function() { closeForm(false, 'cancel'); };
+                var filterSection = createElement('div', { className: 'preference__modal-filters' });
+                filterSection.append(createElement('h3', { text: pt('filtersHeading') }));
+                filterSection.append(buildFilterEditor(response, formState, readonly));
+                var targettingModalElement = null;
+                var closeTargettingModal = function() {
+                    if (targettingModalElement) targettingModalElement.classList.remove('active');
+                    form.getElement().classList.remove('dimmed');
+                };
+                var buildTargettingModal = function() {
+                    if (targettingModalElement) return targettingModalElement;
+                    targettingModalElement = createElement('div', {
+                        className: [
+                            'targetting__modal', 'preference__modal',
+                            readonly ? 'preference__modal--readonly' : null
+                        ],
+                        children: [createElement('div', {
+                            className: 'preference__modal-wrapper',
+                            children: [
+                                createElement('div', {
+                                    className: 'preference__modal-header',
+                                    children: [
+                                        createElement('div', {
+                                            className: 'title',
+                                            text: pt('targettingTitle')
+                                        }),
+                                        createElement('button', {
+                                            className: 'close',
+                                            attrs: { type: 'button', 'aria-label': pt('close') },
+                                            events: { click: closeTargettingModal }
+                                        })
+                                    ]
+                                }),
+                                createElement('div', {
+                                    className: 'preference__modal-content',
+                                    children: [filterSection]
+                                }),
+                                createElement('div', {
+                                    className: 'preference__modal-footer',
+                                    children: [
+                                        createElement('button', {
+                                            className: ['button', 'btn-cancel'],
+                                            attrs: { type: 'button' },
+                                            text: pt('close'),
+                                            events: { click: closeTargettingModal }
+                                        })
+                                    ]
+                                })
+                            ]
+                        })]
+                    }).getElement();
+                    if (!readonly) {
+                        targettingModalElement.addEventListener('input', function() {
+                            if (!formState.busy) formState.dirty = true;
+                        });
+                        targettingModalElement.addEventListener('change', function() {
+                            if (!formState.busy) formState.dirty = true;
+                        });
+                    }
+                    return targettingModalElement;
+                };
+                var buildModalContent = function() {
+                    var content = createElement('div', { className: 'preference__modal-content' });
+                    content.append(validationSlot);
+                    content.append(errorSlot);
+                    content.append(createElement('div', { className: 'gpo-editor-fields' }));
+                    if (fieldTabs) content.append(fieldTabs);
+                    return content;
+                };
                 var form = createElement('div', {
                     className: [
-                        'preference__modal', 'active', 'gpo-editor-preference-form',
+                        'preference__modal', 'gpo-editor-preference-form',
                         readonly ? 'preference__modal--readonly' : null
                     ],
                     children: [createElement('div', {
@@ -938,16 +1826,7 @@ define([
                                     })
                                 ]
                             }),
-                            createElement('div', {
-                                className: 'preference__modal-content',
-                                children: [
-                                    validationSlot,
-                                    errorSlot,
-                                    createElement('div', { className: 'gpo-editor-fields' }),
-                                    createElement('h3', { text: pt('filtersHeading') }),
-                                    buildFilterEditor(response, formState, readonly)
-                                ]
-                            }),
+                            buildModalContent(),
                             createElement('div', {
                                 className: 'preference__modal-footer',
                                 children: readonly ? [
@@ -971,17 +1850,46 @@ define([
                     })]
                 });
                 var fieldSlot = form.getElement().querySelector('.gpo-editor-fields');
-                if (nameField) fieldSlot.appendChild(nameField.getElement());
-                if (parentField) fieldSlot.appendChild(parentField.getElement());
-                fields.forEach(function(field) {
-                    var control = field.hidden
-                        ? hiddenFieldControl(field)
-                        : fieldControl(field, readonly, creating);
-                    controls.push(control);
-                    if (!controlsById.has(field.id)) controlsById.set(field.id, []);
-                    controlsById.get(field.id).push(control);
-                    if (control.element) fieldSlot.appendChild(control.element.getElement());
+                if (nameField) {
+                    var basicTab = form.getElement().querySelector('#tab-basic');
+                    var targetTypeField = basicTab
+                        && basicTab.querySelector('[data-field-id="properties.targetType"]');
+                    if (targetTypeField && targetTypeField.parentNode) {
+                        targetTypeField.parentNode.insertBefore(
+                            nameField.getElement(), targetTypeField);
+                    } else if (basicTab) {
+                        basicTab.insertBefore(nameField.getElement(), basicTab.firstChild);
+                    } else if (fieldSlot) {
+                        fieldSlot.appendChild(nameField.getElement());
+                    }
+                }
+                if (parentField && fieldSlot) fieldSlot.appendChild(parentField.getElement());
+                var targettingButton = createElement('button', {
+                    className: ['button', 'preference__tab-targetting-btn'],
+                    attrs: { type: 'button' },
+                    text: pt('targettingButton'),
+                    events: {
+                        click: function() {
+                            var modal = buildTargettingModal();
+                            if (!modal.parentNode) host.appendChild(modal);
+                            void modal.offsetHeight;
+                            modal.classList.add('active');
+                            form.getElement().classList.add('dimmed');
+                        }
+                    }
                 });
+                var generalTabElement = form.getElement().querySelector('#tab-general');
+                var descriptionField = generalTabElement
+                    && generalTabElement.querySelector('[data-field-id="metadata.desc"]');
+                if (generalTabElement && descriptionField && descriptionField.parentNode) {
+                    descriptionField.parentNode.insertBefore(
+                        targettingButton.getElement(), descriptionField);
+                } else if (generalTabElement) {
+                    generalTabElement.appendChild(targettingButton.getElement());
+                } else {
+                    var formContentSlot = form.getElement().querySelector('.preference__modal-content');
+                    if (formContentSlot) formContentSlot.appendChild(targettingButton.getElement());
+                }
                 if (!readonly) {
                     form.getElement().addEventListener('input', function() {
                         if (!formState.busy) formState.dirty = true;
@@ -992,6 +1900,9 @@ define([
                 }
                 host.innerHTML = '';
                 host.appendChild(form.getElement());
+                host.classList.add('active');
+                void form.getElement().offsetHeight;
+                form.getElement().classList.add('active');
                 modalState = {
                     creating: creating,
                     readonly: readonly,
@@ -1020,6 +1931,11 @@ define([
                     requiresRefresh: false,
                     blockedDescriptors: false
                 };
+                if (modalState.nameInput && !readonly) {
+                    modalState.nameInput.addEventListener('input', function() {
+                        if (modalState.nameError.textContent) setNameError(modalState, '');
+                    });
+                }
                 var duplicates = dto.preferenceFieldIds(fields).duplicates;
                 if (!readonly && duplicates.length) {
                     modalState.blockedDescriptors = true;
@@ -1031,6 +1947,13 @@ define([
                         });
                     });
                 }
+                var dependencyRules = dependencyRulesFor(item.preferenceKind);
+                if (dependencyRules.length && !readonly) {
+                    var dependencies = attachFieldDependencies(
+                        modalState.formElement, controlsById, dependencyRules);
+                    modalState.dependencyDisabledIds = dependencies.disabledIds;
+                    dependencies.sync();
+                }
                 syncFormBusy(modalState);
                 setHeaderState();
             } catch (error) {
@@ -1040,17 +1963,114 @@ define([
             }
         }
 
+        function buildDiscardModal() {
+            if (discardModal) return discardModal;
+            var content = createElement('div', { className: 'policy-changed__modal-content' });
+            var modal = createElement('div', {
+                className: ['policy-changed__modal', 'policy-changed__modal--discard'],
+                children: [
+                    createElement('div', {
+                        className: 'policy-changed__modal-wrapper',
+                        children: [
+                            createElement('div', {
+                                className: 'policy-changed__modal-header',
+                                children: [
+                                    createElement('div', {
+                                        className: 'title',
+                                        text: t('confirmModal.title')
+                                    })
+                                ]
+                            }),
+                            content,
+                            createElement('div', {
+                                className: 'policy-changed__modal-footer',
+                                children: [
+                                    createElement('div', {
+                                        className: ['btn', 'btn-no'],
+                                        text: t('policyChangedModal.no'),
+                                        events: { click: function() { handleDiscardModalChoice(false); } }
+                                    }),
+                                    createElement('div', {
+                                        className: ['btn', 'btn-yes'],
+                                        text: t('policyChangedModal.yes'),
+                                        events: { click: function() { handleDiscardModalChoice(true); } }
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                ]
+            });
+            rootElement.appendChild(modal.getElement());
+            discardModal = { element: modal.getElement(), content: content.getElement() };
+            return discardModal;
+        }
+
+        function showDiscardModal(action) {
+            var modal = buildDiscardModal();
+            pendingDiscard = { action: action };
+            modal.content.textContent = pt(action === 'cancel'
+                ? 'confirmCancelDiscard' : 'confirmCloseDiscard');
+            if (modalState && modalState.formElement) {
+                modalState.formElement.classList.add('gpo-editor-preference-form--confirming');
+                if (modalState.formElement.parentNode) {
+                    var targettingModal = modalState.formElement.parentNode
+                        .querySelector('.targetting__modal');
+                    if (targettingModal) {
+                        targettingModal.classList.add('gpo-editor-preference-form--confirming');
+                    }
+                }
+            }
+            void modal.element.offsetHeight;
+            modal.element.classList.add('active');
+        }
+
+        function hideDiscardModal() {
+            if (discardModal) discardModal.element.classList.remove('active');
+            var confirmingForms = rootElement.querySelectorAll(
+                '.gpo-editor-preference-form--confirming');
+            Array.prototype.forEach.call(confirmingForms, function(formElement) {
+                formElement.classList.remove('gpo-editor-preference-form--confirming');
+            });
+        }
+
+        function handleDiscardModalChoice(confirmed) {
+            var pending = pendingDiscard;
+            pendingDiscard = null;
+            hideDiscardModal();
+            if (!confirmed || !pending) return;
+            closeForm(true, pending.action);
+        }
+
+        function closeHostModals(host) {
+            host.classList.remove('active');
+            var modals = Array.prototype.slice.call(host.children);
+            modals.forEach(function(element) {
+                element.classList.remove('active');
+            });
+            setTimeout(function() {
+                modals.forEach(function(element) {
+                    if (!element.classList.contains('active') && element.parentNode === host) {
+                        host.removeChild(element);
+                    }
+                });
+            }, 500);
+        }
+
         function closeForm(force, action) {
             var state = modalState;
             if (state && (state.saving || state.reconciling)
                     && action !== 'saved' && action !== 'cleanup') return false;
             if (!force && state && state.formState.dirty) {
-                var key = action === 'cancel' ? 'confirmCancelDiscard' : 'confirmCloseDiscard';
-                if (!window.confirm(pt(key))) return false;
+                if (pendingDiscard) return false;
+                showDiscardModal(action);
+                return false;
             }
+            pendingDiscard = null;
+            hideDiscardModal();
             formRequestId += 1;
             var host = rootElement.querySelector('.gpo-editor-preferences__modal-host');
-            if (host) host.innerHTML = '';
+            if (host) closeHostModals(host);
             modalState = null;
             setHeaderState();
             return true;
@@ -1058,13 +2078,20 @@ define([
 
         function formInteractiveElements(state) {
             var elements = [];
-            ['input', 'select', 'textarea', 'button'].forEach(function(selector) {
-                Array.prototype.forEach.call(
-                    state.formElement.querySelectorAll(selector),
-                    function(element) {
-                        if (elements.indexOf(element) === -1) elements.push(element);
-                    }
-                );
+            var roots = [state.formElement];
+            if (state.formElement.parentNode) {
+                var targettingModal = state.formElement.parentNode.querySelector('.targetting__modal');
+                if (targettingModal) roots.push(targettingModal);
+            }
+            roots.forEach(function(root) {
+                ['input', 'select', 'textarea', 'button'].forEach(function(selector) {
+                    Array.prototype.forEach.call(
+                        root.querySelectorAll(selector),
+                        function(element) {
+                            if (elements.indexOf(element) === -1) elements.push(element);
+                        }
+                    );
+                });
             });
             return elements;
         }
@@ -1226,7 +2253,8 @@ define([
                 parent: state.parentSelect ? dto.preferenceParentIdentity(
                     state.parentCandidates, state.parentSelect.value
                 ) : null,
-                filters: filterResult.operations
+                filters: filterResult.operations,
+                validationExemptions: state.dependencyDisabledIds || []
             });
             var errors = result.errors.concat(filterResult.errors || []);
             if (errors.length) {
@@ -1261,6 +2289,7 @@ define([
                     : await API.preferenceUpdate(item.scope, item.preferenceKind, result.request);
                 var conflict = recoveryConflict(response);
                 if (conflict) throw conflict;
+                if (!state.creating) invalidateCachedFields(state.identity);
                 closeForm(true, 'saved');
                 await loadItems();
                 return true;
@@ -1283,6 +2312,7 @@ define([
             if (deleteButton) deleteButton.disabled = true;
             try {
                 await API.preferenceDelete(item.scope, item.preferenceKind, identity);
+                invalidateCachedFields(identity);
                 if (dto.equal(selectedIdentity, identity)) selectedIdentity = null;
                 await loadItems();
             } catch (error) {
@@ -1327,6 +2357,8 @@ define([
                     && headerActions.getAttribute('data-preference-owner') === headerOwner) {
                 headerActions.style.display = '';
                 headerActions.removeAttribute('data-preference-owner');
+                if (admxActions) admxActions.style.display = '';
+                if (helpSeparator) helpSeparator.style.display = '';
             }
         };
         return root;
@@ -1334,6 +2366,14 @@ define([
 
     return {
         renderPreferencesTemplate: renderPreferencesTemplate,
-        _test: { fieldControl: fieldControl, filterKey: filterKey, editableFields: editableFields }
+        _test: {
+            fieldControl: fieldControl,
+            mockupFieldControl: mockupFieldControl,
+            buildFieldTabs: buildFieldTabs,
+            orderedTabEntries: orderedTabEntries,
+            isMetadataField: isMetadataField,
+            filterKey: filterKey,
+            editableFields: editableFields
+        }
     };
 });

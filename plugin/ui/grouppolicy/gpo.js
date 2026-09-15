@@ -4,10 +4,14 @@ define([
     'freeipa/phases',
     'freeipa/reg',
     'freeipa/navigation',
-    'freeipa/rpc'
-], function(require, IPA, phases, reg, navigation, rpc) {
+    'freeipa/rpc',
+    './js/locales/translations'
+], function(require, IPA, phases, reg, navigation, rpc, translationsModule) {
 
     var exp = IPA.gpo = {};
+
+    translationsModule.setLanguage((navigator.language || 'en').slice(0, 2).toLowerCase());
+    var t = translationsModule.t;
 
     (function loadCSS() {
         var files = [
@@ -23,6 +27,19 @@ define([
         });
     })();
 
+    var order_control_buttons = exp.order_control_buttons = function(order) {
+        return function(spec) {
+            var rank = {};
+            order.forEach(function(name, i) { rank[name] = i; });
+            spec.control_buttons.sort(function(a, b) {
+                var ra = rank[a.name] !== undefined ? rank[a.name] : order.length;
+                var rb = rank[b.name] !== undefined ? rank[b.name] : order.length;
+                return ra - rb;
+            });
+            return spec;
+        };
+    };
+
     var make_gpo_spec = function() {
         return {
             name: 'gpo',
@@ -32,6 +49,7 @@ define([
                     $type: 'search',
                     name: 'search',
                     label: 'Group Policy Objects',
+                    $pre_ops: [order_control_buttons(['refresh', 'add', 'gpui', 'remove'])],
                     columns: [
                         {
                             name: 'displayname',
@@ -55,8 +73,8 @@ define([
                     control_buttons: [
                         {
                             name: 'gpui',
-                            label: 'GPUI',
-                            icon: 'fa-external-link'
+                            label: t('common.edit'),
+                            icon: 'fa-pencil'
                         }
                     ]
                 },
@@ -64,6 +82,7 @@ define([
                     $type: 'details',
                     name: 'details',
                     check_rights: false,
+                    $pre_ops: [order_control_buttons(['refresh', 'gpui', 'save', 'revert'])],
                     actions: ['gpo_save', 'revert', 'refresh', 'gpui'],
                     sections: [
                         {
@@ -100,8 +119,8 @@ define([
                     control_buttons: [
                         {
                             name: 'gpui',
-                            label: 'GPUI',
-                            icon: 'fa-external-link'
+                            label: t('common.edit'),
+                            icon: 'fa-pencil'
                         }
                     ]
                 }
@@ -195,7 +214,7 @@ define([
         exp.gpui_action = function(spec) {
         spec = spec || {};
         spec.name = spec.name || 'gpui';
-        spec.label = spec.label || 'GPUI';
+        spec.label = spec.label || t('common.edit');
         spec.enable_cond = spec.enable_cond || [];
 
         var that = IPA.action(spec);
@@ -231,9 +250,9 @@ define([
                 return;
             }
 
-            var backdrop = $('<div class="modal-backdrop fade in"></div>');
+            var backdrop = $('<div class="modal-backdrop fade modal-gpui-backdrop"></div>');
             var modal = $(
-                '<div class="modal fade in modal-gpui" style="display:block;" tabindex="-1" role="dialog">' +
+                '<div class="modal fade modal-gpui" style="display:block;" tabindex="-1" role="dialog">' +
                     '<div class="modal-dialog" role="document">' +
                         '<div class="modal-content">' +
                             '<div class="modal-header">' +
@@ -251,9 +270,13 @@ define([
             );
 
             var close_modal = function() {
-                modal.remove();
-                backdrop.remove();
-                facet.refresh();
+                modal.removeClass('in');
+                backdrop.removeClass('in');
+                setTimeout(function() {
+                    modal.remove();
+                    backdrop.remove();
+                    facet.refresh();
+                }, 500);
             };
 
             modal.find('.close').on('click', close_modal);
@@ -263,6 +286,9 @@ define([
             modal.find('.modal-title').text('GPUI | ' + policyName);
 
             $('body').append(backdrop).append(modal);
+            void modal[0].offsetHeight;
+            modal.addClass('in');
+            backdrop.addClass('in');
 
             require(['./js/app'], function(app) {
                 if (app && typeof app.init === 'function') {

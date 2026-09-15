@@ -9,6 +9,21 @@ define([], function() {
       edit: 'Edit'
     },
 
+    // Menu
+    menu: {
+      groupPolicy: 'GROUP Policy',
+      chains: 'Chains',
+      groupPolicyObjects: 'Group Policy Objects'
+    },
+
+    // Group Policy Chains
+    chain: {
+      enable: 'Enable',
+      disable: 'Disable',
+      moveUp: 'Move Up',
+      moveDown: 'Move Down'
+    },
+
     // Политики
     policies: {
       localGroupPolicy: '[Local Group Policy]',
@@ -59,7 +74,13 @@ define([], function() {
         specified: 'Specified',
         unspecified: 'Not specified',
         userContext: "Run in logged-on user's security context (user policy option)",
+        applyOnce: 'Apply only once',
+        itemSelection: 'Item selection',
         filtersHeading: 'Item-level targeting',
+        tabBasic: 'Basic settings',
+        tabGeneral: 'General',
+        targettingButton: 'Targetting',
+        targettingTitle: 'Targetting',
         selectFilter: 'Select a filter to view its fields.',
         filterType: 'Filter type',
         addFilter: 'Add filter',
@@ -86,7 +107,45 @@ define([], function() {
         confirmDelete: 'Delete the selected preference item?',
         confirmRefreshDiscard: 'Refresh from the server and discard the current draft?',
         confirmDiscardChanges: 'Discard unsaved changes?',
-        reconcileSucceededRefresh: 'Publication recovery succeeded. Refresh the item before editing it again.'
+        reconcileSucceededRefresh: 'Publication recovery succeeded. Refresh the item before editing it again.',
+        settingsTitle: 'Settings:',
+        descriptionTitle: 'Description:',
+        noDescription: 'No description',
+        settingBypassErrors: 'Ignore errors',
+        settingRemovePolicy: 'Remove policy',
+        settingDisabled: 'Disabled',
+        columnName: 'Name',
+        columnOrder: 'Order',
+        columnAction: 'Action',
+        columnTarget: 'Target',
+        columnPath: 'Path',
+        columnSourcePath: 'Source path',
+        columnTargetPath: 'Target path',
+        columnShortcutPath: 'Shortcut path',
+        columnHive: 'Hive',
+        columnKey: 'Key',
+        columnUserLimit: 'User limit',
+        columnAbe: 'Access-based enumeration',
+        columnSection: 'Section',
+        columnProperty: 'Property',
+        columnValue: 'Value',
+        columnLetter: 'Letter',
+        columnDriver: 'Driver',
+        columnServer: 'Server',
+        columnDatabase: 'Database',
+        columnDeviceClass: 'Device class',
+        columnDeviceId: 'Device ID',
+        columnLocation: 'Location',
+        columnStartupType: 'Startup type',
+        columnServiceAction: 'Service action',
+        columnApplication: 'Application',
+        columnUserName: 'User name',
+        columnIpAddress: 'IP address',
+        columnSystemLocale: 'System locale',
+        actionCreate: 'Create',
+        actionReplace: 'Replace',
+        actionUpdate: 'Update',
+        actionDelete: 'Delete'
       }
     },
 
@@ -106,7 +165,31 @@ define([], function() {
 
     systemSettings: {
       systemSettings:'System settings',
-      scripts: 'Scripts'
+      scripts: 'Scripts',
+      startupScript: 'Startup script',
+      shutdownScript: 'Shutdown script',
+      dialogTitle: 'Settings dialog',
+      tabScript: 'Script',
+      tabPowershell: 'PowerShell scripts',
+      scriptsForStartup: 'Scripts: “Startup” for Local Group Policy',
+      scriptsForShutdown: 'Scripts: “Shutdown” for Local Group Policy',
+      columnName: 'Script name',
+      columnArguments: 'Arguments',
+      up: 'Up',
+      down: 'Down',
+      add: 'Add',
+      edit: 'Edit',
+      remove: 'Remove',
+      scriptsPathLabel: 'The script files stored in this Group Policy object are located at the following path: -',
+      psOrderLabel: 'Run scripts for this object in the following order:',
+      psOrderNotConfigured: 'Not configured',
+      psRequirement: 'PowerShell scripts require Windows 7 or Windows Server 2008 R2 at a minimum',
+      addTitle: 'Add script',
+      editTitle: 'Edit script',
+      nameLabel: 'Script name:',
+      argumentsLabel: 'Script arguments:',
+      nameRequired: 'Enter a script name.',
+      ok: 'OK'
     },
 
     policyChangedModal: {
@@ -114,6 +197,10 @@ define([], function() {
       message: 'Policy settings were modified do you want to save them?',
       no: 'No',
       yes: 'Yes'
+    },
+
+    confirmModal: {
+      title: 'Confirmation'
     },
 
   };

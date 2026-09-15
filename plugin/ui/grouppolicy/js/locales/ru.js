@@ -9,6 +9,21 @@ define([], function() {
       edit: 'Редактировать'
     },
 
+    // Меню
+    menu: {
+      groupPolicy: 'Групповые политики',
+      chains: 'Цепочки',
+      groupPolicyObjects: 'Объекты групповых политик'
+    },
+
+    // Цепочки групповых политик
+    chain: {
+      enable: 'Включить',
+      disable: 'Отключить',
+      moveUp: 'Переместить вверх',
+      moveDown: 'Переместить вниз'
+    },
+
     // Политики
     policies: {
       localGroupPolicy: '[Локальная групповая политика]',
@@ -59,7 +74,13 @@ define([], function() {
         specified: 'Задано',
         unspecified: 'Не задано',
         userContext: 'Выполнять в контексте безопасности вошедшего пользователя (параметр политики пользователя)',
+        applyOnce: 'Применить только один раз',
+        itemSelection: 'Выбор элементов',
         filtersHeading: 'Выбор элементов',
+        tabBasic: 'Основные настройки',
+        tabGeneral: 'Общие',
+        targettingButton: 'Нацеливание',
+        targettingTitle: 'Нацеливание',
         selectFilter: 'Выберите фильтр для просмотра его полей.',
         filterType: 'Тип фильтра',
         addFilter: 'Добавить фильтр',
@@ -86,7 +107,45 @@ define([], function() {
         confirmDelete: 'Удалить выбранный элемент настройки?',
         confirmRefreshDiscard: 'Обновить данные с сервера и отбросить текущий черновик?',
         confirmDiscardChanges: 'Отбросить несохранённые изменения?',
-        reconcileSucceededRefresh: 'Восстановление публикации завершено. Обновите элемент перед дальнейшим изменением.'
+        reconcileSucceededRefresh: 'Восстановление публикации завершено. Обновите элемент перед дальнейшим изменением.',
+        settingsTitle: 'Настройки:',
+        descriptionTitle: 'Описание:',
+        noDescription: 'Без описания',
+        settingBypassErrors: 'Игнорировать ошибки',
+        settingRemovePolicy: 'Remove policy',
+        settingDisabled: 'Disabled',
+        columnName: 'Название',
+        columnOrder: 'Очередность',
+        columnAction: 'Действие',
+        columnTarget: 'Target',
+        columnPath: 'Путь',
+        columnSourcePath: 'Source path',
+        columnTargetPath: 'Target path',
+        columnShortcutPath: 'Shortcut path',
+        columnHive: 'Куст',
+        columnKey: 'Ключ',
+        columnUserLimit: 'Лимит пользователей',
+        columnAbe: 'Перечисление на основе доступа',
+        columnSection: 'Секция',
+        columnProperty: 'Свойство',
+        columnValue: 'Значение',
+        columnLetter: 'Буква',
+        columnDriver: 'Драйвер',
+        columnServer: 'Сервер',
+        columnDatabase: 'База данных',
+        columnDeviceClass: 'Класс устройства',
+        columnDeviceId: 'ИД устройства',
+        columnLocation: 'Расположение',
+        columnStartupType: 'Тип запуска',
+        columnServiceAction: 'Действие службы',
+        columnApplication: 'Приложение',
+        columnUserName: 'Имя пользователя',
+        columnIpAddress: 'IP-адрес',
+        columnSystemLocale: 'Системный язык',
+        actionCreate: 'Создать',
+        actionReplace: 'Заменить',
+        actionUpdate: 'Обновить',
+        actionDelete: 'Удалить'
       }
     },
 
@@ -106,7 +165,31 @@ define([], function() {
 
     systemSettings: {
       systemSettings:'Настройки Системы',
-      scripts: 'Скрипты'
+      scripts: 'Скрипты',
+      startupScript: 'Сценарий запуска',
+      shutdownScript: 'Сценарий завершения работы',
+      dialogTitle: 'Диалог настроек',
+      tabScript: 'Сценарий',
+      tabPowershell: 'Скрипты PowerShell',
+      scriptsForStartup: 'Сценарии: “Запуск” для локальной групповой политики',
+      scriptsForShutdown: 'Сценарии: “Завершение работы” для локальной групповой политики',
+      columnName: 'Имя скрипта',
+      columnArguments: 'Аргументы',
+      up: 'Вверх',
+      down: 'Вниз',
+      add: 'Добавить',
+      edit: 'Изменить',
+      remove: 'Удалить',
+      scriptsPathLabel: 'Файлы сценариев, хранящиеся в этом объекте групповой политики, расположены по следующему пути: -',
+      psOrderLabel: 'Запуск скриптов для этого объекта в следующем порядке:',
+      psOrderNotConfigured: 'Не настроено',
+      psRequirement: 'Для сценариев Powershell требуется как минимум Windows 7 или Windows Server 2008 R2',
+      addTitle: 'Добавить скрипт',
+      editTitle: 'Редактировать скрипт',
+      nameLabel: 'Имя скрипта:',
+      argumentsLabel: 'Аргументы скрипта:',
+      nameRequired: 'Введите имя скрипта.',
+      ok: 'Ок'
     },
 
     policyChangedModal: {
@@ -114,6 +197,10 @@ define([], function() {
       message: 'Настройки политики были изменены, хотите сохранить их?',
       no: 'Нет',
       yes: 'Да'
+    },
+
+    confirmModal: {
+      title: 'Подтверждение'
     },
   };
 });

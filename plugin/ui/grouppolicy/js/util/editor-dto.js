@@ -300,12 +300,16 @@ define([], function() {
         var draft = new Map(draftFields.map(function(field) {
             return [field.id, field.value];
         }));
+        var exemptions = config.validationExemptions instanceof Set
+            ? config.validationExemptions
+            : new Set(Array.isArray(config.validationExemptions) ? config.validationExemptions : []);
         var errors = ids.duplicates.map(function(id) {
             return { id: id, code: 'duplicate_descriptor' };
         });
 
         descriptors.forEach(function(field) {
             if (!field || !field.editable || ids.duplicates.indexOf(field.id) !== -1) return;
+            if (exemptions.has(field.id)) return;
             var value = draft.has(field.id) ? draft.get(field.id) : field.value;
             var code = validatePreferenceField(field, value);
             if (code) errors.push({ id: field.id, code: code });
