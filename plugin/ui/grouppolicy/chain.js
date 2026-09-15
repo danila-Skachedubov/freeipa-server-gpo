@@ -7,9 +7,10 @@ define(
         'freeipa/rpc',
         'freeipa/jquery',
         './gpo',
-        './js/locales/translations'
+        './js/locales/translations',
+        'freeipa/text'
     ],
-    function(IPA, menu, phases, reg, rpc, $, gpo_module, translationsModule) {
+    function(IPA, menu, phases, reg, rpc, $, gpo_module, translationsModule, text) {
 
         var exp = IPA.grouppolicy = {};
 
@@ -326,20 +327,20 @@ define(
 
             that.format = function(value) {
                 if (value === null || value === undefined) {
-                    return 'Unknown';
+                    return t('chain.statusUnknown');
                 }
 
                 if (typeof value === 'boolean') {
-                    return value ? 'Active' : 'Inactive';
+                    return value ? t('chain.statusActive') : t('chain.statusInactive');
                 }
 
                 if (typeof value === 'string') {
                     var lower = value.toLowerCase();
                     if (lower === 'true' || lower === '1' || lower === 'yes') {
-                        return 'Active';
+                        return t('chain.statusActive');
                     }
                     if (lower === 'false' || lower === '0' || lower === 'no') {
-                        return 'Inactive';
+                        return t('chain.statusInactive');
                     }
                 }
 
@@ -347,7 +348,7 @@ define(
                     return that.format(value[0]);
                 }
 
-                return 'Unknown';
+                return t('chain.statusUnknown');
             };
 
             return that;
@@ -614,15 +615,46 @@ define(
             return that;
         };
 
+        exp.chain_search_summary_policy = function(spec) {
+            var that = IPA.facet_policy(spec);
+
+            that.post_load = function(data) {
+                if (!data || !data.result || data.result.truncated) return;
+
+                var facet = that.container;
+                if (!facet || !facet.table || !facet.table.summary) return;
+
+                var total = data.result.count;
+                if (total === undefined && data.result.result) {
+                    total = data.result.result.length;
+                }
+
+                if (!total) {
+                    facet.table.summary.text(text.get('@i18n:association.no_entries'));
+                    return;
+                }
+
+                var message = text.get('@i18n:association.paging');
+                message = message.replace('${start}', 1)
+                                 .replace('${end}', total)
+                                 .replace('${total}', total);
+                facet.table.summary.text(message);
+            };
+
+            return that;
+        };
+
         var add_chain_details_facet_fields = function (spec) {
             spec.fields = [
                 {
                     name: 'cn',
+                    label: t('chain.fields.cn'),
                     read_only: true
                 },
                 {
                     $type: 'entity_select',
                     name: 'usergroup',
+                    label: t('chain.fields.usergroup'),
                     other_entity: 'group',
                     other_field: 'cn',
                     filter_options: {'posix': true}
@@ -630,11 +662,13 @@ define(
                 {
                     $type: 'entity_select',
                     name: 'computergroup',
+                    label: t('chain.fields.computergroup'),
                     other_entity: 'hostgroup',
                     other_field: 'cn'
                 },
                 {
                     name: 'active',
+                    label: t('chain.fields.active'),
                     read_only: true,
                     formatter: 'boolean_status_formatter'
                 }
@@ -649,35 +683,39 @@ define(
                     {
                          $type: 'search',
                          name: 'search',
-                         label: 'Group Policy Chains',
+                         title: t('chain.titlePlural'),
+                         label: t('chain.titlePlural'),
                          $pre_ops: [gpo_module.order_control_buttons(['refresh', 'add', 'enable', 'disable', 'move_up', 'move_down', 'remove'])],
                         sort_enabled: false,
                         server_sort: true,
                         pagination: false,
-                        policies: [
-                            {
-                                $factory: exp.chain_dnd_policy
-                            }
-                        ],
+                         policies: [
+                             {
+                                 $factory: exp.chain_dnd_policy
+                             },
+                             {
+                                 $factory: exp.chain_search_summary_policy
+                             }
+                         ],
                         columns: [
                             {
                                 name: 'cn',
-                                label: 'Chain Name',
+                                label: t('chain.fields.cn'),
                                 sortable: false
                             },
                             {
                                 name: 'usergroup',
-                                label: 'User Group',
+                                label: t('chain.fields.usergroup'),
                                 sortable: false
                             },
                             {
                                 name: 'computergroup',
-                                label: 'Computer Group',
+                                label: t('chain.fields.computergroup'),
                                 sortable: false
                             },
                             {
                                 name: 'active',
-                                label: 'Active',
+                                label: t('chain.fields.active'),
                                 sortable: false,
                                 formatter: 'boolean_status_formatter'
                             }
@@ -714,6 +752,8 @@ define(
                     {
                         $type: 'details',
                         name: 'details',
+                        title: t('chain.title'),
+                        label: t('chain.title'),
                         check_rights: false,
                         $pre_ops: [gpo_module.order_control_buttons(['refresh', 'save', 'revert'])]
                     },
@@ -724,8 +764,8 @@ define(
                         facet_group: 'member',
                         sort_enabled: false,
                         server_sort: true,
-                        label: 'Group Policy Objects',
-                        tab_label: 'Group Policy Objects',
+                         label: t('chain.gpoTab'),
+                         tab_label: t('chain.gpoTab'),
                         columns: [
                             {
                                 name: 'displayname',

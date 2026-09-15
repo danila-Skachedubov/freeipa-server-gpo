@@ -21,7 +21,19 @@ define([], function() {
       enable: 'Включить',
       disable: 'Отключить',
       moveUp: 'Переместить вверх',
-      moveDown: 'Переместить вниз'
+      moveDown: 'Переместить вниз',
+      title: 'Цепочка групповых политик',
+      titlePlural: 'Цепочки групповых политик',
+      gpoTab: 'Объекты групповых политик',
+      statusActive: 'Активна',
+      statusInactive: 'Неактивна',
+      statusUnknown: 'Неизвестно',
+      fields: {
+        cn: 'Имя цепочки',
+        usergroup: 'Группа пользователей',
+        computergroup: 'Группа компьютеров',
+        active: 'Активна'
+      }
     },
 
     // Политики

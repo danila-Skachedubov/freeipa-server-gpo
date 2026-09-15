@@ -21,7 +21,19 @@ define([], function() {
       enable: 'Enable',
       disable: 'Disable',
       moveUp: 'Move Up',
-      moveDown: 'Move Down'
+      moveDown: 'Move Down',
+      title: 'Group Policy Chain',
+      titlePlural: 'Group Policy Chains',
+      gpoTab: 'Group Policy Objects',
+      statusActive: 'Active',
+      statusInactive: 'Inactive',
+      statusUnknown: 'Unknown',
+      fields: {
+        cn: 'Chain name',
+        usergroup: 'User group',
+        computergroup: 'Computer group',
+        active: 'Active'
+      }
     },
 
     // Политики
