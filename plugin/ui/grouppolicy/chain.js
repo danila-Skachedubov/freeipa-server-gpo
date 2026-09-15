@@ -714,7 +714,8 @@ define(
                     {
                         $type: 'details',
                         name: 'details',
-                        check_rights: false
+                        check_rights: false,
+                        $pre_ops: [gpo_module.order_control_buttons(['refresh', 'save', 'revert'])]
                     },
                     {
                         $type: 'association',
