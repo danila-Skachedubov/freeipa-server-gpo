@@ -36,6 +36,28 @@ define([], function() {
       }
     },
 
+    // Group Policy Objects
+    gpo: {
+      title: 'Group Policy Objects',
+      addTitle: 'Add Group Policy Object',
+      fields: {
+        policyName: 'Policy Name',
+        guid: 'GUID',
+        version: 'Version',
+        flags: 'Flags',
+        identity: 'Identity',
+        distinguishedName: 'Distinguished Name',
+        versionNumber: 'Version Number'
+      },
+      noChanges: 'No changes made',
+      updatedSuccessfully: 'GPO "%s" updated successfully',
+      renamedSuccessfully: 'GPO renamed from "%s" to "%s" successfully',
+      updateFailed: 'Failed to update GPO',
+      cannotDetermineName: 'Cannot determine GPO name',
+      gpuiInitializeFailed: 'Failed to initialize GPUI module',
+      gpuiLoadFailed: 'Failed to load GPUI module'
+    },
+
     // Политики
     policies: {
       localGroupPolicy: '[Local Group Policy]',

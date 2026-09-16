@@ -36,6 +36,28 @@ define([], function() {
       }
     },
 
+    // Объекты групповых политик
+    gpo: {
+      title: 'Объекты групповых политик',
+      addTitle: 'Добавить объект групповой политики',
+      fields: {
+        policyName: 'Имя политики',
+        guid: 'GUID',
+        version: 'Версия',
+        flags: 'Флаги',
+        identity: 'Идентификация',
+        distinguishedName: 'Различающееся имя',
+        versionNumber: 'Номер версии'
+      },
+      noChanges: 'Изменений нет',
+      updatedSuccessfully: 'Объект групповой политики «%s» успешно обновлён',
+      renamedSuccessfully: 'Объект групповой политики переименован с «%s» на «%s» успешно',
+      updateFailed: 'Не удалось обновить объект групповой политики',
+      cannotDetermineName: 'Не удалось определить имя объекта групповой политики',
+      gpuiInitializeFailed: 'Не удалось инициализировать модуль GPUI',
+      gpuiLoadFailed: 'Не удалось загрузить модуль GPUI'
+    },
+
     // Политики
     policies: {
       localGroupPolicy: '[Локальная групповая политика]',
