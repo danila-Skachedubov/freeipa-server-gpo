@@ -82,6 +82,8 @@ define([
                 {
                     $type: 'details',
                     name: 'details',
+                    title: t('gpo.titleSingular'),
+                    label: t('gpo.titleSingular'),
                     check_rights: false,
                     $pre_ops: [order_control_buttons(['refresh', 'gpui', 'save', 'revert'])],
                     actions: ['gpo_save', 'revert', 'refresh', 'gpui'],
@@ -144,7 +146,7 @@ define([
     exp.save_action = function(spec) {
         spec = spec || {};
         spec.name = spec.name || 'gpo_save';
-        spec.label = spec.label || 'Save';
+        spec.label = spec.label || t('common.save');
         spec.enable_cond = spec.enable_cond || ['dirty'];
         spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : false;
 

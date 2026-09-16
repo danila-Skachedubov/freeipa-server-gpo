@@ -6,7 +6,8 @@ define([], function() {
       description: 'Description:',
       options: 'Options:',
       comment: 'Comment:',
-      edit: 'Edit'
+      edit: 'Edit',
+      save: 'Save'
     },
 
     // Menu
@@ -70,6 +71,7 @@ define([], function() {
     // Group Policy Objects
     gpo: {
       title: 'Group Policy Objects',
+      titleSingular: 'Group Policy Object',
       addTitle: 'Add Group Policy Object',
       fields: {
         policyName: 'Policy Name',
