@@ -7,9 +7,10 @@ define(
         'freeipa/rpc',
         'freeipa/jquery',
         './gpo',
-        './js/locales/translations'
+        './js/locales/translations',
+        'freeipa/text'
     ],
-    function(IPA, menu, phases, reg, rpc, $, gpo_module, translationsModule) {
+    function(IPA, menu, phases, reg, rpc, $, gpo_module, translationsModule, text) {
 
         var exp = IPA.grouppolicy = {};
 
@@ -21,7 +22,7 @@ define(
             spec.label = spec.label || t('chain.enable');
             spec.enable_cond = spec.enable_cond || ['item-selected'];
             spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : true;
-            spec.confirm_msg = spec.confirm_msg || 'Are you sure you want to enable the selected chain?';
+            spec.confirm_msg = spec.confirm_msg || t('chain.enableConfirm');
 
             var that = IPA.action(spec);
 
@@ -29,7 +30,7 @@ define(
                 var selected = facet.get_selected_values();
 
                 if (selected.length !== 1) {
-                    IPA.notify('Please select exactly one chain to enable', 'error');
+                    IPA.notify(t('chain.selectOneChainEnable'), 'error');
                     return;
                 }
 
@@ -44,11 +45,11 @@ define(
                     },
                     on_success: function(data) {
                         facet.refresh();
-                        IPA.notify_success('Chain "' + chain_name + '" enabled successfully');
+                        IPA.notify_success(t('chain.enabledSuccessfully').replace('%s', chain_name));
                         if (on_success) on_success(data);
                     },
                     on_error: function(xhr, text_status, error_thrown) {
-                        var msg = 'Failed to enable chain';
+                        var msg = t('chain.enableFailed');
                         if (error_thrown && error_thrown.message) {
                             msg += ': ' + error_thrown.message;
                         }
@@ -69,7 +70,7 @@ define(
             spec.label = spec.label || t('chain.disable');
             spec.enable_cond = spec.enable_cond || ['item-selected'];
             spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : true;
-            spec.confirm_msg = spec.confirm_msg || 'Are you sure you want to disable the selected chain?';
+            spec.confirm_msg = spec.confirm_msg || t('chain.disableConfirm');
 
             var that = IPA.action(spec);
 
@@ -77,7 +78,7 @@ define(
                 var selected = facet.get_selected_values();
 
                 if (selected.length !== 1) {
-                    IPA.notify('Please select exactly one chain to disable', 'error');
+                    IPA.notify(t('chain.selectOneChainDisable'), 'error');
                     return;
                 }
 
@@ -92,11 +93,11 @@ define(
                     },
                     on_success: function(data) {
                         facet.refresh();
-                        IPA.notify_success('Chain "' + chain_name + '" disabled successfully');
+                        IPA.notify_success(t('chain.disabledSuccessfully').replace('%s', chain_name));
                         if (on_success) on_success(data);
                     },
                     on_error: function(xhr, text_status, error_thrown) {
-                        var msg = 'Failed to disable chain';
+                        var msg = t('chain.disableFailed');
                         if (error_thrown && error_thrown.message) {
                             msg += ': ' + error_thrown.message;
                         }
@@ -124,7 +125,7 @@ define(
                 var selected = facet.get_selected_values();
 
                 if (selected.length !== 1) {
-                    IPA.notify('Please select exactly one chain to move', 'error');
+                    IPA.notify(t('chain.selectOneChainMove'), 'error');
                     return;
                 }
 
@@ -139,11 +140,11 @@ define(
                     },
                     on_success: function(data) {
                         facet.refresh();
-                        IPA.notify_success('Chain moved up successfully');
+                        IPA.notify_success(t('chain.movedUpSuccessfully'));
                         if (on_success) on_success(data);
                     },
                     on_error: function(xhr, text_status, error_thrown) {
-                        IPA.notify('Failed to move chain up: ' + (error_thrown.message || text_status), 'error');
+                        IPA.notify(t('chain.moveUpFailed').replace('%s', error_thrown.message || text_status), 'error');
                         if (on_error) on_error(xhr, text_status, error_thrown);
                     }
                 });
@@ -167,7 +168,7 @@ define(
                 var selected = facet.get_selected_values();
 
                 if (selected.length !== 1) {
-                    IPA.notify('Please select exactly one chain to move', 'error');
+                    IPA.notify(t('chain.selectOneChainMove'), 'error');
                     return;
                 }
 
@@ -182,11 +183,11 @@ define(
                     },
                     on_success: function(data) {
                         facet.refresh();
-                        IPA.notify_success('Chain moved down successfully');
+                        IPA.notify_success(t('chain.movedDownSuccessfully'));
                         if (on_success) on_success(data);
                     },
                     on_error: function(xhr, text_status, error_thrown) {
-                        IPA.notify('Failed to move chain down: ' + (error_thrown.message || text_status), 'error');
+                        IPA.notify(t('chain.moveDownFailed').replace('%s', error_thrown.message || text_status), 'error');
                         if (on_error) on_error(xhr, text_status, error_thrown);
                     }
                 });
@@ -200,7 +201,7 @@ define(
         exp.move_gpc_up_action = function(spec) {
             spec = spec || {};
             spec.name = spec.name || 'move_gpc_up';
-            spec.label = spec.label || 'Move GPC Up';
+            spec.label = spec.label || t('chain.moveGpcUp');
             spec.enable_cond = spec.enable_cond || ['item-selected'];
             spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : false;
 
@@ -210,7 +211,7 @@ define(
                 var selected = facet.get_selected_values();
 
                 if (selected.length !== 1) {
-                    IPA.notify('Please select exactly one GPC to move', 'error');
+                    IPA.notify(t('chain.selectOneGpc'), 'error');
                     return;
                 }
 
@@ -225,7 +226,7 @@ define(
                 }
 
                 if (!pkey) {
-                    IPA.notify('Unable to determine chain name for move up', 'error');
+                    IPA.notify(t('chain.unableToDetermineChainUp'), 'error');
                     return;
                 }
 
@@ -239,11 +240,11 @@ define(
                     },
                     on_success: function(data) {
                         facet.refresh();
-                        IPA.notify_success('GPC "' + gpc_name + '" moved up successfully');
+                        IPA.notify_success(t('chain.gpcMovedUp').replace('%s', gpc_name));
                         if (on_success) on_success(data);
                     },
                     on_error: function(xhr, text_status, error_thrown) {
-                        var msg = 'Failed to move GPC up';
+                        var msg = t('chain.gpcMoveUpFailed');
                         if (error_thrown && error_thrown.message) {
                             msg += ': ' + error_thrown.message;
                         }
@@ -261,7 +262,7 @@ define(
         exp.move_gpc_down_action = function(spec) {
             spec = spec || {};
             spec.name = spec.name || 'move_gpc_down';
-            spec.label = spec.label || 'Move GPC Down';
+            spec.label = spec.label || t('chain.moveGpcDown');
             spec.enable_cond = spec.enable_cond || ['item-selected'];
             spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : false;
 
@@ -271,7 +272,7 @@ define(
                 var selected = facet.get_selected_values();
 
                 if (selected.length !== 1) {
-                    IPA.notify('Please select exactly one GPC to move', 'error');
+                    IPA.notify(t('chain.selectOneGpc'), 'error');
                     return;
                 }
 
@@ -286,7 +287,7 @@ define(
                 }
 
                 if (!pkey) {
-                    IPA.notify('Unable to determine chain name for move down', 'error');
+                    IPA.notify(t('chain.unableToDetermineChainDown'), 'error');
                     return;
                 }
 
@@ -300,11 +301,11 @@ define(
                     },
                     on_success: function(data) {
                         facet.refresh();
-                        IPA.notify_success('GPC "' + gpc_name + '" moved down successfully');
+                        IPA.notify_success(t('chain.gpcMovedDown').replace('%s', gpc_name));
                         if (on_success) on_success(data);
                     },
                     on_error: function(xhr, text_status, error_thrown) {
-                        var msg = 'Failed to move GPC down';
+                        var msg = t('chain.gpcMoveDownFailed');
                         if (error_thrown && error_thrown.message) {
                             msg += ': ' + error_thrown.message;
                         }
@@ -326,20 +327,20 @@ define(
 
             that.format = function(value) {
                 if (value === null || value === undefined) {
-                    return 'Unknown';
+                    return t('chain.statusUnknown');
                 }
 
                 if (typeof value === 'boolean') {
-                    return value ? 'Active' : 'Inactive';
+                    return value ? t('chain.statusActive') : t('chain.statusInactive');
                 }
 
                 if (typeof value === 'string') {
                     var lower = value.toLowerCase();
                     if (lower === 'true' || lower === '1' || lower === 'yes') {
-                        return 'Active';
+                        return t('chain.statusActive');
                     }
                     if (lower === 'false' || lower === '0' || lower === 'no') {
-                        return 'Inactive';
+                        return t('chain.statusInactive');
                     }
                 }
 
@@ -347,7 +348,7 @@ define(
                     return that.format(value[0]);
                 }
 
-                return 'Unknown';
+                return t('chain.statusUnknown');
             };
 
             return that;
@@ -490,9 +491,9 @@ define(
             that.after_move = function(name, facet, ok) {
                 if (facet && facet.refresh) facet.refresh();
                 if (ok) {
-                    IPA.notify_success('Chain "' + name + '" moved successfully');
+                    IPA.notify_success(t('chain.movedSuccessfully').replace('%s', name));
                 } else {
-                    IPA.notify('Failed to move chain', 'error');
+                    IPA.notify(t('chain.moveFailed'), 'error');
                 }
             };
 
@@ -505,7 +506,7 @@ define(
 
                 var batch = rpc.batch_command({
                     name: 'chain_dnd_move',
-                    error_message: 'Failed to reorder chains'
+                    error_message: t('chain.reorderFailed')
                 });
 
                 for (var i = 0; i < steps; i++) {
@@ -614,15 +615,46 @@ define(
             return that;
         };
 
+        exp.chain_search_summary_policy = function(spec) {
+            var that = IPA.facet_policy(spec);
+
+            that.post_load = function(data) {
+                if (!data || !data.result || data.result.truncated) return;
+
+                var facet = that.container;
+                if (!facet || !facet.table || !facet.table.summary) return;
+
+                var total = data.result.count;
+                if (total === undefined && data.result.result) {
+                    total = data.result.result.length;
+                }
+
+                if (!total) {
+                    facet.table.summary.text(text.get('@i18n:association.no_entries'));
+                    return;
+                }
+
+                var message = text.get('@i18n:association.paging');
+                message = message.replace('${start}', 1)
+                                 .replace('${end}', total)
+                                 .replace('${total}', total);
+                facet.table.summary.text(message);
+            };
+
+            return that;
+        };
+
         var add_chain_details_facet_fields = function (spec) {
             spec.fields = [
                 {
                     name: 'cn',
+                    label: t('chain.fields.cn'),
                     read_only: true
                 },
                 {
                     $type: 'entity_select',
                     name: 'usergroup',
+                    label: t('chain.fields.usergroup'),
                     other_entity: 'group',
                     other_field: 'cn',
                     filter_options: {'posix': true}
@@ -630,11 +662,13 @@ define(
                 {
                     $type: 'entity_select',
                     name: 'computergroup',
+                    label: t('chain.fields.computergroup'),
                     other_entity: 'hostgroup',
                     other_field: 'cn'
                 },
                 {
                     name: 'active',
+                    label: t('chain.fields.active'),
                     read_only: true,
                     formatter: 'boolean_status_formatter'
                 }
@@ -649,35 +683,39 @@ define(
                     {
                          $type: 'search',
                          name: 'search',
-                         label: 'Group Policy Chains',
+                         title: t('chain.titlePlural'),
+                         label: t('chain.titlePlural'),
                          $pre_ops: [gpo_module.order_control_buttons(['refresh', 'add', 'enable', 'disable', 'move_up', 'move_down', 'remove'])],
                         sort_enabled: false,
                         server_sort: true,
                         pagination: false,
-                        policies: [
-                            {
-                                $factory: exp.chain_dnd_policy
-                            }
-                        ],
+                         policies: [
+                             {
+                                 $factory: exp.chain_dnd_policy
+                             },
+                             {
+                                 $factory: exp.chain_search_summary_policy
+                             }
+                         ],
                         columns: [
                             {
                                 name: 'cn',
-                                label: 'Chain Name',
+                                label: t('chain.fields.cn'),
                                 sortable: false
                             },
                             {
                                 name: 'usergroup',
-                                label: 'User Group',
+                                label: t('chain.fields.usergroup'),
                                 sortable: false
                             },
                             {
                                 name: 'computergroup',
-                                label: 'Computer Group',
+                                label: t('chain.fields.computergroup'),
                                 sortable: false
                             },
                             {
                                 name: 'active',
-                                label: 'Active',
+                                label: t('chain.fields.active'),
                                 sortable: false,
                                 formatter: 'boolean_status_formatter'
                             }
@@ -714,7 +752,10 @@ define(
                     {
                         $type: 'details',
                         name: 'details',
-                        check_rights: false
+                        title: t('chain.title'),
+                        label: t('chain.title'),
+                        check_rights: false,
+                        $pre_ops: [gpo_module.order_control_buttons(['refresh', 'save', 'revert'])]
                     },
                     {
                         $type: 'association',
@@ -723,23 +764,23 @@ define(
                         facet_group: 'member',
                         sort_enabled: false,
                         server_sort: true,
-                        label: 'Group Policy Objects',
-                        tab_label: 'Group Policy Objects',
+                         label: t('chain.gpoTab'),
+                         tab_label: t('chain.gpoTab'),
                         columns: [
                             {
                                 name: 'displayname',
-                                label: 'Policy Name',
+                                label: t('gpo.fields.policyName'),
                                 primary_key: true,
                                 sortable: false
                             },
                             {
                                 name: 'cn',
-                                label: 'Container Name',
+                                label: t('gpo.fields.containerName'),
                                 sortable: false
                             },
                             {
                                 name: 'versionnumber',
-                                label: 'Version',
+                                label: t('gpo.fields.version'),
                                 sortable: false
                             }
                         ],
@@ -750,8 +791,8 @@ define(
                                 width: '100%'
                             }
                         ],
-                        add_title: 'Add Group Policy Objects to Chain',
-                        remove_title: 'Remove Group Policy Objects from Chain',
+                        add_title: t('gpo.addToChainTitle'),
+                        remove_title: t('gpo.removeFromChainTitle'),
                         add_method: 'add_gpo',
                         remove_method: 'remove_gpo',
                         actions: [
@@ -761,32 +802,32 @@ define(
                         control_buttons: [
                             {
                                 name: 'move_gpc_up',
-                                label: 'Move Up',
+                                label: t('chain.moveUp'),
                                 icon: 'fa-arrow-up'
                             },
                             {
                                 name: 'move_gpc_down',
-                                label: 'Move Down',
+                                label: t('chain.moveDown'),
                                 icon: 'fa-arrow-down'
                             }
                         ],
                     }
                 ],
                 adder_dialog: {
-                    title: 'Add Group Policy Chain',
+                    title: t('chain.addTitle'),
                     fields: [
                         {
                             name: 'cn',
-                            label: 'Chain Name',
-                            doc: 'Unique name for the Group Policy Chain',
+                            label: t('chain.fields.cn'),
+                            doc: t('chain.fields.chainNameDoc'),
                             required: true,
                             width: '400px'
                         },
                         {
                             $type: 'entity_select',
                             name: 'usergroup',
-                            label: 'User Group',
-                            doc: 'Select a user group for this chain',
+                            label: t('chain.fields.usergroup'),
+                            doc: t('chain.fields.userGroupDoc'),
                             other_entity: 'group',
                             other_field: 'cn',
                             label_field: 'cn',
@@ -799,8 +840,8 @@ define(
                         {
                             $type: 'entity_select',
                             name: 'computergroup',
-                            label: 'Computer Group',
-                            doc: 'Select a computer group for this chain',
+                            label: t('chain.fields.computergroup'),
+                            doc: t('chain.fields.computerGroupDoc'),
                             other_entity: 'hostgroup',
                             other_field: 'cn',
                             label_field: 'cn',
@@ -812,8 +853,8 @@ define(
                         {
                             $type: 'multivalued',
                             name: 'gplink',
-                            label: 'Group Policy Links',
-                            doc: 'Select Group Policy Objects to link to this chain',
+                            label: t('chain.fields.gplink'),
+                            doc: t('chain.fields.gplinkDoc'),
                             child_spec: {
                                 $type: 'entity_select',
                                 other_entity: 'gpo',
