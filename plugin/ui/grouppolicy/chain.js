@@ -615,6 +615,255 @@ define(
             return that;
         };
 
+        exp.gpo_dnd_policy = function(spec) {
+            spec = spec || {};
+            var that = IPA.facet_policy(spec);
+            that.initialized = false;
+            that.dragged_name = null;
+            that.tbody = null;
+
+            that.get_table = function() {
+                var facet = that.container;
+                return facet && facet.table ? facet.table : null;
+            };
+
+            that.gpo_rows = function() {
+                var table = that.get_table();
+                if (!table || !table.records || !table.tbody) return null;
+
+                var info = [];
+                var row_els = table.tbody.children('tr');
+                for (var i = 0; i < table.records.length && i < row_els.length; i++) {
+                    var rec = table.records[i];
+                    if (rec === null || rec === undefined) continue;
+                    if (rec.displayname === null || rec.displayname === undefined) return null;
+                    info.push({
+                        name: String(rec.displayname),
+                        row: row_els.eq(i)
+                    });
+                }
+                return info;
+            };
+
+            that.gpo_name_from_row = function(tr) {
+                var table = that.get_table();
+                if (!table || !table.records || !table.tbody) return null;
+                var idx = table.tbody.children('tr').index(tr);
+                if (idx >= 0 && table.records[idx] && table.records[idx].displayname !== undefined) {
+                    return String(table.records[idx].displayname);
+                }
+                var checkbox = tr.find('input[type="checkbox"]').first();
+                if (checkbox.length) {
+                    return String(checkbox.val() || '');
+                }
+                return null;
+            };
+
+            that.apply_draggable = function() {
+                var info = that.gpo_rows();
+                if (!info) return;
+
+                var enable = info.length >= 2;
+
+                for (var j = 0; j < info.length; j++) {
+                    var div = info[j].row.find('div[name="displayname"]').first();
+                    if (!div.length) continue;
+                    if (enable) {
+                        div.attr('draggable', 'true');
+                        div.find('a').attr('draggable', 'false');
+                        div.removeClass('chain-dnd-disabled');
+                    } else {
+                        div.removeAttr('draggable');
+                        div.addClass('chain-dnd-disabled');
+                    }
+                }
+            };
+
+            that.placement = function(e) {
+                var info = that.gpo_rows();
+                if (!info || !that.dragged_name) return null;
+
+                var reduced = [];
+                var from = -1;
+                for (var i = 0; i < info.length; i++) {
+                    var entry = info[i];
+                    if (entry.name === that.dragged_name) {
+                        from = reduced.length;
+                        continue;
+                    }
+                    reduced.push(entry);
+                }
+                if (from < 0) return null;
+
+                var y = e.clientY !== undefined ? e.clientY : e.originalEvent.clientY;
+                var to = reduced.length;
+                for (var j = 0; j < reduced.length; j++) {
+                    var node = reduced[j].row.get(0);
+                    if (!node) break;
+                    var rect = node.getBoundingClientRect();
+                    if (y < rect.top + rect.height / 2) {
+                        to = j;
+                        break;
+                    }
+                }
+                return {from: from, to: to};
+            };
+
+            that.clear_indicator = function() {
+                if (!that.tbody) return;
+                that.tbody.find('tr').removeClass(
+                    'chain-dnd-insert chain-dnd-before chain-dnd-after'
+                );
+                that.tbody.removeClass('chain-dnd-active');
+            };
+
+            that.show_indicator = function(placement_result) {
+                that.clear_indicator();
+                if (!that.tbody) return;
+                that.tbody.addClass('chain-dnd-active');
+
+                var info = that.gpo_rows();
+                if (!info) return;
+                var reduced = [];
+                for (var i = 0; i < info.length; i++) {
+                    var entry = info[i];
+                    if (entry.name !== that.dragged_name) {
+                        reduced.push(entry);
+                    }
+                }
+                var to = placement_result.to;
+                if (to >= reduced.length) {
+                    if (reduced.length > 0) {
+                        reduced[reduced.length - 1].row
+                            .addClass('chain-dnd-insert chain-dnd-after');
+                    }
+                } else {
+                    reduced[to].row.addClass('chain-dnd-insert chain-dnd-before');
+                }
+            };
+
+            that.after_move = function(name, facet, ok) {
+                if (facet && facet.refresh) facet.refresh();
+                if (ok) {
+                    IPA.notify_success(t('chain.gpoMovedSuccessfully').replace('%s', name));
+                } else {
+                    IPA.notify(t('chain.gpoMoveFailed'), 'error');
+                }
+            };
+
+            that.move_gpo = function(name, from, to, facet) {
+                var delta = to - from;
+                if (delta === 0) return;
+
+                var pkey = facet && facet.get_pkey ? facet.get_pkey() : null;
+                if (!pkey) {
+                    IPA.notify(t('chain.unableToDetermineGpo'), 'error');
+                    return;
+                }
+
+                var option = delta < 0 ? 'moveup_gpc' : 'movedown_gpc';
+                var steps = Math.abs(delta);
+
+                var batch = rpc.batch_command({
+                    name: 'gpo_dnd_move',
+                    error_message: t('chain.gpoReorderFailed')
+                });
+
+                for (var i = 0; i < steps; i++) {
+                    var opts = {};
+                    opts[option] = [name];
+                    opts.version = IPA.api_version;
+                    batch.add_command(rpc.command({
+                        entity: 'chain',
+                        method: 'mod',
+                        args: [pkey],
+                        options: opts
+                    }));
+                }
+
+                batch.on_success = function() {
+                    that.after_move(name, facet, true);
+                };
+                batch.on_error = function() {
+                    that.after_move(name, facet, false);
+                };
+                batch.execute();
+            };
+
+            that.on_dragstart = function(e) {
+                var tr = $(this).closest('tr');
+                var name = that.gpo_name_from_row(tr);
+                if (!name) return false;
+
+                that.dragged_name = name;
+                var native_event = e.originalEvent || e;
+                if (native_event.dataTransfer) {
+                    native_event.dataTransfer.effectAllowed = 'move';
+                    native_event.dataTransfer.setData('text/plain', name);
+                }
+                tr.addClass('chain-dnd-source');
+                return true;
+            };
+
+            that.on_dragover = function(e) {
+                if (!that.dragged_name) return;
+                var info = that.gpo_rows();
+                if (!info) return;
+                var placement_result = that.placement(e);
+                if (!placement_result) return;
+                e.preventDefault();
+                var native_event = e.originalEvent || e;
+                if (native_event.dataTransfer) {
+                    native_event.dataTransfer.dropEffect = 'move';
+                }
+                that.show_indicator(placement_result);
+            };
+
+            that.on_drop = function(e) {
+                if (!that.dragged_name) return;
+                var placement_result = that.placement(e);
+                var name = that.dragged_name;
+                that.dragged_name = null;
+                that.clear_indicator();
+                if (that.tbody) that.tbody.find('tr').removeClass('chain-dnd-source');
+                if (e.preventDefault) e.preventDefault();
+                if (e.stopPropagation) e.stopPropagation();
+
+                var facet = that.container;
+                if (!placement_result) return;
+                that.move_gpo(name, placement_result.from, placement_result.to, facet);
+            };
+
+            that.on_dragend = function() {
+                that.dragged_name = null;
+                if (that.tbody) {
+                    that.tbody.find('tr').removeClass('chain-dnd-source');
+                }
+                that.clear_indicator();
+            };
+
+            that.init_events = function() {
+                var tbody = that.tbody;
+                tbody.on('dragstart', 'div[name="displayname"]', that.on_dragstart);
+                tbody.on('dragover', that.on_dragover);
+                tbody.on('drop', that.on_drop);
+                tbody.on('dragend', 'div[name="displayname"]', that.on_dragend);
+            };
+
+            that.post_load = function(data) {
+                var facet = that.container;
+                if (!facet || !facet.table || !facet.table.tbody) return;
+                that.tbody = facet.table.tbody;
+                that.apply_draggable();
+                if (!that.initialized) {
+                    that.init_events();
+                    that.initialized = true;
+                }
+            };
+
+            return that;
+        };
+
         exp.chain_search_summary_policy = function(spec) {
             var that = IPA.facet_policy(spec);
 
@@ -766,6 +1015,11 @@ define(
                         server_sort: true,
                          label: t('chain.gpoTab'),
                          tab_label: t('chain.gpoTab'),
+                        policies: [
+                            {
+                                $factory: exp.gpo_dnd_policy
+                            }
+                        ],
                         columns: [
                             {
                                 name: 'displayname',
