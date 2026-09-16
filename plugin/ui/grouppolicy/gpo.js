@@ -48,25 +48,26 @@ define([
                 {
                     $type: 'search',
                     name: 'search',
-                    label: 'Group Policy Objects',
+                    title: t('gpo.title'),
+                    label: t('gpo.title'),
                     $pre_ops: [order_control_buttons(['refresh', 'add', 'gpui', 'remove'])],
                     columns: [
                         {
                             name: 'displayname',
-                            label: 'Policy Name',
+                            label: t('gpo.fields.policyName'),
                             primary_key: true
                         },
                         {
                             name: 'cn',
-                            label: 'GUID'
+                            label: t('gpo.fields.guid')
                         },
                         {
                             name: 'versionnumber',
-                            label: 'Version'
+                            label: t('gpo.fields.version')
                         },
                         {
                             name: 'flags',
-                            label: 'Flags'
+                            label: t('gpo.fields.flags')
                         }
                     ],
                     actions: ['gpui'],
@@ -81,37 +82,39 @@ define([
                 {
                     $type: 'details',
                     name: 'details',
+                    title: t('gpo.titleSingular'),
+                    label: t('gpo.titleSingular'),
                     check_rights: false,
                     $pre_ops: [order_control_buttons(['refresh', 'gpui', 'save', 'revert'])],
                     actions: ['gpo_save', 'revert', 'refresh', 'gpui'],
                     sections: [
                         {
                             name: 'identity',
-                            label: 'Identity',
+                            label: t('gpo.fields.identity'),
                             fields: [
                                 {
                                     name: 'displayname',
-                                    label: 'Policy Name',
+                                    label: t('gpo.fields.policyName'),
                                     read_only: false
                                 },
                                 {
                                     name: 'cn',
-                                    label: 'GUID',
+                                    label: t('gpo.fields.guid'),
                                     read_only: true
                                 },
                                 {
                                     name: 'distinguishedname',
-                                    label: 'Distinguished Name',
+                                    label: t('gpo.fields.distinguishedName'),
                                     read_only: true
                                 },
                                 {
                                     name: 'versionnumber',
-                                    label: 'Version Number',
+                                    label: t('gpo.fields.versionNumber'),
                                     read_only: true
                                 },
                                 {
                                     name: 'flags',
-                                    label: 'Flags'
+                                    label: t('gpo.fields.flags')
                                 }
                             ]
                         }
@@ -126,11 +129,11 @@ define([
                 }
             ],
             adder_dialog: {
-                title: 'Add Group Policy Object',
+                title: t('gpo.addTitle'),
                 fields: [
                     {
                         name: 'displayname',
-                        label: 'Policy Name',
+                        label: t('gpo.fields.policyName'),
                         required: true
                     }
                 ]
@@ -143,7 +146,7 @@ define([
     exp.save_action = function(spec) {
         spec = spec || {};
         spec.name = spec.name || 'gpo_save';
-        spec.label = spec.label || 'Save';
+        spec.label = spec.label || t('common.save');
         spec.enable_cond = spec.enable_cond || ['dirty'];
         spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : false;
 
@@ -173,7 +176,7 @@ define([
             }
 
             if (!has_changes) {
-                IPA.notify('No changes made', 'info');
+                IPA.notify(t('gpo.noChanges'), 'info');
                 if (on_success) on_success();
                 return;
             }
@@ -189,15 +192,17 @@ define([
                 options: mod_data,
                 on_success: function(mod_result) {
                     facet.refresh();
-                    var success_msg = 'GPO "' + gpo_name + '" updated successfully';
+                    var success_msg = t('gpo.updatedSuccessfully').replace('%s', gpo_name);
                     if (mod_data.rename) {
-                        success_msg = 'GPO renamed from "' + gpo_name + '" to "' + mod_data.rename + '" successfully';
+                        success_msg = t('gpo.renamedSuccessfully')
+                            .replace('%s', gpo_name)
+                            .replace('%s', mod_data.rename);
                     }
                     IPA.notify_success(success_msg);
                     if (on_success) on_success(mod_result);
                 },
                 on_error: function(xhr, text_status, error_thrown) {
-                    var msg = 'Failed to update GPO';
+                    var msg = t('gpo.updateFailed');
                     if (error_thrown && error_thrown.message) {
                         msg += ': ' + error_thrown.message;
                     }
@@ -246,7 +251,7 @@ define([
             }
 
             if (!policyName) {
-                IPA.notify('Cannot determine GPO name', 'error');
+                IPA.notify(t('gpo.cannotDetermineName'), 'error');
                 return;
             }
 
@@ -300,9 +305,9 @@ define([
                     return;
                 }
 
-                IPA.notify('Failed to initialize GPUI module', 'error');
+                IPA.notify(t('gpo.gpuiInitializeFailed'), 'error');
             }, function(err) {
-                IPA.notify('Failed to load GPUI module', 'error');
+                IPA.notify(t('gpo.gpuiLoadFailed'), 'error');
                 if (window.console && console.error) {
                     console.error('[gpui] Failed to load app module.', err);
                 }

@@ -6,7 +6,8 @@ define([], function() {
       description: 'Description:',
       options: 'Options:',
       comment: 'Comment:',
-      edit: 'Edit'
+      edit: 'Edit',
+      save: 'Save'
     },
 
     // Menu
@@ -21,7 +22,80 @@ define([], function() {
       enable: 'Enable',
       disable: 'Disable',
       moveUp: 'Move Up',
-      moveDown: 'Move Down'
+      moveDown: 'Move Down',
+      moveGpcUp: 'Move GPC Up',
+      moveGpcDown: 'Move GPC Down',
+      title: 'Group Policy Chain',
+      titlePlural: 'Group Policy Chains',
+      gpoTab: 'Group Policy Objects',
+      statusActive: 'Active',
+      statusInactive: 'Inactive',
+      statusUnknown: 'Unknown',
+      enableConfirm: 'Are you sure you want to enable the selected chain?',
+      disableConfirm: 'Are you sure you want to disable the selected chain?',
+      selectOneChainEnable: 'Please select exactly one chain to enable',
+      selectOneChainDisable: 'Please select exactly one chain to disable',
+      selectOneGpc: 'Please select exactly one GPC to move',
+      selectOneChainMove: 'Please select exactly one chain to move',
+      enabledSuccessfully: 'Chain "%s" enabled successfully',
+      disabledSuccessfully: 'Chain "%s" disabled successfully',
+      enableFailed: 'Failed to enable chain',
+      disableFailed: 'Failed to disable chain',
+      movedUpSuccessfully: 'Chain moved up successfully',
+      movedDownSuccessfully: 'Chain moved down successfully',
+      moveUpFailed: 'Failed to move chain up: %s',
+      moveDownFailed: 'Failed to move chain down: %s',
+      movedSuccessfully: 'Chain "%s" moved successfully',
+      moveFailed: 'Failed to move chain',
+      reorderFailed: 'Failed to reorder chains',
+      unableToDetermineChainUp: 'Unable to determine chain name for move up',
+      unableToDetermineChainDown: 'Unable to determine chain name for move down',
+      gpcMovedUp: 'GPC "%s" moved up successfully',
+      gpcMovedDown: 'GPC "%s" moved down successfully',
+      gpcMoveUpFailed: 'Failed to move GPC up',
+      gpcMoveDownFailed: 'Failed to move GPC down',
+      gpoMovedSuccessfully: 'Group Policy Object "%s" moved successfully',
+      gpoMoveFailed: 'Failed to move group policy object',
+      gpoReorderFailed: 'Failed to reorder group policy objects',
+      unableToDetermineGpo: 'Unable to determine group policy object name',
+      addTitle: 'Add Group Policy Chain',
+      fields: {
+        cn: 'Chain name',
+        usergroup: 'User group',
+        computergroup: 'Computer group',
+        active: 'Active',
+        gplink: 'Group Policy Links',
+        chainNameDoc: 'Unique name for the Group Policy Chain',
+        userGroupDoc: 'Select a user group for this chain',
+        computerGroupDoc: 'Select a computer group for this chain',
+        gplinkDoc: 'Select Group Policy Objects to link to this chain'
+      }
+    },
+
+    // Group Policy Objects
+    gpo: {
+      title: 'Group Policy Objects',
+      titleSingular: 'Group Policy Object',
+      addTitle: 'Add Group Policy Object',
+      fields: {
+        policyName: 'Policy Name',
+        guid: 'GUID',
+        version: 'Version',
+        flags: 'Flags',
+        identity: 'Identity',
+        distinguishedName: 'Distinguished Name',
+        versionNumber: 'Version Number',
+        containerName: 'Container Name'
+      },
+      noChanges: 'No changes made',
+      updatedSuccessfully: 'GPO "%s" updated successfully',
+      renamedSuccessfully: 'GPO renamed from "%s" to "%s" successfully',
+      updateFailed: 'Failed to update GPO',
+      cannotDetermineName: 'Cannot determine GPO name',
+      gpuiInitializeFailed: 'Failed to initialize GPUI module',
+      gpuiLoadFailed: 'Failed to load GPUI module',
+      addToChainTitle: 'Add Group Policy Objects to Chain',
+      removeFromChainTitle: 'Remove Group Policy Objects from Chain'
     },
 
     // Политики
