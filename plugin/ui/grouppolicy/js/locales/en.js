@@ -54,6 +54,10 @@ define([], function() {
       gpcMovedDown: 'GPC "%s" moved down successfully',
       gpcMoveUpFailed: 'Failed to move GPC up',
       gpcMoveDownFailed: 'Failed to move GPC down',
+      gpoMovedSuccessfully: 'Group Policy Object "%s" moved successfully',
+      gpoMoveFailed: 'Failed to move group policy object',
+      gpoReorderFailed: 'Failed to reorder group policy objects',
+      unableToDetermineGpo: 'Unable to determine group policy object name',
       addTitle: 'Add Group Policy Chain',
       fields: {
         cn: 'Chain name',
