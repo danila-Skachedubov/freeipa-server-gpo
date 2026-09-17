@@ -64,6 +64,7 @@ define([], function() {
       renamedSuccessfully: 'Chain renamed from "%s" to "%s" successfully',
       updateFailed: 'Failed to update chain',
       renameChainlistFixFailed: 'Chain was renamed, but its activity and position in the list could not be restored',
+      patternError: 'Chain name may only include letters, numbers, _, -, . and $, refer to \'ipa help chain\' for complete format description',
       fields: {
         cn: 'Chain name',
         usergroup: 'User group',
@@ -96,6 +97,7 @@ define([], function() {
       updatedSuccessfully: 'GPO "%s" updated successfully',
       renamedSuccessfully: 'GPO renamed from "%s" to "%s" successfully',
       updateFailed: 'Failed to update GPO',
+      patternError: 'Policy name may only include letters, numbers, _, -, . and $, refer to \'ipa help Group Policy Object\' for complete format description',
       cannotDetermineName: 'Cannot determine GPO name',
       gpuiInitializeFailed: 'Failed to initialize GPUI module',
       gpuiLoadFailed: 'Failed to load GPUI module',

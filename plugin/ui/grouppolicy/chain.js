@@ -1171,6 +1171,13 @@ define(
                         no_update: true,
                         $pre_ops: [gpo_module.order_control_buttons(['refresh', 'save', 'revert'])],
                         actions: ['chain_save'],
+                        policies: [
+                            {
+                                $factory: gpo_module.pattern_error_policy,
+                                fields: ['cn'],
+                                message: t('chain.patternError')
+                            }
+                        ],
                         control_buttons: [
                             {
                                 name: 'save',

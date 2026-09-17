@@ -227,6 +227,23 @@ define([
 
         if (facet.name === 'details') {
             if (facet.set_pkeys) facet.set_pkeys([new_name]);
+
+            // Заголовок (h1 .facet-pkey) и хлебные крошки.
+            if (facet.header && facet.header.set_pkey) {
+                facet.header.set_pkey(new_name);
+            }
+
+            // Протухаем родительский search штатной details_facet_update_policy.
+            if (facet.on_update) facet.on_update.notify();
+
+            // Принудительно обновляем таблицу search в фоне, чтобы при
+            // возврате в список отображалось новое имя без перезагрузки.
+            var search_facet = facet.entity && facet.entity.get_facet
+                ? facet.entity.get_facet('search') : null;
+            if (search_facet && search_facet.refresh) {
+                search_facet.refresh();
+            }
+
             var hash = navigation.get_entity_hash(entity_name, 'details', [new_name]);
             if (hash) {
                 window.location.hash = hash;
@@ -235,6 +252,29 @@ define([
         }
 
         if (facet.refresh) facet.refresh();
+    };
+
+    // Подменяет серверный pattern_errmsg у перечисленных полей details-фасета
+    // на локализованный текст.
+    exp.pattern_error_policy = function(spec) {
+        spec = spec || {};
+        var that = IPA.facet_policy(spec);
+        var names = spec.fields || [];
+
+        var apply = function() {
+            var facet = that.container;
+            if (!facet || !facet.fields || !facet.fields.get_field) return;
+            for (var i = 0; i < names.length; i++) {
+                var field = facet.fields.get_field(names[i]);
+                if (field && field.metadata && field.metadata.pattern && field.metadata.pattern_errmsg) {
+                    field.metadata.pattern_errmsg = spec.message;
+                }
+            }
+        };
+
+        that.post_create = apply;
+        that.post_load = apply;
+        return that;
     };
 
     var make_gpo_spec = function() {
@@ -294,6 +334,13 @@ define([
                     no_update: true,
                     $pre_ops: [order_control_buttons(['refresh', 'gpui', 'save', 'revert'])],
                     actions: ['gpo_save', 'gpui'],
+                    policies: [
+                        {
+                            $factory: exp.pattern_error_policy,
+                            fields: ['displayname'],
+                            message: t('gpo.patternError')
+                        }
+                    ],
                     sections: [
                         {
                             name: 'identity',
