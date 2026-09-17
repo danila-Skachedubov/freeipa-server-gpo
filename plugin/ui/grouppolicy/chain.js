@@ -2,6 +2,7 @@ define(
     [
         'freeipa/ipa',
         'freeipa/menu',
+        'freeipa/navigation',
         'freeipa/phases',
         'freeipa/reg',
         'freeipa/rpc',
@@ -10,7 +11,7 @@ define(
         './js/locales/translations',
         'freeipa/text'
     ],
-    function(IPA, menu, phases, reg, rpc, $, gpo_module, translationsModule, text) {
+    function(IPA, menu, navigation, phases, reg, rpc, $, gpo_module, translationsModule, text) {
 
         var exp = IPA.grouppolicy = {};
 
@@ -315,6 +316,165 @@ define(
                 });
 
                 command.execute();
+            };
+
+            return that;
+        };
+
+        exp.chain_save_action = function(spec) {
+            spec = spec || {};
+            spec.name = spec.name || 'chain_save';
+            spec.label = spec.label || t('common.save');
+            spec.enable_cond = spec.enable_cond || ['dirty'];
+            spec.needs_confirm = spec.needs_confirm !== undefined ? spec.needs_confirm : false;
+
+            var that = IPA.action(spec);
+
+            that.execute_action = function(facet, on_success, on_error) {
+                var cn_field = facet.get_field('cn');
+
+                if (cn_field.dirty && cn_field.is_editable()) {
+                    var new_values = cn_field.get_widget_values();
+                    var old_value = String(cn_field.get_pristine_value());
+                    var new_value = String(new_values.length ? new_values[0] : '');
+                    var new_name = new_value.trim();
+                    var is_rename = new_value.trim() !== '' && new_value.trim() !== old_value;
+
+                    if (is_rename) {
+                        // Запоминаем прежнюю позицию строки в списке цепочек,
+                        // чтобы вернуть её на место после переименования.
+                        gpo_module.capture_rename_position(facet, 'chain', old_value, new_name);
+
+                        // gpmaster's chainlist stores chain names in order and
+                        // defines both chain activity and its position. Fetch it
+                        // before renaming so the position of an active chain can
+                        // be restored afterwards.
+                        rpc.command({
+                            entity: 'gpmaster',
+                            method: 'show',
+                            options: {
+                                version: IPA.api_version
+                            },
+                            on_success: function(data) {
+                                var chainlist = gpo_module.get_chainlist(data);
+                                var idx = chainlist.indexOf(old_value);
+                                var position = idx >= 0 ? {chainlist: chainlist, idx: idx} : null;
+                                that.rename_send(facet, old_value, new_name, position, on_success, on_error);
+                            },
+                            on_error: function() {
+                                // Activity/order info unavailable: rename anyway,
+                                // warn afterwards if the chainlist could not be restored.
+                                that.rename_send(facet, old_value, new_name, null, on_success, on_error);
+                            }
+                        }).execute();
+                        return;
+                    }
+                }
+
+                // Нет переименования — обычное обновление details-фасета
+                facet.update();
+            };
+
+            that.rename_send = function(facet, old_name, new_name, position, on_success, on_error) {
+                var command = rpc.command({
+                    entity: 'chain',
+                    method: 'mod',
+                    args: [facet.get_pkey()],
+                    on_success: function(data) {
+                        if (position) {
+                            that.fix_chainlist(facet, old_name, new_name, position, on_success);
+                        } else {
+                            that.finish_rename(facet, old_name, new_name, false, on_success);
+                        }
+                    },
+                    on_error: function(xhr, text_status, error_thrown) {
+                        gpo_module.clear_rename_position('chain', new_name);
+                        var msg = t('chain.updateFailed');
+                        if (error_thrown && error_thrown.message) {
+                            msg += ': ' + error_thrown.message;
+                        }
+                        IPA.notify(msg, 'error');
+                        if (on_error) on_error(xhr, text_status, error_thrown);
+                    }
+                });
+
+                command.set_option('version', IPA.api_version);
+
+                command.set_option('rename', new_name);
+
+                var fields = facet.fields.get_fields();
+                for (var i = 0; i < fields.length; i++) {
+                    var f = fields[i];
+                    if (f.name === 'cn' || !f.dirty || !f.is_editable()) continue;
+                    if (f.metadata && f.metadata.primary_key) continue;
+                    var values = f.save();
+                    if (values && values.length) {
+                        command.set_option(f.param, values.length === 1 ? values[0] : values);
+                    }
+                }
+
+                command.execute();
+            };
+
+            // remove the old name, add the new one and move it back to its
+            // original place so activity and order are preserved.
+            that.fix_chainlist = function(facet, old_name, new_name, position, on_success) {
+                var batch = rpc.batch_command({
+                    name: 'chain_rename_fix_chainlist',
+                    show_error: false,
+                    error_message: t('chain.renameChainlistFixFailed')
+                });
+
+                batch.add_command(rpc.command({
+                    entity: 'gpmaster',
+                    method: 'mod',
+                    options: {
+                        'remove_chain': [old_name],
+                        version: IPA.api_version
+                    }
+                }));
+
+                batch.add_command(rpc.command({
+                    entity: 'gpmaster',
+                    method: 'mod',
+                    options: {
+                        'add_chain': [new_name],
+                        version: IPA.api_version
+                    }
+                }));
+
+                var steps = (position.chainlist.length - 1) - position.idx;
+                for (var i = 0; i < steps; i++) {
+                    batch.add_command(rpc.command({
+                        entity: 'gpmaster',
+                        method: 'mod',
+                        options: {
+                            'moveup_chain': new_name,
+                            version: IPA.api_version
+                        }
+                    }));
+                }
+
+                batch.on_success = function() {
+                    var ok = !batch.errors || batch.errors.errors.length === 0;
+                    that.finish_rename(facet, old_name, new_name, !ok, on_success);
+                };
+                batch.on_error = function() {
+                    that.finish_rename(facet, old_name, new_name, true, on_success);
+                };
+                batch.execute();
+            };
+
+            that.finish_rename = function(facet, old_name, new_name, warn, on_success) {
+                var msg = t('chain.renamedSuccessfully')
+                    .replace('%s', old_name)
+                    .replace('%s', new_name);
+                IPA.notify_success(msg);
+                if (warn) {
+                    IPA.notify(t('chain.renameChainlistFixFailed'), 'warning');
+                }
+                gpo_module.handle_rename_success(facet, 'chain', new_name);
+                if (on_success) on_success();
             };
 
             return that;
@@ -898,7 +1058,8 @@ define(
                 {
                     name: 'cn',
                     label: t('chain.fields.cn'),
-                    read_only: true
+                    read_only: false,
+                    check_writable_from_metadata: false
                 },
                 {
                     $type: 'entity_select',
@@ -944,6 +1105,9 @@ define(
                              },
                              {
                                  $factory: exp.chain_search_summary_policy
+                             },
+                             {
+                                 $factory: gpo_module.rename_position_policy
                              }
                          ],
                         columns: [
@@ -1004,7 +1168,29 @@ define(
                         title: t('chain.title'),
                         label: t('chain.title'),
                         check_rights: false,
-                        $pre_ops: [gpo_module.order_control_buttons(['refresh', 'save', 'revert'])]
+                        no_update: true,
+                        $pre_ops: [gpo_module.order_control_buttons(['refresh', 'save', 'revert'])],
+                        actions: ['chain_save'],
+                        policies: [
+                            {
+                                $factory: gpo_module.pattern_error_policy,
+                                fields: ['cn'],
+                                message: t('chain.patternError')
+                            }
+                        ],
+                        control_buttons: [
+                            {
+                                name: 'save',
+                                action: 'chain_save',
+                                label: '@i18n:buttons.save',
+                                icon: 'fa-upload'
+                            },
+                            {
+                                name: 'revert',
+                                label: '@i18n:buttons.revert',
+                                icon: 'fa-undo'
+                            }
+                        ]
                     },
                     {
                         $type: 'association',
@@ -1142,6 +1328,7 @@ define(
             a.register('move_down', exp.move_down_action);
             a.register('move_gpc_up', exp.move_gpc_up_action);
             a.register('move_gpc_down', exp.move_gpc_down_action);
+            a.register('chain_save', exp.chain_save_action);
 
             e.register({type: 'chain', spec: exp.chain_entity_spec});
         };
