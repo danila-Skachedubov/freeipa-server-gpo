@@ -59,6 +59,11 @@ define([], function() {
       gpoReorderFailed: 'Failed to reorder group policy objects',
       unableToDetermineGpo: 'Unable to determine group policy object name',
       addTitle: 'Add Group Policy Chain',
+      noChanges: 'No changes made',
+      updatedSuccessfully: 'Chain "%s" updated successfully',
+      renamedSuccessfully: 'Chain renamed from "%s" to "%s" successfully',
+      updateFailed: 'Failed to update chain',
+      renameChainlistFixFailed: 'Chain was renamed, but its activity and position in the list could not be restored',
       fields: {
         cn: 'Chain name',
         usergroup: 'User group',
