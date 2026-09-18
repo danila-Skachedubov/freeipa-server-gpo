@@ -61,10 +61,6 @@ define([], function() {
       addTitle: 'Add Group Policy Chain',
       noChanges: 'No changes made',
       updatedSuccessfully: 'Chain "%s" updated successfully',
-      renamedSuccessfully: 'Chain renamed from "%s" to "%s" successfully',
-      updateFailed: 'Failed to update chain',
-      renameChainlistFixFailed: 'Chain was renamed, but its activity and position in the list could not be restored',
-      patternError: 'Chain name may only include letters, numbers, _, -, . and $, refer to \'ipa help chain\' for complete format description',
       fields: {
         cn: 'Chain name',
         usergroup: 'User group',
