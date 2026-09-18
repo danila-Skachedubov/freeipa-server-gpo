@@ -288,15 +288,6 @@ define([
                     title: t('gpo.title'),
                     label: t('gpo.title'),
                     $pre_ops: [order_control_buttons(['refresh', 'add', 'gpui', 'remove'])],
-                    sort_enabled: false,
-                    server_sort: true,
-                    pagination: false,
-                    policies: [
-                        {
-                            $factory: exp.rename_position_policy,
-                            sort_key: 'displayname'
-                        }
-                    ],
                     columns: [
                         {
                             name: 'displayname',
@@ -419,57 +410,58 @@ define([
         var that = IPA.action(spec);
 
         that.execute_action = function(facet, on_success, on_error) {
+            if (!facet.validate()) {
+                facet.show_validation_error();
+                return;
+            }
+
             var dn_field = facet.get_field('displayname');
 
             if (dn_field.dirty && dn_field.is_editable()) {
                 var new_values = dn_field.get_widget_values();
-                var old_value = String(dn_field.get_pristine_value());
+                var old_value = String(facet.get_pkey());
                 var new_value = String(new_values.length ? new_values[0] : '');
                 var new_name = new_value.trim();
                 var is_rename = new_value.trim() !== '' && new_value.trim() !== old_value;
 
                 if (is_rename) {
-                    // Запоминаем прежнюю позицию строки в списке GPO,
-                    // чтобы вернуть её на место после переименования.
-                    exp.capture_rename_position(facet, 'gpo', old_value, new_name);
-
-                    var command = rpc.command({
-                        entity: 'gpo',
-                        method: 'mod',
-                        args: [facet.get_pkey()],
-                        on_success: function(data) {
-                            exp.handle_rename_success(facet, 'gpo', new_name);
-                            var msg = t('gpo.renamedSuccessfully')
-                                .replace('%s', old_value)
-                                .replace('%s', new_name);
-                            IPA.notify_success(msg);
-                            if (on_success) on_success(data);
-                        },
-                        on_error: function(xhr, text_status, error_thrown) {
-                            exp.clear_rename_position('gpo', new_name);
-                            var msg = t('gpo.updateFailed');
-                            if (error_thrown && error_thrown.message) {
-                                msg += ': ' + error_thrown.message;
-                            }
-                            IPA.notify(msg, 'error');
-                            if (on_error) on_error(xhr, text_status, error_thrown);
-                        }
-                    });
-
-                    command.set_option('version', IPA.api_version);
-
+                    // Reuse the standard details command so every other dirty
+                    // field is saved in the same request. The standard command
+                    // builder intentionally skips the primary key, therefore
+                    // the rename option is added explicitly.
+                    var command = facet.create_update_command();
                     command.set_option('rename', new_name);
 
-                    var fields = facet.fields.get_fields();
-                    for (var i = 0; i < fields.length; i++) {
-                        var f = fields[i];
-                        if (f.name === 'displayname' || !f.dirty || !f.is_editable()) continue;
-                        if (f.metadata && f.metadata.primary_key) continue;
-                        var values = f.save();
-                        if (values && values.length) {
-                            command.set_option(f.param, values.length === 1 ? values[0] : values);
+                    command.on_success = function(data) {
+                        // displayName is the API key, while the LDAP RDN is the
+                        // stable GPO GUID. Switch the facet key and load the
+                        // server response to reset dirty/pristine field state.
+                        facet.set_pkeys([new_name]);
+                        facet.load(data);
+                        facet.on_update.notify();
+
+                        var msg = t('gpo.renamedSuccessfully')
+                            .replace('%s', old_value)
+                            .replace('%s', new_name);
+                        IPA.notify_success(msg);
+
+                        navigation.show_entity(
+                            facet.entity.name,
+                            facet.name,
+                            [new_name]
+                        );
+
+                        if (on_success) on_success(data);
+                    };
+
+                    command.on_error = function(xhr, text_status, error_thrown) {
+                        var msg = t('gpo.updateFailed');
+                        if (error_thrown && error_thrown.message) {
+                            msg += ': ' + error_thrown.message;
                         }
-                    }
+                        IPA.notify(msg, 'error');
+                        if (on_error) on_error(xhr, text_status, error_thrown);
+                    };
 
                     command.execute();
                     return;
@@ -477,7 +469,7 @@ define([
             }
 
             // Нет переименования — обычное обновление details-фасета
-            facet.update();
+            facet.update(on_success, on_error);
         };
 
         return that;
