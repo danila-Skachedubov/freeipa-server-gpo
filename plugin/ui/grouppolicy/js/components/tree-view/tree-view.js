@@ -74,10 +74,10 @@ async function initializeTreeView(element, workspace = null, treeViewState = nul
 }
 
 /**
- * Рендерит контейнер дерева с содержимым из tree-view-list.js
- * @param {ElementCreator} workspace - Элемент workspace для отображения выбранного элемента
- * @param {Object} treeViewState - State дерева (selectedItem, workspace, setWorkspace, setSelectedItem)
- * @returns {ElementCreator} - Контейнер дерева
+ * Renders the tree container with content from tree-view-list.js.
+ * @param {ElementCreator} workspace Workspace used to display the selected item.
+ * @param {Object} treeViewState Tree state (selectedItem, workspace, setWorkspace, setSelectedItem).
+ * @returns {ElementCreator} Tree container.
  */
 function renderTreeView(workspace = null, treeViewState = null) {
     const element = createElement('div', {

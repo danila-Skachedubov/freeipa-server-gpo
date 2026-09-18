@@ -277,10 +277,10 @@ class IPAActions:
 
     def run_ipa_server_upgrade(self):
         """
-        Запустить ipa-server-upgrade для применения схем и обновлений
+        Run ipa-server-upgrade to apply schema changes and updates.
         
         Returns:
-            True если обновление прошло успешно, False иначе
+            True if the upgrade succeeds, otherwise False.
         """
         try:
             self.logger.info(_("Running ipa-server-upgrade to apply schema changes"))
@@ -302,10 +302,10 @@ class IPAActions:
 
     def restart_oddjob(self):
         """
-        Перезапустить службу oddjob для подхвата новых D-Bus обработчиков
+        Restart the oddjob service to load new D-Bus handlers.
         
         Returns:
-            True если перезапуск прошел успешно, False иначе
+            True if the restart succeeds, otherwise False.
         """
         try:
             self.logger.info(_("Restarting oddjob service"))

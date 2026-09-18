@@ -12,7 +12,7 @@ function renderDivider() {
         children: [dividerLine]
     });
     
-    return element; // Возвращаем экземпляр ElementCreator для возможности использования его методов
+    return element; // Return ElementCreator so callers can use its methods.
 }
     return { renderDivider };
 });

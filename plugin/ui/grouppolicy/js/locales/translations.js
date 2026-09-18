@@ -14,7 +14,7 @@ function t(key) {
     if (value && value[k] !== undefined) {
       value = value[k];
     } else {
-      return key; // Ключ не найден
+      return key; // Key not found.
     }
   }
   

@@ -1,6 +1,6 @@
 define([], function() {
   return {
-    // Общие тексты
+    // Common text
     common: {
       help: 'Помощь:',
       description: 'Описание:',
@@ -10,14 +10,14 @@ define([], function() {
       save: 'Сохранить'
     },
 
-    // Меню
+    // Menu
     menu: {
       groupPolicy: 'Групповые политики',
       chains: 'Цепочки',
       groupPolicyObjects: 'Объекты групповых политик'
     },
 
-    // Цепочки групповых политик
+    // Group Policy Chains
     chain: {
       enable: 'Включить',
       disable: 'Отключить',
@@ -74,7 +74,7 @@ define([], function() {
       }
     },
 
-    // Объекты групповых политик
+    // Group Policy Objects
     gpo: {
       title: 'Объекты групповых политик',
       titleSingular: 'Объект групповой политики',
@@ -101,7 +101,7 @@ define([], function() {
       removeFromChainTitle: 'Удалить объекты групповых политик из цепочки'
     },
 
-    // Политики
+    // Policies
     policies: {
       localGroupPolicy: '[Локальная групповая политика]',
       machine: 'Компьютер',
@@ -120,7 +120,7 @@ define([], function() {
       supportedOn: 'Поддерживается на:',
     },
 
-    // Настройки (Preferences)
+    // Preferences
     preferences: {
       title: 'Настройки',
       description: 'Политики настроек.',

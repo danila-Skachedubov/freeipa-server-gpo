@@ -14,22 +14,22 @@ function classTokens(className) {
 }
 
 /**
- * Универсальный класс для создания DOM элементов
- * Поддерживает создание элементов с атрибутами, классами, событиями и вложенными элементами
+ * General-purpose DOM element creation class.
+ * Supports attributes, classes, events, and nested elements.
  */
 class ElementCreator {
     /**
-     * Создает новый экземпляр ElementCreator
-     * @param {string} tagName - Тег элемента (div, span, button и т.д.)
-     * @param {Object} options - Опции для создания элемента
-     * @param {string|string[]} options.className - CSS класс(ы)
-     * @param {string} options.id - ID элемента
-     * @param {Object} options.attrs - Дополнительные атрибуты (data-*, aria-*, и т.д.)
-     * @param {string} options.text - Текстовое содержимое
-     * @param {string} options.html - HTML содержимое (взаимоисключающе с text)
-     * @param {Object} options.style - Инлайн стили
-     * @param {Object} options.events - Объект с обработчиками событий {click: handler, mouseover: handler}
-     * @param {ElementCreator[]|Element[]|string[]} options.children - Дочерние элементы
+     * Creates an ElementCreator instance.
+     * @param {string} tagName Element tag (div, span, button, etc.).
+     * @param {Object} options Element creation options.
+     * @param {string|string[]} options.className CSS class or classes.
+     * @param {string} options.id Element ID.
+     * @param {Object} options.attrs Additional attributes (data-*, aria-*, etc.).
+     * @param {string} options.text Text content.
+     * @param {string} options.html HTML content (mutually exclusive with text).
+     * @param {Object} options.style Inline styles.
+     * @param {Object} options.events Event handlers, for example {click: handler, mouseover: handler}.
+     * @param {ElementCreator[]|Element[]|string[]} options.children Child elements.
      */
     constructor(tagName = 'div', options = {}) {
         this.element = document.createElement(tagName);
@@ -37,7 +37,7 @@ class ElementCreator {
     }
 
     /**
-     * Применяет опции к элементу
+     * Applies options to the element.
      * @private
      */
     applyOptions(options) {
@@ -52,47 +52,47 @@ class ElementCreator {
             children = []
         } = options;
 
-        // Применение ID
+        // Apply the ID.
         if (id) {
             this.element.id = id;
         }
 
-        // Применение классов
+        // Apply classes.
         const classes = classTokens(className);
         if (classes.length > 0) {
             this.element.classList.add(...classes);
         }
 
-        // Применение дополнительных атрибутов
+        // Apply additional attributes.
         Object.entries(attrs).forEach(([key, value]) => {
             if (value !== null && value !== undefined) {
                 this.element.setAttribute(key, value);
             }
         });
 
-        // Применение инлайн стилей
+        // Apply inline styles.
         Object.entries(style).forEach(([key, value]) => {
             this.element.style[key] = value;
         });
 
-        // Применение текстового содержимого
+        // Apply text content.
         if (text !== undefined && text !== null) {
             this.element.textContent = text;
         }
 
-        // Применение HTML содержимого (имеет приоритет над text)
+        // Apply HTML content, which takes precedence over text.
         if (html !== undefined && html !== null) {
             this.element.innerHTML = html;
         }
 
-        // Применение обработчиков событий
+        // Apply event handlers.
         Object.entries(events).forEach(([eventName, handler]) => {
             if (typeof handler === 'function') {
                 this.element.addEventListener(eventName, handler);
             }
         });
 
-        // Добавление дочерних элементов
+        // Append child elements.
         if (Array.isArray(children) && children.length > 0) {
             children.forEach(child => {
                 this.append(child);
@@ -101,9 +101,9 @@ class ElementCreator {
     }
 
     /**
-     * Добавляет класс(ы) к элементу
-     * @param {string|string[]} className - Класс(ы) для добавления
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Adds one or more classes to the element.
+     * @param {string|string[]} className Class or classes to add.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     addClass(className) {
         const classes = classTokens(className);
@@ -112,9 +112,9 @@ class ElementCreator {
     }
 
     /**
-     * Удаляет класс(ы) из элемента
-     * @param {string|string[]} className - Класс(ы) для удаления
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Removes one or more classes from the element.
+     * @param {string|string[]} className Class or classes to remove.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     removeClass(className) {
         const classes = classTokens(className);
@@ -123,9 +123,9 @@ class ElementCreator {
     }
 
     /**
-     * Переключает класс элемента
-     * @param {string} className - Класс для переключения
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Toggles a class on the element.
+     * @param {string} className Class to toggle.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     toggleClass(className) {
         this.element.classList.toggle(className);
@@ -133,10 +133,10 @@ class ElementCreator {
     }
 
     /**
-     * Устанавливает атрибут элемента
-     * @param {string} name - Имя атрибута
-     * @param {string} value - Значение атрибута
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Sets an element attribute.
+     * @param {string} name Attribute name.
+     * @param {string} value Attribute value.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     setAttr(name, value) {
         if (value !== null && value !== undefined) {
@@ -146,9 +146,9 @@ class ElementCreator {
     }
 
     /**
-     * Удаляет атрибут элемента
-     * @param {string} name - Имя атрибута
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Removes an element attribute.
+     * @param {string} name Attribute name.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     removeAttr(name) {
         this.element.removeAttribute(name);
@@ -156,9 +156,9 @@ class ElementCreator {
     }
 
     /**
-     * Устанавливает текстовое содержимое
-     * @param {string} text - Текст
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Sets the text content.
+     * @param {string} text Text content.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     setText(text) {
         this.element.textContent = text;
@@ -166,9 +166,9 @@ class ElementCreator {
     }
 
     /**
-     * Устанавливает HTML содержимое
-     * @param {string} html - HTML строка
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Sets the HTML content.
+     * @param {string} html HTML string.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     setHTML(html) {
         this.element.innerHTML = html;
@@ -176,9 +176,9 @@ class ElementCreator {
     }
 
     /**
-     * Устанавливает инлайн стили
-     * @param {Object|string} style - Объект со стилями или CSS строка
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Sets inline styles.
+     * @param {Object|string} style Style object or CSS string.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     setStyle(style) {
         if (typeof style === 'string') {
@@ -192,11 +192,11 @@ class ElementCreator {
     }
 
     /**
-     * Добавляет обработчик события
-     * @param {string} eventName - Имя события
-     * @param {Function} handler - Обработчик события
-     * @param {Object} options - Опции addEventListener
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Adds an event listener.
+     * @param {string} eventName Event name.
+     * @param {Function} handler Event handler.
+     * @param {Object} options addEventListener options.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     on(eventName, handler, options) {
         if (typeof handler === 'function') {
@@ -206,10 +206,10 @@ class ElementCreator {
     }
 
     /**
-     * Удаляет обработчик события
-     * @param {string} eventName - Имя события
-     * @param {Function} handler - Обработчик события
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Removes an event listener.
+     * @param {string} eventName Event name.
+     * @param {Function} handler Event handler.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     off(eventName, handler) {
         if (typeof handler === 'function') {
@@ -219,9 +219,9 @@ class ElementCreator {
     }
 
     /**
-     * Добавляет дочерний элемент
-     * @param {ElementCreator|Element|string} child - Дочерний элемент или текст
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Appends a child.
+     * @param {ElementCreator|Element|string} child Child element or text.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     append(child) {
         if (child instanceof ElementCreator) {
@@ -235,9 +235,9 @@ class ElementCreator {
     }
 
     /**
-     * Добавляет дочерний элемент в начало
-     * @param {ElementCreator|Element|string} child - Дочерний элемент или текст
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Prepends a child.
+     * @param {ElementCreator|Element|string} child Child element or text.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     prepend(child) {
         if (child instanceof ElementCreator) {
@@ -251,8 +251,8 @@ class ElementCreator {
     }
 
     /**
-     * Очищает содержимое элемента
-     * @returns {ElementCreator} - Возвращает this для цепочки вызовов
+     * Clears the element content.
+     * @returns {ElementCreator} This instance for method chaining.
      */
     clear() {
         this.element.innerHTML = '';
@@ -260,27 +260,27 @@ class ElementCreator {
     }
 
     /**
-     * Возвращает созданный DOM элемент
-     * @returns {Element} - DOM элемент
+     * Returns the created DOM element.
+     * @returns {Element} DOM element.
      */
     getElement() {
         return this.element;
     }
 
     /**
-     * Статический метод для быстрого создания элемента
-     * @param {string} tagName - Тег элемента
-     * @param {Object} options - Опции для создания элемента
-     * @returns {ElementCreator} - Экземпляр ElementCreator
+     * Creates an element.
+     * @param {string} tagName Element tag.
+     * @param {Object} options Element creation options.
+     * @returns {ElementCreator} ElementCreator instance.
      */
     static create(tagName = 'div', options = {}) {
         return new ElementCreator(tagName, options);
     }
 
     /**
-     * Статический метод для создания элемента из HTML строки
-     * @param {string} html - HTML строка
-     * @returns {Element} - DOM элемент
+     * Creates an element from an HTML string.
+     * @param {string} html HTML string.
+     * @returns {Element} DOM element.
      */
     static fromHTML(html) {
         const template = document.createElement('template');
@@ -290,25 +290,25 @@ class ElementCreator {
 }
 
 /**
- * Функция-хелпер для быстрого создания элементов
- * @param {string} tagName - Тег элемента
- * @param {Object} options - Опции для создания элемента
- * @returns {ElementCreator} - Экземпляр ElementCreator
+ * Convenience function for creating elements.
+ * @param {string} tagName Element tag.
+ * @param {Object} options Element creation options.
+ * @returns {ElementCreator} ElementCreator instance.
  */
 function createElement(tagName = 'div', options = {}) {
     return new ElementCreator(tagName, options);
 }
 
 /**
- * Функция-хелпер для создания элемента из HTML
- * @param {string} html - HTML строка
- * @returns {Element} - DOM элемент
+ * Convenience function for creating an element from HTML.
+ * @param {string} html HTML string.
+ * @returns {Element} DOM element.
  */
 function fromHTML(html) {
     return ElementCreator.fromHTML(html);
 }
 
-// Делаем createElement доступным глобально при загрузке модуля
+// Expose createElement globally when the module loads.
 if (typeof window !== 'undefined') {
     window.createElement = createElement;
 }

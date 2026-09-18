@@ -40,8 +40,8 @@ define([
         };
     };
 
-    // Подменяет серверный pattern_errmsg у перечисленных полей details-фасета
-    // на локализованный текст.
+    // Replace the server-provided pattern_errmsg for the listed details facet
+    // fields with localized text.
     exp.pattern_error_policy = function(spec) {
         spec = spec || {};
         var that = IPA.facet_policy(spec);
@@ -254,7 +254,7 @@ define([
                 }
             }
 
-            // Нет переименования — обычное обновление details-фасета
+            // No rename: perform a regular details facet update.
             facet.update(on_success, on_error);
         };
 

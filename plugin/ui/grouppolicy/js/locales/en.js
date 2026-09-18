@@ -101,7 +101,7 @@ define([], function() {
       removeFromChainTitle: 'Remove Group Policy Objects from Chain'
     },
 
-    // Политики
+    // Policies
     policies: {
       localGroupPolicy: '[Local Group Policy]',
       machine: 'Machine',
@@ -120,7 +120,7 @@ define([], function() {
       supportedOn: 'Supported on:'
     },
 
-    // Настройки (Preferences)
+    // Preferences
     preferences: {
       title: 'Preferences',
       description: 'Preferences policies.',

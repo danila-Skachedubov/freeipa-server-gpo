@@ -328,7 +328,7 @@ function createScriptFormModal(kind, initial, onSubmit, host, onClose) {
         element: modal,
         open: function() {
             host.append(modal);
-            void modal.getElement().offsetHeight; // принудительный расчёт начальных стилей
+            void modal.getElement().offsetHeight; // Force initial style calculation.
             modal.getElement().classList.add('active');
             nameInput.getElement().focus();
         }
@@ -336,9 +336,9 @@ function createScriptFormModal(kind, initial, onSubmit, host, onClose) {
 }
 
 /**
- * Рендерит статический шаблон раздела «Скрипты» с диалогом настройки сценариев
- * @param {Object} options - Опции шаблона (item - выбранный элемент дерева)
- * @returns {ElementCreator} - Элемент шаблона с кнопками сценариев запуска и завершения работы
+ * Renders the static Scripts section with a script configuration dialog.
+ * @param {Object} options Template options (`item` is the selected tree item).
+ * @returns {ElementCreator} Template with startup and shutdown script buttons.
  */
 function renderScriptsTemplate(options) {
     var config = options || {};
