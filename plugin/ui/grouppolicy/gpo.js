@@ -40,6 +40,243 @@ define([
         };
     };
 
+    // Список позиций (entity|new_pkey -> индекс в родительском списке),
+    // которые нужно восстановить после переименования.
+    var pending_rename_positions = exp.pending_rename_positions = {};
+
+    var get_pkey_name = exp.get_pkey_name = function(facet) {
+        if (facet.managed_entity && facet.managed_entity.metadata) {
+            return facet.managed_entity.metadata.primary_key;
+        }
+        return facet.primary_key_name || 'cn';
+    };
+
+    var get_record_pkey = exp.get_record_pkey = function(record, pkey_name) {
+        if (!record) return null;
+        var value = record[pkey_name];
+        if (Array.isArray(value) && value.length) value = value[0];
+        if (value === null || value === undefined) value = '';
+        return String(value);
+    };
+
+    // Извлекает упорядоченный список цепочек из gpmaster.show.
+    exp.get_chainlist = function(data) {
+        var value = data && data.result && data.result.chainlist;
+        if (value === null || value === undefined) return [];
+        if (Array.isArray(value)) {
+            return value.map(function(item) { return String(item); });
+        }
+        return [String(value)];
+    };
+
+    // Запоминает индекс строки с old_name в родительском списке (search-фасет).
+    // Нужно вызывать ДО успешного переименования, пока старые записи ещё в списке.
+    exp.capture_rename_position = function(facet, entity_name, old_name, new_name) {
+        if (!facet || !facet.entity || !new_name) return;
+        var search_facet = facet.entity.get_facet('search');
+        if (!search_facet || !search_facet.table || !search_facet.table.records) return;
+
+        var pkey_name = get_pkey_name(search_facet);
+        var records = search_facet.table.records;
+        for (var i = 0; i < records.length; i++) {
+            if (get_record_pkey(records[i], pkey_name) === String(old_name)) {
+                pending_rename_positions[entity_name + '|' + new_name] = i;
+                return;
+            }
+        }
+    };
+
+    exp.clear_rename_position = function(entity_name, new_name) {
+        delete pending_rename_positions[entity_name + '|' + new_name];
+    };
+
+    exp.rename_position_policy = function(spec) {
+        spec = spec || {};
+        var that = IPA.facet_policy(spec);
+        var sort_key = spec.sort_key;
+
+        that.sort_records = function(facet, records) {
+            if (!sort_key) return;
+            var key_func;
+            if (typeof sort_key === 'function') {
+                key_func = function(record, pkey_name) {
+                    var key = sort_key(record, pkey_name);
+                    if (key === null || key === undefined) key = '';
+                    return String(key);
+                };
+            } else {
+                key_func = function(record, pkey_name) {
+                    var value = record[sort_key];
+                    if (Array.isArray(value) && value.length) value = value[0];
+                    if (value === null || value === undefined) value = '';
+                    return String(value);
+                };
+            }
+
+            var pkey_name = get_pkey_name(facet);
+            var order = [];
+            var i;
+            for (i = 0; i < records.length; i++) order.push(i);
+            order.sort(function(a, b) {
+                var ka = key_func(records[a], pkey_name);
+                var kb = key_func(records[b], pkey_name);
+                if (ka < kb) return -1;
+                if (ka > kb) return 1;
+                return 0;
+            });
+
+            var sorted = true;
+            for (i = 0; i < order.length; i++) {
+                if (order[i] !== i) {
+                    sorted = false;
+                    break;
+                }
+            }
+            if (sorted) return;
+
+            var sorted_records = [];
+            for (i = 0; i < order.length; i++) {
+                sorted_records.push(records[order[i]]);
+            }
+            for (i = 0; i < records.length; i++) {
+                records[i] = sorted_records[i];
+            }
+
+            var tbody = facet.table.tbody;
+            var trs = tbody.children('tr');
+            for (i = 0; i < order.length; i++) {
+                tbody.append(trs.eq(order[i]));
+            }
+        };
+
+        that.post_load = function() {
+            var facet = that.container;
+            if (!facet || !facet.entity || !facet.table) return;
+            if (!facet.table.records || !facet.table.tbody) return;
+
+            var entity_name = facet.entity.name;
+            var pkey_name = get_pkey_name(facet);
+            var records = facet.table.records;
+            var tbody = facet.table.tbody;
+            var pending = pending_rename_positions;
+
+            // При pagination:false список грузится в серверном порядке,
+            // поэтому алфавитный порядок поддерживаем здесь.
+            that.sort_records(facet, records);
+
+            var has_pending = false;
+            for (var key in pending) {
+                if (!Object.prototype.hasOwnProperty.call(pending, key)) continue;
+                var sep = key.indexOf('|');
+                if (sep < 0) continue;
+                if (key.substring(0, sep) !== entity_name) continue;
+                has_pending = true;
+            }
+
+            if (!has_pending) return;
+
+            var positions = {};
+            var order = [];
+            for (var key in pending) {
+                if (!Object.prototype.hasOwnProperty.call(pending, key)) continue;
+                var sep = key.indexOf('|');
+                if (sep < 0 || key.substring(0, sep) !== entity_name) continue;
+                positions[key.substring(sep + 1)] = pending[key];
+                order.push(key);
+            }
+
+            for (var j = 0; j < order.length; j++) {
+                var this_key = order[j];
+                var this_sep = this_key.indexOf('|');
+                var new_name = this_key.substring(this_sep + 1);
+                var target = positions[new_name];
+
+                var idx = -1;
+                for (var i = 0; i < records.length; i++) {
+                    if (get_record_pkey(records[i], pkey_name) === String(new_name)) {
+                        idx = i;
+                        break;
+                    }
+                }
+                if (idx < 0 || idx === target) continue;
+
+                var row = records[idx];
+                records.splice(idx, 1);
+                if (target > records.length) target = records.length;
+                records.splice(target, 0, row);
+
+                var tr = tbody.children('tr').eq(idx);
+                if (tr.length) {
+                    if (target === 0) {
+                        tbody.prepend(tr);
+                    } else {
+                        tr.insertAfter(tbody.children('tr').eq(target - 1));
+                    }
+                }
+                delete pending[this_key];
+            }
+        };
+
+        return that;
+    };
+
+    // После успешного переименования на details-фасете переключает
+    // первичный ключ и URL на новое имя без полной перезагрузки.
+    exp.handle_rename_success = function(facet, entity_name, new_name) {
+        if (!facet) return;
+
+        if (facet.name === 'details') {
+            if (facet.set_pkeys) facet.set_pkeys([new_name]);
+
+            // Заголовок (h1 .facet-pkey) и хлебные крошки.
+            if (facet.header && facet.header.set_pkey) {
+                facet.header.set_pkey(new_name);
+            }
+
+            // Протухаем родительский search штатной details_facet_update_policy.
+            if (facet.on_update) facet.on_update.notify();
+
+            // Принудительно обновляем таблицу search в фоне, чтобы при
+            // возврате в список отображалось новое имя без перезагрузки.
+            var search_facet = facet.entity && facet.entity.get_facet
+                ? facet.entity.get_facet('search') : null;
+            if (search_facet && search_facet.refresh) {
+                search_facet.refresh();
+            }
+
+            var hash = navigation.get_entity_hash(entity_name, 'details', [new_name]);
+            if (hash) {
+                window.location.hash = hash;
+            }
+            return;
+        }
+
+        if (facet.refresh) facet.refresh();
+    };
+
+    // Подменяет серверный pattern_errmsg у перечисленных полей details-фасета
+    // на локализованный текст.
+    exp.pattern_error_policy = function(spec) {
+        spec = spec || {};
+        var that = IPA.facet_policy(spec);
+        var names = spec.fields || [];
+
+        var apply = function() {
+            var facet = that.container;
+            if (!facet || !facet.fields || !facet.fields.get_field) return;
+            for (var i = 0; i < names.length; i++) {
+                var field = facet.fields.get_field(names[i]);
+                if (field && field.metadata && field.metadata.pattern && field.metadata.pattern_errmsg) {
+                    field.metadata.pattern_errmsg = spec.message;
+                }
+            }
+        };
+
+        that.post_create = apply;
+        that.post_load = apply;
+        return that;
+    };
+
     var make_gpo_spec = function() {
         return {
             name: 'gpo',
@@ -51,6 +288,15 @@ define([
                     title: t('gpo.title'),
                     label: t('gpo.title'),
                     $pre_ops: [order_control_buttons(['refresh', 'add', 'gpui', 'remove'])],
+                    sort_enabled: false,
+                    server_sort: true,
+                    pagination: false,
+                    policies: [
+                        {
+                            $factory: exp.rename_position_policy,
+                            sort_key: 'displayname'
+                        }
+                    ],
                     columns: [
                         {
                             name: 'displayname',
@@ -85,8 +331,16 @@ define([
                     title: t('gpo.titleSingular'),
                     label: t('gpo.titleSingular'),
                     check_rights: false,
+                    no_update: true,
                     $pre_ops: [order_control_buttons(['refresh', 'gpui', 'save', 'revert'])],
-                    actions: ['gpo_save', 'revert', 'refresh', 'gpui'],
+                    actions: ['gpo_save', 'gpui'],
+                    policies: [
+                        {
+                            $factory: exp.pattern_error_policy,
+                            fields: ['displayname'],
+                            message: t('gpo.patternError')
+                        }
+                    ],
                     sections: [
                         {
                             name: 'identity',
@@ -95,7 +349,8 @@ define([
                                 {
                                     name: 'displayname',
                                     label: t('gpo.fields.policyName'),
-                                    read_only: false
+                                    read_only: false,
+                                    check_writable_from_metadata: false
                                 },
                                 {
                                     name: 'cn',
@@ -120,6 +375,17 @@ define([
                         }
                     ],
                     control_buttons: [
+                        {
+                            name: 'save',
+                            action: 'gpo_save',
+                            label: '@i18n:buttons.save',
+                            icon: 'fa-upload'
+                        },
+                        {
+                            name: 'revert',
+                            label: '@i18n:buttons.revert',
+                            icon: 'fa-undo'
+                        },
                         {
                             name: 'gpui',
                             label: t('common.edit'),
@@ -153,64 +419,65 @@ define([
         var that = IPA.action(spec);
 
         that.execute_action = function(facet, on_success, on_error) {
-            // Get current values from facet
-            var values = facet.get_values();
-            var original_values = facet.get_original_values();
+            var dn_field = facet.get_field('displayname');
 
-            var mod_data = {};
-            var has_changes = false;
+            if (dn_field.dirty && dn_field.is_editable()) {
+                var new_values = dn_field.get_widget_values();
+                var old_value = String(dn_field.get_pristine_value());
+                var new_value = String(new_values.length ? new_values[0] : '');
+                var new_name = new_value.trim();
+                var is_rename = new_value.trim() !== '' && new_value.trim() !== old_value;
 
-            var current_displayname = String(original_values.displayname || '').trim();
-            var new_displayname = String(values.displayname || '').trim();
+                if (is_rename) {
+                    // Запоминаем прежнюю позицию строки в списке GPO,
+                    // чтобы вернуть её на место после переименования.
+                    exp.capture_rename_position(facet, 'gpo', old_value, new_name);
 
-            if (new_displayname && new_displayname !== current_displayname) {
-                mod_data.rename = new_displayname;
-                has_changes = true;
-            }
+                    var command = rpc.command({
+                        entity: 'gpo',
+                        method: 'mod',
+                        args: [facet.get_pkey()],
+                        on_success: function(data) {
+                            exp.handle_rename_success(facet, 'gpo', new_name);
+                            var msg = t('gpo.renamedSuccessfully')
+                                .replace('%s', old_value)
+                                .replace('%s', new_name);
+                            IPA.notify_success(msg);
+                            if (on_success) on_success(data);
+                        },
+                        on_error: function(xhr, text_status, error_thrown) {
+                            exp.clear_rename_position('gpo', new_name);
+                            var msg = t('gpo.updateFailed');
+                            if (error_thrown && error_thrown.message) {
+                                msg += ': ' + error_thrown.message;
+                            }
+                            IPA.notify(msg, 'error');
+                            if (on_error) on_error(xhr, text_status, error_thrown);
+                        }
+                    });
 
-            var current_flags = parseInt(original_values.flags || 0, 10);
-            var new_flags = parseInt(values.flags || 0, 10);
-            if (Number.isFinite(new_flags) && new_flags !== current_flags) {
-                mod_data.flags = new_flags;
-                has_changes = true;
-            }
+                    command.set_option('version', IPA.api_version);
 
-            if (!has_changes) {
-                IPA.notify(t('gpo.noChanges'), 'info');
-                if (on_success) on_success();
-                return;
-            }
+                    command.set_option('rename', new_name);
 
-            // Get the GPO name (primary key)
-            var gpo_name = facet.entity.get_primary_key(original_values);
-
-            // Execute modify command
-            var mod_command = rpc.command({
-                entity: 'gpo',
-                method: 'mod',
-                args: [gpo_name],
-                options: mod_data,
-                on_success: function(mod_result) {
-                    facet.refresh();
-                    var success_msg = t('gpo.updatedSuccessfully').replace('%s', gpo_name);
-                    if (mod_data.rename) {
-                        success_msg = t('gpo.renamedSuccessfully')
-                            .replace('%s', gpo_name)
-                            .replace('%s', mod_data.rename);
+                    var fields = facet.fields.get_fields();
+                    for (var i = 0; i < fields.length; i++) {
+                        var f = fields[i];
+                        if (f.name === 'displayname' || !f.dirty || !f.is_editable()) continue;
+                        if (f.metadata && f.metadata.primary_key) continue;
+                        var values = f.save();
+                        if (values && values.length) {
+                            command.set_option(f.param, values.length === 1 ? values[0] : values);
+                        }
                     }
-                    IPA.notify_success(success_msg);
-                    if (on_success) on_success(mod_result);
-                },
-                on_error: function(xhr, text_status, error_thrown) {
-                    var msg = t('gpo.updateFailed');
-                    if (error_thrown && error_thrown.message) {
-                        msg += ': ' + error_thrown.message;
-                    }
-                    IPA.notify(msg, 'error');
-                    if (on_error) on_error(xhr, text_status, error_thrown);
+
+                    command.execute();
+                    return;
                 }
-            });
-            mod_command.execute();
+            }
+
+            // Нет переименования — обычное обновление details-фасета
+            facet.update();
         };
 
         return that;
