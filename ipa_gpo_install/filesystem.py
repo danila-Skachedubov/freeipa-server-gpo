@@ -120,6 +120,28 @@ def ensure_policies_root_acl(
     )
 
 
+def ensure_path_traversal_acls(
+    directories,
+    editor_user=GPO_EDITOR_USER,
+    runner=subprocess.run,
+):
+    """Allow the editor to traverse trusted parents without listing them."""
+    trusted_directories = [Path(path) for path in directories]
+    for directory in trusted_directories:
+        if directory.is_symlink() or not directory.is_dir():
+            raise FilesystemConfigurationError(
+                "ACL parent is not a real directory: {}".format(directory)
+            )
+
+    for offset in range(0, len(trusted_directories), 128):
+        batch = trusted_directories[offset:offset + 128]
+        _run_checked(
+            ["setfacl", "-m", "u:{}:--x".format(editor_user), "--"]
+            + [str(path) for path in batch],
+            runner=runner,
+        )
+
+
 def ensure_new_gpo_acls(
     policies_path,
     policy_path,

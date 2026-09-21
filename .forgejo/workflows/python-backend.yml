@@ -20,11 +20,16 @@ jobs:
   build-package:
     name: Build package for Sisyphus
     runs-on: als-tiny
+    timeout-minutes: 30
     container:
       image: altlinux.space/actions/runner/hasherc:sisyphus
+    outputs:
+      rpm_sha256: ${{ steps.package.outputs.sha256 }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Verify release tag matches RPM version
         if: ${{ startsWith(forgejo.ref, 'refs/tags/') }}
@@ -48,24 +53,425 @@ jobs:
       - name: Build and test RPMs
         uses: actions/build-rpm-action@main
 
+      - name: Prepare the single tested RPM artifact
+        id: package
+        env:
+          RELEASE_REF: ${{ forgejo.ref }}
+        run: |
+          set -euo pipefail
+
+          mapfile -d '' -t project_rpms < <(
+            find -L /root/.cache/hasherc/freeipa-server-gpo/out/RPMS \
+              -type f -name 'freeipa-server-gpo-*.rpm' \
+              ! -name '*.src.rpm' ! -name '*debuginfo*' -print0
+          )
+          if [ "${#project_rpms[@]}" -ne 1 ]; then
+            echo "Expected exactly one project RPM, found ${#project_rpms[@]}"
+            exit 1
+          fi
+          test "$(rpm -qp --queryformat '%{NAME}' "${project_rpms[0]}")" = freeipa-server-gpo
+          if [[ "$RELEASE_REF" == refs/tags/* ]]; then
+            test "$(rpm -qp --queryformat '%{VERSION}-%{RELEASE}' "${project_rpms[0]}")" = "${RELEASE_REF#refs/tags/}"
+          fi
+          mkdir -p /tmp/ipa-gpo-artifact
+          cp -- "${project_rpms[0]}" /tmp/ipa-gpo-artifact/
+          digest="$(sha256sum "${project_rpms[0]}")"
+          echo "sha256=${digest%% *}" >> "$GITHUB_OUTPUT"
+
       - name: Upload packages as CI artifact
         uses: actions/upload-artifact@v3
         with:
           name: alt-packages
-          path: ~/.cache/hasherc/freeipa-server-gpo/out/RPMS/**/*.rpm
+          path: /tmp/ipa-gpo-artifact/*.rpm
+          if-no-files-found: error
+
+  integration:
+    name: Run integration suite in a minimal FreeIPA domain
+    needs: build-package
+    # Privileged domain provisioning is restricted to trusted pushes/manual runs.
+    if: ${{ forgejo.event_name == 'workflow_dispatch' || (forgejo.event_name == 'push' && (forgejo.ref == 'refs/heads/master' || forgejo.ref == 'refs/heads/ci/integration-container-probe' || startsWith(forgejo.ref, 'refs/tags/'))) }}
+    env:
+      EXPECTED_SHA256: ${{ needs.build-package.outputs.rpm_sha256 }}
+    runs-on: als-huge
+    timeout-minutes: 60
+    container:
+      image: altlinux.space/actions/runner/containers:sisyphus
+      options: --privileged
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download integration RPM
+        uses: actions/download-artifact@v3
+        with:
+          name: alt-packages
+          path: /tmp/ipa-gpo-rpms
+
+      - name: Verify integration RPM artifact
+        run: |
+          set -euo pipefail
+
+          mapfile -t project_rpms < <(
+            find /tmp/ipa-gpo-rpms -type f \
+              -name 'freeipa-server-gpo-*.rpm' \
+              ! -name '*.src.rpm' \
+              ! -name '*debuginfo*' \
+              -print
+          )
+
+          if [ "${#project_rpms[@]}" -ne 1 ]; then
+            printf 'Expected exactly one project RPM, found %s:\n' \
+              "${#project_rpms[@]}"
+            find /tmp/ipa-gpo-rpms -type f -print
+            exit 1
+          fi
+
+          test -n "$EXPECTED_SHA256"
+          digest="$(sha256sum "${project_rpms[0]}")"
+          test "${digest%% *}" = "$EXPECTED_SHA256"
+          rpm -qpi "${project_rpms[0]}"
+
+      - name: Inspect runner container
+        run: |
+          set -euxo pipefail
+
+          id
+          uname -a
+          podman --version
+          podman info
+          findmnt -T /sys/fs/cgroup
+          cat /proc/self/cgroup
+
+      - name: Probe nested Podman
+        run: |
+          set -euxo pipefail
+
+          podman run --rm \
+            registry.altlinux.org/sisyphus/alt:latest \
+            /bin/true
+
+          podman run --rm --privileged \
+            registry.altlinux.org/sisyphus/alt:latest \
+            /usr/bin/id
+
+      - name: Build minimal ALT systemd image
+        run: |
+          set -euxo pipefail
+
+          podman build --tag localhost/ipa-gpo-systemd-probe:latest -f - . <<'EOF'
+          FROM registry.altlinux.org/sisyphus/alt:latest
+          RUN apt-get update \
+              && apt-get install -y systemd dbus \
+              && apt-get clean
+          STOPSIGNAL SIGRTMIN+3
+          CMD ["/sbin/init"]
+          EOF
+
+      - name: Probe systemd inside nested container
+        run: |
+          set -euxo pipefail
+
+          podman run --detach \
+            --name ipa-gpo-systemd-probe \
+            --privileged \
+            --systemd=always \
+            ipa-gpo-systemd-probe
+
+          system_state=""
+          for attempt in $(seq 1 30); do
+            system_state="$(podman exec ipa-gpo-systemd-probe \
+              systemctl is-system-running 2>/dev/null || true)"
+            case "$system_state" in
+              running|degraded)
+                break
+                ;;
+            esac
+            sleep 1
+          done
+
+          podman exec ipa-gpo-systemd-probe \
+            systemctl --no-pager --full status || true
+
+          case "$system_state" in
+            running|degraded)
+              echo "Nested systemd reached acceptable state: $system_state"
+              ;;
+            *)
+              echo "Nested systemd did not start: $system_state"
+              exit 1
+              ;;
+          esac
+
+      - name: Build ALT FreeIPA server image
+        run: |
+          set -euxo pipefail
+
+          podman build --tag localhost/ipa-gpo-freeipa-probe:latest -f - . <<'EOF'
+          FROM localhost/ipa-gpo-systemd-probe:latest
+          RUN apt-get update \
+              && apt-get install -y \
+                   freeipa-server \
+                   python3-module-pytest \
+              && apt-get clean
+          EOF
+
+      - name: Verify FreeIPA package payload
+        run: |
+          set -euxo pipefail
+
+          podman run --rm \
+            localhost/ipa-gpo-freeipa-probe:latest \
+            rpm -q freeipa-server freeipa-server-core
+
+          podman run --rm \
+            localhost/ipa-gpo-freeipa-probe:latest \
+            ipa-server-install --help >/dev/null
+
+      - name: Probe systemd in FreeIPA image
+        run: |
+          set -euxo pipefail
+
+          podman run --detach \
+            --name ipa-gpo-freeipa-probe \
+            --hostname server.ipa.test \
+            --privileged \
+            --systemd=always \
+            localhost/ipa-gpo-freeipa-probe:latest
+
+          system_state=""
+          for attempt in $(seq 1 30); do
+            system_state="$(podman exec ipa-gpo-freeipa-probe \
+              systemctl is-system-running 2>/dev/null || true)"
+            case "$system_state" in
+              running|degraded)
+                break
+                ;;
+            esac
+            sleep 1
+          done
+
+          podman exec ipa-gpo-freeipa-probe \
+            rpm -q freeipa-server freeipa-server-core
+          podman exec ipa-gpo-freeipa-probe \
+            systemctl is-active dbus.service
+
+          case "$system_state" in
+            running|degraded)
+              echo "FreeIPA image reached acceptable state: $system_state"
+              ;;
+            *)
+              echo "FreeIPA image did not start: $system_state"
+              exit 1
+              ;;
+          esac
+
+      - name: Install minimal IPA domain
+        run: |
+          set -euo pipefail
+
+          ipa_hostname="$(podman exec ipa-gpo-freeipa-probe hostname --fqdn)"
+          ipa_address="$(podman inspect \
+            --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
+            ipa-gpo-freeipa-probe)"
+
+          test "$ipa_hostname" = "server.ipa.test"
+          test -n "$ipa_address"
+
+          podman exec ipa-gpo-freeipa-probe \
+            getent hosts server.ipa.test
+
+          podman exec ipa-gpo-freeipa-probe \
+            ipa-server-install \
+              --unattended \
+              --hostname=server.ipa.test \
+              --ip-address="$ipa_address" \
+              --domain=ipa.test \
+              --realm=IPA.TEST \
+              --ds-password='IpaTest-Directory-42!' \
+              --admin-password='IpaTest-Administrator-42!' \
+              --no-ntp \
+              --no-host-dns \
+              --no-ssh \
+              --no-sshd
+
+      - name: Verify IPA domain
+        run: |
+          set -euo pipefail
+
+          podman exec ipa-gpo-freeipa-probe ipactl status
+
+          printf '%s\n' 'IpaTest-Administrator-42!' | \
+            podman exec --interactive ipa-gpo-freeipa-probe \
+              kinit admin
+
+          podman exec ipa-gpo-freeipa-probe klist
+          podman exec ipa-gpo-freeipa-probe ipa ping
+          podman exec ipa-gpo-freeipa-probe \
+            ipa user-show admin
+
+      - name: Install project RPM in IPA server
+        run: |
+          set -euo pipefail
+
+          mapfile -t project_rpms < <(
+            find /tmp/ipa-gpo-rpms -type f \
+              -name 'freeipa-server-gpo-*.rpm' \
+              ! -name '*.src.rpm' \
+              ! -name '*debuginfo*' \
+              -print
+          )
+          test "${#project_rpms[@]}" -eq 1
+
+          podman cp \
+            "${project_rpms[0]}" \
+            ipa-gpo-freeipa-probe:/tmp/freeipa-server-gpo.rpm
+
+          podman exec ipa-gpo-freeipa-probe \
+            apt-get update
+          podman exec ipa-gpo-freeipa-probe \
+            apt-get install -y /tmp/freeipa-server-gpo.rpm
+
+          podman exec ipa-gpo-freeipa-probe \
+            rpm -q freeipa-server-gpo
+          podman exec ipa-gpo-freeipa-probe \
+            rpm -V freeipa-server-gpo
+          podman exec ipa-gpo-freeipa-probe \
+            test -x /usr/bin/ipa-gpo-install
+
+      - name: Configure and verify GPO backend
+        run: |
+          set -euo pipefail
+
+          podman exec ipa-gpo-freeipa-probe \
+            ipa-gpo-install --debuglevel=2
+          podman exec ipa-gpo-freeipa-probe \
+            ipa-gpo-install --debuglevel=2 --check-only
+
+          # AD Trust adds smb and winbind to ``ipactl status``.  Their
+          # availability depends on the current Sisyphus Samba packaging,
+          # while these server-side tests require the same essential service
+          # set enforced by ipa-gpo-install itself.
+          podman exec ipa-gpo-freeipa-probe \
+            ipactl status || true
+          for service in \
+            dirsrv@IPA-TEST krb5kdc ipa sssd oddjobd; do
+            podman exec ipa-gpo-freeipa-probe \
+              systemctl is-active "$service"
+          done
+          podman exec ipa-gpo-freeipa-probe \
+            ipa ping
+          podman exec ipa-gpo-freeipa-probe \
+            test -d /var/lib/freeipa/sysvol/ipa.test/Policies
+          podman exec ipa-gpo-freeipa-probe \
+            test -d /var/lib/freeipa/gpo-editor-state
+
+      - name: Run live FreeIPA integration tests
+        run: |
+          set -euo pipefail
+
+          podman exec ipa-gpo-freeipa-probe klist -s
+          podman exec ipa-gpo-freeipa-probe \
+            mkdir -p /tmp/freeipa-server-gpo/tests
+          podman cp \
+            tests/integration \
+            ipa-gpo-freeipa-probe:/tmp/freeipa-server-gpo/tests/integration
+
+          podman exec \
+            --env FREEIPA_GPO_RUN_389DS=1 \
+            --env FREEIPA_GPO_REQUIRE_TESTS=1 \
+            --env FREEIPA_GPO_INTEGRATION_ACK=CREATE_AND_DELETE_ISOLATED_GPOS_AND_CHAINS \
+            --env FREEIPA_GPO_EXPECTED_DOMAIN=ipa.test \
+            --env PYTHONUNBUFFERED=1 \
+            ipa-gpo-freeipa-probe \
+            /bin/sh -c '
+              cd /tmp/freeipa-server-gpo
+              python3 -m pytest -vv --tb=short tests/integration
+            '
+
+      - name: Collect diagnostics and clean up
+        if: ${{ always() }}
+        run: |
+          set +e
+
+          podman ps --all
+          podman logs ipa-gpo-systemd-probe
+          podman exec ipa-gpo-systemd-probe \
+            journalctl -b --no-pager
+          podman logs ipa-gpo-freeipa-probe
+          podman exec ipa-gpo-freeipa-probe \
+            journalctl -b --no-pager
+          podman exec ipa-gpo-freeipa-probe \
+            ipactl status
+          podman exec ipa-gpo-freeipa-probe \
+            tail -n 300 /var/log/ipaserver-install.log
+          podman exec ipa-gpo-freeipa-probe \
+            tail -n 300 /var/log/freeipa/ipa-gpo-install.log
+          podman exec ipa-gpo-freeipa-probe \
+            rpm -q freeipa-server-gpo
+          podman exec ipa-gpo-freeipa-probe \
+            id ipaapi
+          podman exec ipa-gpo-freeipa-probe \
+            namei -l /var/lib/freeipa/sysvol/ipa.test/Policies
+          podman exec ipa-gpo-freeipa-probe \
+            getfacl -cp \
+              /var/lib/freeipa \
+              /var/lib/freeipa/sysvol \
+              /var/lib/freeipa/sysvol/ipa.test \
+              /var/lib/freeipa/sysvol/ipa.test/Policies
+          podman exec ipa-gpo-freeipa-probe \
+            setpriv \
+              --reuid ipaapi \
+              --regid ipaapi \
+              --clear-groups \
+              -- /bin/sh -c '
+              id
+              test -r /var/lib/freeipa/sysvol/ipa.test/Policies
+              echo "Policies read status: $?"
+              test -x /var/lib/freeipa/sysvol/ipa.test/Policies
+              echo "Policies traverse status: $?"
+            '
+          podman rm --force ipa-gpo-freeipa-probe
+          podman rm --force ipa-gpo-systemd-probe
+          podman image rm localhost/ipa-gpo-freeipa-probe:latest
+          podman image rm localhost/ipa-gpo-systemd-probe:latest
+
+  publish-package:
+    name: Publish the integration-tested RPM
+    needs: [build-package, integration]
+    if: ${{ needs.integration.result == 'success' && ((forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/tags/')) || (forgejo.event_name == 'workflow_dispatch' && inputs.publish_test_package)) }}
+    runs-on: als-tiny
+    timeout-minutes: 10
+    container:
+      image: altlinux.space/actions/runner/hasherc:sisyphus
+    env:
+      EXPECTED_SHA256: ${{ needs.build-package.outputs.rpm_sha256 }}
+      PACKAGE_SERVER: ${{ forgejo.server_url }}
+      PACKAGE_OWNER: ${{ forgejo.repository_owner }}
+    steps:
+      - name: Check out publication script
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download the tested RPM
+        uses: actions/download-artifact@v3
+        with:
+          name: alt-packages
+          path: /tmp/ipa-gpo-rpms
 
       - name: Publish release in Forgejo Packages
         if: ${{ forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/tags/') }}
-        uses: actions/upload-rpm-action@main
-        with:
-          token: ${{ secrets.PACKAGE_TOKEN }}
-          directory: ~/.cache/hasherc/freeipa-server-gpo/out/RPMS
-          group: freeipa-server-gpo
+        env:
+          PACKAGE_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
+          PACKAGE_GROUP: freeipa-server-gpo
+        run: bash ci/publish-rpm.sh /tmp/ipa-gpo-rpms
 
       - name: Test publish to Forgejo Packages
         if: ${{ forgejo.event_name == 'workflow_dispatch' && inputs.publish_test_package }}
-        uses: actions/upload-rpm-action@main
-        with:
-          token: ${{ secrets.PACKAGE_TOKEN }}
-          directory: ~/.cache/hasherc/freeipa-server-gpo/out/RPMS
-          group: freeipa-server-gpo-test
+        env:
+          PACKAGE_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
+          PACKAGE_GROUP: freeipa-server-gpo-test
+        run: bash ci/publish-rpm.sh /tmp/ipa-gpo-rpms

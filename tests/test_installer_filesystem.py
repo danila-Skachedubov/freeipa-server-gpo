@@ -163,6 +163,10 @@ def test_new_gpo_handler_applies_editor_acls_after_creation(tmp_path, monkeypatc
     assert calls == [(str(policies), str(policy))]
     assert (policy / "Machine").is_dir()
     assert (policy / "User").is_dir()
+    assert (policy / "Machine/Scripts/Startup").is_dir()
+    assert (policy / "Machine/Scripts/Shutdown").is_dir()
+    assert (policy / "User/Scripts/Logon").is_dir()
+    assert (policy / "User/Scripts/Logoff").is_dir()
     assert (policy / "GPT.INI").read_text(encoding="utf-8") == (
         "[General]\ndisplayName=Example policy\nVersion=0\n"
     )
@@ -530,6 +534,10 @@ def test_install_configures_fresh_filesystem_and_health_check():
             calls.append("oddjob")
             return True
 
+        def restart_httpd(self):
+            calls.append("httpd")
+            return True
+
     class Checker:
         def check_editor_filesystem(self):
             calls.append("health")
@@ -544,4 +552,4 @@ def test_install_configures_fresh_filesystem_and_health_check():
     }
 
     assert execute_required_actions(Actions(), checks, Checker()) is True
-    assert calls == ["filesystem", "health", "plugins", "oddjob"]
+    assert calls == ["filesystem", "health", "plugins", "oddjob", "httpd"]

@@ -143,6 +143,10 @@ msgstr "Выполняется необратимое обновление сх�
 msgid "Run ipa-server-upgrade"
 msgstr "Выполнить ipa-server-upgrade"
 
+#: ipa_gpo_install/cli.py:194
+msgid "Restart httpd service"
+msgstr "Перезапуск службы httpd"
+
 #: ipa_gpo_install/cli.py:191
 msgid "Checking critical requirements"
 msgstr "Проверка критических требований"
@@ -412,6 +416,18 @@ msgstr "Не удалось перезапустить службу oddjob: {}"
 #: ipa_gpo_install/actions.py:212
 msgid "Error restarting oddjob service: {}"
 msgstr "Ошибка перезапуска службы oddjob: {}"
+
+#: ipa_gpo_install/actions.py:314
+msgid "Restarting httpd service"
+msgstr "Выполняется перезапуск службы httpd"
+
+#: ipa_gpo_install/actions.py:320
+msgid "httpd service restarted successfully"
+msgstr "Служба httpd успешно перезапущена"
+
+#: ipa_gpo_install/actions.py:331
+msgid "Error restarting httpd service: {}"
+msgstr "Ошибка перезапуска службы httpd: {}"
 
 #: ipa_gpo_install/actions.py:271 ipa_gpo_install/actions.py:305
 msgid "Plugin file not found: {}"

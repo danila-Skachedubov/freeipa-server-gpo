@@ -58,6 +58,17 @@ def main():
 
         ensure_new_gpo_acls(policies_path, policy_path)
 
+        # Create the managed script asset directories only after the default
+        # ACLs have been applied to Machine and User.  The descendants then
+        # inherit write access for the ipaapi worker that runs libadmix.
+        for relative_path in (
+            ("Machine", "Scripts", "Startup"),
+            ("Machine", "Scripts", "Shutdown"),
+            ("User", "Scripts", "Logon"),
+            ("User", "Scripts", "Logoff"),
+        ):
+            os.makedirs(os.path.join(policy_path, *relative_path))
+
         print("Created GPT.INI file: {}".format(gpt_ini_path))
         print("GPO structure creation completed successfully")
         return 0

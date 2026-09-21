@@ -188,6 +188,12 @@ def execute_required_actions(
         if not run_task(_("Run ipa-server-upgrade"), actions.run_ipa_server_upgrade):
             return False
 
+    # RPM installation updates server-side IPA modules while Apache workers
+    # may still have the old command registry in memory.  Reload them after
+    # the schema is ready so the installed CLI can discover the new commands.
+    if not run_task(_("Restart httpd service"), actions.restart_httpd):
+        return False
+
     return True
 
 
