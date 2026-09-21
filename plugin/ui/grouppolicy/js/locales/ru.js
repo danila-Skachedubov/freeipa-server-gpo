@@ -1,15 +1,109 @@
 define([], function() {
   return {
-    // Общие тексты
+    // Common text
     common: {
       help: 'Помощь:',
       description: 'Описание:',
       options: 'Опции:',
       comment: 'Комментарий:',
-      edit: 'Редактировать'
+      edit: 'Редактировать',
+      save: 'Сохранить'
     },
 
-    // Политики
+    // Menu
+    menu: {
+      groupPolicy: 'Групповые политики',
+      chains: 'Цепочки',
+      groupPolicyObjects: 'Объекты групповых политик'
+    },
+
+    // Group Policy Chains
+    chain: {
+      enable: 'Включить',
+      disable: 'Отключить',
+      moveUp: 'Переместить вверх',
+      moveDown: 'Переместить вниз',
+      moveGpcUp: 'Переместить GPC вверх',
+      moveGpcDown: 'Переместить GPC вниз',
+      title: 'Цепочка групповых политик',
+      titlePlural: 'Цепочки групповых политик',
+      gpoTab: 'Объекты групповых политик',
+      statusActive: 'Активна',
+      statusInactive: 'Неактивна',
+      statusUnknown: 'Неизвестно',
+      enableConfirm: 'Вы уверены, что хотите включить выбранную цепочку?',
+      disableConfirm: 'Вы уверены, что хотите отключить выбранную цепочку?',
+      selectOneChainEnable: 'Выберите ровно одну цепочку для включения',
+      selectOneChainDisable: 'Выберите ровно одну цепочку для отключения',
+      selectOneGpc: 'Выберите ровно один объект групповой политики',
+      selectOneChainMove: 'Выберите ровно одну цепочку для перемещения',
+      enabledSuccessfully: 'Цепочка «%s» успешно включена',
+      disabledSuccessfully: 'Цепочка «%s» успешно отключена',
+      enableFailed: 'Не удалось включить цепочку',
+      disableFailed: 'Не удалось отключить цепочку',
+      movedUpSuccessfully: 'Цепочка успешно перемещена вверх',
+      movedDownSuccessfully: 'Цепочка успешно перемещена вниз',
+      moveUpFailed: 'Не удалось переместить цепочку вверх: %s',
+      moveDownFailed: 'Не удалось переместить цепочку вниз: %s',
+      movedSuccessfully: 'Цепочка «%s» успешно перемещена',
+      moveFailed: 'Не удалось переместить цепочку',
+      reorderFailed: 'Не удалось изменить порядок цепочек',
+      unableToDetermineChainUp: 'Не удалось определить имя цепочки для перемещения вверх',
+      unableToDetermineChainDown: 'Не удалось определить имя цепочки для перемещения вниз',
+      gpcMovedUp: 'Объект групповой политики «%s» успешно перемещён вверх',
+      gpcMovedDown: 'Объект групповой политики «%s» успешно перемещён вниз',
+      gpcMoveUpFailed: 'Не удалось переместить объект групповой политики вверх',
+      gpcMoveDownFailed: 'Не удалось переместить объект групповой политики вниз',
+      gpoMovedSuccessfully: 'Объект групповой политики «%s» успешно перемещён',
+      gpoMoveFailed: 'Не удалось переместить объект групповой политики',
+      gpoReorderFailed: 'Не удалось изменить порядок объектов групповых политик',
+      unableToDetermineGpo: 'Не удалось определить имя объекта групповой политики',
+      addTitle: 'Добавить цепочку групповых политик',
+      noChanges: 'Изменений нет',
+      updatedSuccessfully: 'Цепочка «%s» успешно обновлена',
+      fields: {
+        cn: 'Имя цепочки',
+        description: 'Описание',
+        usergroup: 'Группа пользователей',
+        computergroup: 'Группа компьютеров',
+        active: 'Активна',
+        gplink: 'Ссылки групповых политик',
+        chainNameDoc: 'Уникальное имя для цепочки групповых политик',
+        descriptionDoc: 'Человекочитаемое описание цепочки (необязательно)',
+        userGroupDoc: 'Выберите группу пользователей для этой цепочки',
+        computerGroupDoc: 'Выберите группу компьютеров для этой цепочки',
+        gplinkDoc: 'Выберите объекты групповых политик для связывания с этой цепочкой'
+      }
+    },
+
+    // Group Policy Objects
+    gpo: {
+      title: 'Объекты групповых политик',
+      titleSingular: 'Объект групповой политики',
+      addTitle: 'Добавить объект групповой политики',
+      fields: {
+        policyName: 'Имя политики',
+        guid: 'GUID',
+        version: 'Версия',
+        flags: 'Флаги',
+        identity: 'Идентификация',
+        distinguishedName: 'Различающееся имя',
+        versionNumber: 'Номер версии',
+        containerName: 'Имя контейнера'
+      },
+      noChanges: 'Изменений нет',
+      updatedSuccessfully: 'Объект групповой политики «%s» успешно обновлён',
+      renamedSuccessfully: 'Объект групповой политики переименован с «%s» на «%s» успешно',
+      updateFailed: 'Не удалось обновить объект групповой политики',
+      patternError: 'Имя политики может содержать только латинские буквы, цифры, «_», «-», «.» и «$»; см. \'ipa help Group Policy Object\' для полного описания формата',
+      cannotDetermineName: 'Не удалось определить имя объекта групповой политики',
+      gpuiInitializeFailed: 'Не удалось инициализировать модуль GPUI',
+      gpuiLoadFailed: 'Не удалось загрузить модуль GPUI',
+      addToChainTitle: 'Добавить объекты групповых политик в цепочку',
+      removeFromChainTitle: 'Удалить объекты групповых политик из цепочки'
+    },
+
+    // Policies
     policies: {
       localGroupPolicy: '[Локальная групповая политика]',
       machine: 'Компьютер',
@@ -28,7 +122,7 @@ define([], function() {
       supportedOn: 'Поддерживается на:',
     },
 
-    // Настройки (Preferences)
+    // Preferences
     preferences: {
       title: 'Настройки',
       description: 'Политики настроек.',
@@ -59,7 +153,13 @@ define([], function() {
         specified: 'Задано',
         unspecified: 'Не задано',
         userContext: 'Выполнять в контексте безопасности вошедшего пользователя (параметр политики пользователя)',
+        applyOnce: 'Применить только один раз',
+        itemSelection: 'Выбор элементов',
         filtersHeading: 'Выбор элементов',
+        tabBasic: 'Основные настройки',
+        tabGeneral: 'Общие',
+        targettingButton: 'Нацеливание',
+        targettingTitle: 'Нацеливание',
         selectFilter: 'Выберите фильтр для просмотра его полей.',
         filterType: 'Тип фильтра',
         addFilter: 'Добавить фильтр',
@@ -86,7 +186,45 @@ define([], function() {
         confirmDelete: 'Удалить выбранный элемент настройки?',
         confirmRefreshDiscard: 'Обновить данные с сервера и отбросить текущий черновик?',
         confirmDiscardChanges: 'Отбросить несохранённые изменения?',
-        reconcileSucceededRefresh: 'Восстановление публикации завершено. Обновите элемент перед дальнейшим изменением.'
+        reconcileSucceededRefresh: 'Восстановление публикации завершено. Обновите элемент перед дальнейшим изменением.',
+        settingsTitle: 'Настройки:',
+        descriptionTitle: 'Описание:',
+        noDescription: 'Без описания',
+        settingBypassErrors: 'Игнорировать ошибки',
+        settingRemovePolicy: 'Remove policy',
+        settingDisabled: 'Disabled',
+        columnName: 'Название',
+        columnOrder: 'Очередность',
+        columnAction: 'Действие',
+        columnTarget: 'Target',
+        columnPath: 'Путь',
+        columnSourcePath: 'Source path',
+        columnTargetPath: 'Target path',
+        columnShortcutPath: 'Shortcut path',
+        columnHive: 'Куст',
+        columnKey: 'Ключ',
+        columnUserLimit: 'Лимит пользователей',
+        columnAbe: 'Перечисление на основе доступа',
+        columnSection: 'Секция',
+        columnProperty: 'Свойство',
+        columnValue: 'Значение',
+        columnLetter: 'Буква',
+        columnDriver: 'Драйвер',
+        columnServer: 'Сервер',
+        columnDatabase: 'База данных',
+        columnDeviceClass: 'Класс устройства',
+        columnDeviceId: 'ИД устройства',
+        columnLocation: 'Расположение',
+        columnStartupType: 'Тип запуска',
+        columnServiceAction: 'Действие службы',
+        columnApplication: 'Приложение',
+        columnUserName: 'Имя пользователя',
+        columnIpAddress: 'IP-адрес',
+        columnSystemLocale: 'Системный язык',
+        actionCreate: 'Создать',
+        actionReplace: 'Заменить',
+        actionUpdate: 'Обновить',
+        actionDelete: 'Удалить'
       }
     },
 
@@ -106,7 +244,31 @@ define([], function() {
 
     systemSettings: {
       systemSettings:'Настройки Системы',
-      scripts: 'Скрипты'
+      scripts: 'Скрипты',
+      startupScript: 'Сценарий запуска',
+      shutdownScript: 'Сценарий завершения работы',
+      dialogTitle: 'Диалог настроек',
+      tabScript: 'Сценарий',
+      tabPowershell: 'Скрипты PowerShell',
+      scriptsForStartup: 'Сценарии: “Запуск” для локальной групповой политики',
+      scriptsForShutdown: 'Сценарии: “Завершение работы” для локальной групповой политики',
+      columnName: 'Имя скрипта',
+      columnArguments: 'Аргументы',
+      up: 'Вверх',
+      down: 'Вниз',
+      add: 'Добавить',
+      edit: 'Изменить',
+      remove: 'Удалить',
+      scriptsPathLabel: 'Файлы сценариев, хранящиеся в этом объекте групповой политики, расположены по следующему пути: -',
+      psOrderLabel: 'Запуск скриптов для этого объекта в следующем порядке:',
+      psOrderNotConfigured: 'Не настроено',
+      psRequirement: 'Для сценариев Powershell требуется как минимум Windows 7 или Windows Server 2008 R2',
+      addTitle: 'Добавить скрипт',
+      editTitle: 'Редактировать скрипт',
+      nameLabel: 'Имя скрипта:',
+      argumentsLabel: 'Аргументы скрипта:',
+      nameRequired: 'Введите имя скрипта.',
+      ok: 'Ок'
     },
 
     policyChangedModal: {
@@ -114,6 +276,10 @@ define([], function() {
       message: 'Настройки политики были изменены, хотите сохранить их?',
       no: 'Нет',
       yes: 'Да'
+    },
+
+    confirmModal: {
+      title: 'Подтверждение'
     },
   };
 });

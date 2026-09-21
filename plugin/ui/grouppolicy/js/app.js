@@ -6,6 +6,7 @@ define([
     './components/templates/default-template',
     './components/templates/admx-template',
     './components/templates/folder-template',
+    './components/templates/script-template',
     './components/templates/preference/preferences-view-template',
     './components/tree-view/tree-view-list',
     './util/element-creator',
@@ -20,6 +21,7 @@ define([
     defaultTemplateModule,
     admxTemplateModule,
     folderTemplateModule,
+    scriptsTemplateModule,
     preferencesTemplateModule,
     treeViewListModule,
     elementCreatorModule,
@@ -35,6 +37,7 @@ define([
     var renderAdmxTemplate = admxTemplateModule.renderAdmxTemplate;
     var renderFolderTemplate = folderTemplateModule.renderFolderTemplate;
     var renderHelpBlock = folderTemplateModule.renderHelpBlock;
+    var renderScriptsTemplate = scriptsTemplateModule.renderScriptsTemplate;
     var renderPreferencesTemplate = preferencesTemplateModule.renderPreferencesTemplate;
     var setTreeItemActive = treeViewListModule.setTreeItemActive;
     var setFolderOpenedState = treeViewListModule.setFolderOpenedState;
@@ -195,8 +198,16 @@ define([
                     && this.selectedItem.item.template === 'admx';
             },
 
+            isPreferencesItemSelected: function() {
+                return this.selectedItem
+                    && this.selectedItem.item
+                    && this.selectedItem.item.type === 'file'
+                    && this.selectedItem.item.template === 'preferences';
+            },
+
             isHelpToggleAvailable: function() {
-                return this.isFolderItemSelected() || this.isAdmxItemSelected();
+                return this.isFolderItemSelected() || this.isAdmxItemSelected()
+                    || this.isPreferencesItemSelected();
             },
 
             getCurrentHelpSourceItem: function() {
@@ -252,7 +263,7 @@ define([
                     ? this.workspace.getElement()
                     : null;
                 var helpBlocks = workspaceEl
-                    ? workspaceEl.querySelectorAll('.gp__list-children-help, .gp__admx-help')
+                    ? workspaceEl.querySelectorAll('.gp__list-children-help, .gp__admx-help, .preference__info')
                     : null;
 
                 if (!helpBlocks || helpBlocks.length === 0) {
@@ -336,12 +347,17 @@ define([
                         templateResult = await renderPreferencesTemplate({
                             header: this.header,
                             item: item,
+                            isHelpOpen: this.isHelpOpen,
                             isCurrent: function() {
                                 return renderRequestId === this.renderRequestId
                                     && this.selectedItem
                                     && this.selectedItem.item === item;
                             }.bind(this)
                         });
+                    } else if (item.template === 'scripts') {
+                        if (admxActions) admxActions.style.display = 'none';
+                        if (helpSeparator) helpSeparator.style.display = 'none';
+                        templateResult = renderScriptsTemplate({ item: item });
                     } else {
                         templateResult = renderDefaultTemplate();
                     }

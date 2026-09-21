@@ -45,7 +45,31 @@ UI_PLUGIN_FILES = (
     'js/components/templates/admx-template.js',
     'js/components/templates/default-template.js',
     'js/components/templates/folder-template.js',
+    'js/components/templates/preference/layouts/applications.js',
+    'js/components/templates/preference/layouts/control-panel.js',
+    'js/components/templates/preference/layouts/data-sources.js',
+    'js/components/templates/preference/layouts/devices.js',
+    'js/components/templates/preference/layouts/drives.js',
+    'js/components/templates/preference/layouts/environment-variables.js',
+    'js/components/templates/preference/layouts/files.js',
+    'js/components/templates/preference/layouts/folder-options.js',
+    'js/components/templates/preference/layouts/folders.js',
+    'js/components/templates/preference/layouts/index.js',
+    'js/components/templates/preference/layouts/ini-files.js',
+    'js/components/templates/preference/layouts/internet-settings.js',
+    'js/components/templates/preference/layouts/local-users-and-groups.js',
+    'js/components/templates/preference/layouts/network-options.js',
+    'js/components/templates/preference/layouts/network-shares.js',
+    'js/components/templates/preference/layouts/power-options.js',
+    'js/components/templates/preference/layouts/printers.js',
+    'js/components/templates/preference/layouts/regional-options.js',
+    'js/components/templates/preference/layouts/registry.js',
+    'js/components/templates/preference/layouts/scheduled-tasks.js',
+    'js/components/templates/preference/layouts/services.js',
+    'js/components/templates/preference/layouts/shortcuts.js',
+    'js/components/templates/preference/layouts/start-menu.js',
     'js/components/templates/preference/preferences-view-template.js',
+    'js/components/templates/script-template.js',
     'js/components/tree-view/tree-view-list-data.js',
     'js/components/tree-view/tree-view-list.js',
     'js/components/tree-view/tree-view.js',
@@ -261,10 +285,10 @@ class IPAActions:
 
     def run_ipa_server_upgrade(self):
         """
-        Запустить ipa-server-upgrade для применения схем и обновлений
+        Run ipa-server-upgrade to apply schema changes and updates.
         
         Returns:
-            True если обновление прошло успешно, False иначе
+            True if the upgrade succeeds, otherwise False.
         """
         try:
             self.logger.info(_("Running ipa-server-upgrade to apply schema changes"))
@@ -286,10 +310,10 @@ class IPAActions:
 
     def restart_oddjob(self):
         """
-        Перезапустить службу oddjob для подхвата новых D-Bus обработчиков
+        Restart the oddjob service to load new D-Bus handlers.
         
         Returns:
-            True если перезапуск прошел успешно, False иначе
+            True if the restart succeeds, otherwise False.
         """
         try:
             self.logger.info(_("Restarting oddjob service"))

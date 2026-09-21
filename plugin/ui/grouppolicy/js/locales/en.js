@@ -6,10 +6,104 @@ define([], function() {
       description: 'Description:',
       options: 'Options:',
       comment: 'Comment:',
-      edit: 'Edit'
+      edit: 'Edit',
+      save: 'Save'
     },
 
-    // Политики
+    // Menu
+    menu: {
+      groupPolicy: 'GROUP Policy',
+      chains: 'Chains',
+      groupPolicyObjects: 'Group Policy Objects'
+    },
+
+    // Group Policy Chains
+    chain: {
+      enable: 'Enable',
+      disable: 'Disable',
+      moveUp: 'Move Up',
+      moveDown: 'Move Down',
+      moveGpcUp: 'Move GPC Up',
+      moveGpcDown: 'Move GPC Down',
+      title: 'Group Policy Chain',
+      titlePlural: 'Group Policy Chains',
+      gpoTab: 'Group Policy Objects',
+      statusActive: 'Active',
+      statusInactive: 'Inactive',
+      statusUnknown: 'Unknown',
+      enableConfirm: 'Are you sure you want to enable the selected chain?',
+      disableConfirm: 'Are you sure you want to disable the selected chain?',
+      selectOneChainEnable: 'Please select exactly one chain to enable',
+      selectOneChainDisable: 'Please select exactly one chain to disable',
+      selectOneGpc: 'Please select exactly one GPC to move',
+      selectOneChainMove: 'Please select exactly one chain to move',
+      enabledSuccessfully: 'Chain "%s" enabled successfully',
+      disabledSuccessfully: 'Chain "%s" disabled successfully',
+      enableFailed: 'Failed to enable chain',
+      disableFailed: 'Failed to disable chain',
+      movedUpSuccessfully: 'Chain moved up successfully',
+      movedDownSuccessfully: 'Chain moved down successfully',
+      moveUpFailed: 'Failed to move chain up: %s',
+      moveDownFailed: 'Failed to move chain down: %s',
+      movedSuccessfully: 'Chain "%s" moved successfully',
+      moveFailed: 'Failed to move chain',
+      reorderFailed: 'Failed to reorder chains',
+      unableToDetermineChainUp: 'Unable to determine chain name for move up',
+      unableToDetermineChainDown: 'Unable to determine chain name for move down',
+      gpcMovedUp: 'GPC "%s" moved up successfully',
+      gpcMovedDown: 'GPC "%s" moved down successfully',
+      gpcMoveUpFailed: 'Failed to move GPC up',
+      gpcMoveDownFailed: 'Failed to move GPC down',
+      gpoMovedSuccessfully: 'Group Policy Object "%s" moved successfully',
+      gpoMoveFailed: 'Failed to move group policy object',
+      gpoReorderFailed: 'Failed to reorder group policy objects',
+      unableToDetermineGpo: 'Unable to determine group policy object name',
+      addTitle: 'Add Group Policy Chain',
+      noChanges: 'No changes made',
+      updatedSuccessfully: 'Chain "%s" updated successfully',
+      fields: {
+        cn: 'Chain name',
+        description: 'Description',
+        usergroup: 'User group',
+        computergroup: 'Computer group',
+        active: 'Active',
+        gplink: 'Group Policy Links',
+        chainNameDoc: 'Unique name for the Group Policy Chain',
+        descriptionDoc: 'Human-readable description for the chain (optional)',
+        userGroupDoc: 'Select a user group for this chain',
+        computerGroupDoc: 'Select a computer group for this chain',
+        gplinkDoc: 'Select Group Policy Objects to link to this chain'
+      }
+    },
+
+    // Group Policy Objects
+    gpo: {
+      title: 'Group Policy Objects',
+      titleSingular: 'Group Policy Object',
+      addTitle: 'Add Group Policy Object',
+      fields: {
+        policyName: 'Policy Name',
+        guid: 'GUID',
+        version: 'Version',
+        flags: 'Flags',
+        identity: 'Identity',
+        distinguishedName: 'Distinguished Name',
+        versionNumber: 'Version Number',
+        containerName: 'Container Name'
+      },
+      noChanges: 'No changes made',
+      updatedSuccessfully: 'GPO "%s" updated successfully',
+      renamedSuccessfully: 'GPO renamed from "%s" to "%s" successfully',
+      updateFailed: 'Failed to update GPO',
+      patternError: 'Policy name may only include letters, numbers, _, -, . and $, refer to \'ipa help Group Policy Object\' for complete format description',
+      cannotDetermineName: 'Cannot determine GPO name',
+      gpuiInitializeFailed: 'Failed to initialize GPUI module',
+      gpuiLoadFailed: 'Failed to load GPUI module',
+      addToChainTitle: 'Add Group Policy Objects to Chain',
+      removeFromChainTitle: 'Remove Group Policy Objects from Chain'
+    },
+
+    // Policies
     policies: {
       localGroupPolicy: '[Local Group Policy]',
       machine: 'Machine',
@@ -28,7 +122,7 @@ define([], function() {
       supportedOn: 'Supported on:'
     },
 
-    // Настройки (Preferences)
+    // Preferences
     preferences: {
       title: 'Preferences',
       description: 'Preferences policies.',
@@ -59,7 +153,13 @@ define([], function() {
         specified: 'Specified',
         unspecified: 'Not specified',
         userContext: "Run in logged-on user's security context (user policy option)",
+        applyOnce: 'Apply only once',
+        itemSelection: 'Item selection',
         filtersHeading: 'Item-level targeting',
+        tabBasic: 'Basic settings',
+        tabGeneral: 'General',
+        targettingButton: 'Targetting',
+        targettingTitle: 'Targetting',
         selectFilter: 'Select a filter to view its fields.',
         filterType: 'Filter type',
         addFilter: 'Add filter',
@@ -86,7 +186,45 @@ define([], function() {
         confirmDelete: 'Delete the selected preference item?',
         confirmRefreshDiscard: 'Refresh from the server and discard the current draft?',
         confirmDiscardChanges: 'Discard unsaved changes?',
-        reconcileSucceededRefresh: 'Publication recovery succeeded. Refresh the item before editing it again.'
+        reconcileSucceededRefresh: 'Publication recovery succeeded. Refresh the item before editing it again.',
+        settingsTitle: 'Settings:',
+        descriptionTitle: 'Description:',
+        noDescription: 'No description',
+        settingBypassErrors: 'Ignore errors',
+        settingRemovePolicy: 'Remove policy',
+        settingDisabled: 'Disabled',
+        columnName: 'Name',
+        columnOrder: 'Order',
+        columnAction: 'Action',
+        columnTarget: 'Target',
+        columnPath: 'Path',
+        columnSourcePath: 'Source path',
+        columnTargetPath: 'Target path',
+        columnShortcutPath: 'Shortcut path',
+        columnHive: 'Hive',
+        columnKey: 'Key',
+        columnUserLimit: 'User limit',
+        columnAbe: 'Access-based enumeration',
+        columnSection: 'Section',
+        columnProperty: 'Property',
+        columnValue: 'Value',
+        columnLetter: 'Letter',
+        columnDriver: 'Driver',
+        columnServer: 'Server',
+        columnDatabase: 'Database',
+        columnDeviceClass: 'Device class',
+        columnDeviceId: 'Device ID',
+        columnLocation: 'Location',
+        columnStartupType: 'Startup type',
+        columnServiceAction: 'Service action',
+        columnApplication: 'Application',
+        columnUserName: 'User name',
+        columnIpAddress: 'IP address',
+        columnSystemLocale: 'System locale',
+        actionCreate: 'Create',
+        actionReplace: 'Replace',
+        actionUpdate: 'Update',
+        actionDelete: 'Delete'
       }
     },
 
@@ -106,7 +244,31 @@ define([], function() {
 
     systemSettings: {
       systemSettings:'System settings',
-      scripts: 'Scripts'
+      scripts: 'Scripts',
+      startupScript: 'Startup script',
+      shutdownScript: 'Shutdown script',
+      dialogTitle: 'Settings dialog',
+      tabScript: 'Script',
+      tabPowershell: 'PowerShell scripts',
+      scriptsForStartup: 'Scripts: “Startup” for Local Group Policy',
+      scriptsForShutdown: 'Scripts: “Shutdown” for Local Group Policy',
+      columnName: 'Script name',
+      columnArguments: 'Arguments',
+      up: 'Up',
+      down: 'Down',
+      add: 'Add',
+      edit: 'Edit',
+      remove: 'Remove',
+      scriptsPathLabel: 'The script files stored in this Group Policy object are located at the following path: -',
+      psOrderLabel: 'Run scripts for this object in the following order:',
+      psOrderNotConfigured: 'Not configured',
+      psRequirement: 'PowerShell scripts require Windows 7 or Windows Server 2008 R2 at a minimum',
+      addTitle: 'Add script',
+      editTitle: 'Edit script',
+      nameLabel: 'Script name:',
+      argumentsLabel: 'Script arguments:',
+      nameRequired: 'Enter a script name.',
+      ok: 'OK'
     },
 
     policyChangedModal: {
@@ -114,6 +276,10 @@ define([], function() {
       message: 'Policy settings were modified do you want to save them?',
       no: 'No',
       yes: 'Yes'
+    },
+
+    confirmModal: {
+      title: 'Confirmation'
     },
 
   };

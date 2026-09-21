@@ -3,8 +3,6 @@ define(['../../locales/translations', '../../util/API'], function(translations, 
 
     var t = translations.t;
 
-    var PREFERENCES_ENABLED = false;
-
     function payloadList(result, key) {
         if (Array.isArray(result)) return result;
         return result && Array.isArray(result[key]) ? result[key] : [];
@@ -75,6 +73,28 @@ define(['../../locales/translations', '../../util/API'], function(translations, 
         };
     }
 
+    function scriptsNode(scope) {
+        return {
+            title: t('systemSettings.scripts'),
+            type: 'file',
+            icon: 'ico-file',
+            template: 'scripts',
+            scope: scope
+        };
+    }
+
+    function systemSettingsNode(scope) {
+        return {
+            title: t('systemSettings.systemSettings'),
+            type: 'folder',
+            opened: false,
+            icon: 'ico-folder',
+            scope: scope,
+            help: t('preferences.systemSettingsDesc'),
+            children: [scriptsNode(scope)]
+        };
+    }
+
     function scopeNode(scope, documents) {
         var isComputer = scope === 'computer';
         var preferenceChildren = documents
@@ -82,7 +102,7 @@ define(['../../locales/translations', '../../util/API'], function(translations, 
             .map(preferenceNode);
         var children = [administrativeTemplates(scope)];
 
-        if (PREFERENCES_ENABLED && preferenceChildren.length) {
+        if (preferenceChildren.length) {
             children.push({
                 title: t('preferences.title'),
                 type: 'folder',
@@ -92,6 +112,8 @@ define(['../../locales/translations', '../../util/API'], function(translations, 
                 help: t('preferences.description')
             });
         }
+
+        children.push(systemSettingsNode(scope));
 
         return {
             title: isComputer ? t('policies.machine') : t('policies.user'),

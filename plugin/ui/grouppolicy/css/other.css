@@ -57,113 +57,12 @@
   background-color: #d1d1d1;
 }
 
-.gp__admx-wrapper .packages-control__modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  transition: 0.5s all;
-  z-index: 100;
-  border: 1px solid #d1d1d1;
-  background-color: #fff;
-  border-radius: 3px;
-  overflow: hidden;
-}
-.gp__admx-wrapper .packages-control__modal.active {
-  transform: translate(-50%, -50%) scale(1);
-  transition: 0.5s all;
-}
-.gp__admx-wrapper .packages-control__modal-wrapper {
-  width: 408px;
-}
-.gp__admx-wrapper .packages-control__modal-header {
-  background: #f5f5f5;
-  border-bottom: 1px solid #d1d1d1;
-  height: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-}
-.gp__admx-wrapper .packages-control__modal-header .title {
-  font-weight: 600;
-  color: #363636;
-}
-.gp__admx-wrapper .packages-control__modal-header .close {
-  width: 16px;
-  height: 16px;
-  position: absolute;
-  cursor: pointer;
-  right: 12px;
-  top: 12px;
-  background-image: url(../img/svg/close.svg);
-}
-.gp__admx-wrapper .packages-control__modal-content {
-  display: flex;
-  flex-direction: column;
-  max-height: 300px;
-  overflow-y: auto;
-  padding: 10px;
-  min-height: 100px;
-}
-.gp__admx-wrapper .packages-control__modal-footer {
-  height: 45px;
-  background-color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 20px;
-  border-top: 1px solid #d1d1d1;
-}
-.gp__admx-wrapper .packages-control__modal-footer .btn {
-  width: auto;
-  padding: 0 10px;
-}
-.gp__admx-wrapper .packages-control__modal-footer .btn-ok {
-  margin-left: auto;
-}
-
-.gp__admx-info .packages-control__btn-edit {
-  border: 1px solid #297FB0;
-  padding: 0 12px;
-  width: unset;
-  height: 25px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  background: #fff;
-  font-size: 12px;
-  border-radius: 3px;
-}
-.packages-control__btn-edit:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.packages-control__modal-content .packages-control__package-item {
-  border: 1px solid #d1d1d1;
-  padding: 5px 10px;
-  margin-bottom: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  border-radius: 2px;
-  height: 32px;
-}
-.packages-control__package-item.selected {
-  /* background-color: #297FB0;
-  color: #fff; */
-  border: 1px solid #297FB0;
-}
-.packages-control__package-item:focus {
-  outline: 1px solid #297FB0;
-}
-
 .gp__container .policy-changed__modal {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
   transition: 0.5s all;
   z-index: 100;
   border: 1px solid #d1d1d1;
@@ -173,7 +72,7 @@
 }
 .gp__container .policy-changed__modal.active {
   transform: translate(-50%, -50%) scale(1);
-  transition: 0.5s all;
+  opacity: 1;
 }
 .gp__container .policy-changed__modal-wrapper {
   width: 408px;
@@ -213,6 +112,22 @@
 .gp__container .policy-changed__modal-footer .btn-yes {
   margin-left: auto;
 }
+.gp__container .policy-changed__modal--discard {
+  z-index: 1100;
+}
+.gp__container .preference__modal.gpo-editor-preference-form--confirming {
+  pointer-events: none;
+}
+.gp__container .preference__modal.gpo-editor-preference-form--confirming .preference__modal-wrapper {
+  position: relative;
+}
+.gp__container .preference__modal.gpo-editor-preference-form--confirming .preference__modal-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 25%);
+  opacity: 1;
+}
 
 .gp__container .tree-view ul .tree-view__list{
   padding-left: 22px;
@@ -225,4 +140,73 @@
 
 .modal.modal-gpui{
   overflow: auto;
+}
+
+.modal.modal-gpui.fade .modal-dialog{
+  transform: scale(0);
+  opacity: 0;
+  transition: 0.5s all;
+}
+.modal.modal-gpui.fade.in .modal-dialog{
+  transform: scale(1);
+  opacity: 1;
+}
+.modal-backdrop.modal-gpui-backdrop.fade{
+  transition: opacity 0.5s;
+}
+
+
+
+/* .preference__modal-tabs .field__checkbox[data-field-id="properties.disabled"],
+.preference__modal-tabs .field__checkbox[data-field-id="metadata.bypassErrors"],
+.preference__modal-tabs .field__checkbox[data-field-id="metadata.removePolicy"]
+{
+  display: none;
+}
+*/
+.preference__modal-tabs #tab-general .field__input[data-field-id="metadata.name"],
+.preference__modal-tabs #tab-general .field__input[data-field-id="metadata.changed"],
+.preference__modal-tabs #tab-general .field__input[data-field-id="metadata.status"],
+.preference__modal-tabs #tab-general .field__input[data-field-id="metadata.image"]
+ {
+  display: none;
+} 
+
+/* === Drag & Drop reordering for Group Policy Chains === */
+div[name="cn"][draggable="true"],
+div[name="displayname"][draggable="true"] {
+    cursor: grab;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+div[name="cn"][draggable="true"]:active,
+div[name="displayname"][draggable="true"]:active {
+    cursor: grabbing;
+}
+
+div[name="cn"].chain-dnd-disabled,
+div[name="displayname"].chain-dnd-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+tr.chain-dnd-source > td {
+    opacity: 0.45;
+}
+
+tbody.chain-dnd-active tr.chain-dnd-insert.chain-dnd-before td:first-child {
+    box-shadow: inset 0 3px 0 0 #0088ce;
+}
+
+tbody.chain-dnd-active tr.chain-dnd-insert.chain-dnd-after td:first-child {
+    box-shadow: inset 0 -3px 0 0 #0088ce;
+} 
+
+
+
+.facet[data-entity="chain"] .facet-tabs .facet-group-label{
+  display: none;
 }
