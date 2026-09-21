@@ -901,6 +901,10 @@ define(
                     read_only: true
                 },
                 {
+                    name: 'description',
+                    label: t('chain.fields.description')
+                },
+                {
                     $type: 'entity_select',
                     name: 'usergroup',
                     label: t('chain.fields.usergroup'),
@@ -950,6 +954,11 @@ define(
                             {
                                 name: 'cn',
                                 label: t('chain.fields.cn'),
+                                sortable: false
+                            },
+                            {
+                                name: 'description',
+                                label: t('chain.fields.description'),
                                 sortable: false
                             },
                             {
@@ -1075,6 +1084,13 @@ define(
                             label: t('chain.fields.cn'),
                             doc: t('chain.fields.chainNameDoc'),
                             required: true,
+                            width: '400px'
+                        },
+                        {
+                            name: 'description',
+                            label: t('chain.fields.description'),
+                            doc: t('chain.fields.descriptionDoc'),
+                            required: false,
                             width: '400px'
                         },
                         {

@@ -63,11 +63,13 @@ define([], function() {
       updatedSuccessfully: 'Chain "%s" updated successfully',
       fields: {
         cn: 'Chain name',
+        description: 'Description',
         usergroup: 'User group',
         computergroup: 'Computer group',
         active: 'Active',
         gplink: 'Group Policy Links',
         chainNameDoc: 'Unique name for the Group Policy Chain',
+        descriptionDoc: 'Human-readable description for the chain (optional)',
         userGroupDoc: 'Select a user group for this chain',
         computerGroupDoc: 'Select a computer group for this chain',
         gplinkDoc: 'Select Group Policy Objects to link to this chain'
