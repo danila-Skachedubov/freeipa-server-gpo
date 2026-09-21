@@ -8,14 +8,17 @@ import locale
 from pathlib import Path
 
 from ipalib import api
+from ipaplatform.services import knownservices
 from ipapython import ipautil
 from .config import (
-    LOCALE_DIR, FREEIPA_BASE_PATH, get_domain_sysvol_path, get_policies_path,
+    LOCALE_DIR, FREEIPA_BASE_PATH, FREEIPA_SYSVOL_PATH,
+    get_domain_sysvol_path, get_policies_path,
     TARGET_PYTHON_PLUGINS, TARGET_UI_PLUGINS, TARGET_SCHEMA_DIR,
     TARGET_UPDATE_DIR, TARGET_DBUS_CONFIG_DIR, TARGET_DBUS_HANDLERS_DIR
 )
 from .filesystem import (
     ensure_editor_state_directory,
+    ensure_path_traversal_acls,
     ensure_policies_root_acl,
 )
 
@@ -196,6 +199,11 @@ class IPAActions:
             self.logger.info(
                 _("Configuring GPO editor ACLs on {}").format(policies_path)
             )
+            ensure_path_traversal_acls((
+                Path(FREEIPA_BASE_PATH),
+                Path(FREEIPA_SYSVOL_PATH),
+                policies_path.parent,
+            ))
             ensure_policies_root_acl(policies_path)
             self.logger.info(_("GPO editor filesystem configured successfully"))
             return True
@@ -299,6 +307,23 @@ class IPAActions:
 
         except Exception as e:
             self.logger.error(_("Error restarting oddjob service: {}").format(e))
+            return False
+
+    def restart_httpd(self):
+        """Restart Apache so its IPA workers load the installed plugins."""
+        try:
+            self.logger.info(_("Restarting httpd service"))
+
+            # FreeIPA maps the logical ``httpd`` service to the native unit
+            # name (``httpd2.service`` on ALT Linux).
+            knownservices.httpd.restart()
+            self.logger.info(_("httpd service restarted successfully"))
+            return True
+
+        except Exception as e:
+            self.logger.error(
+                _("Error restarting httpd service: {}").format(e)
+            )
             return False
 
     def are_plugins_activated(self):
