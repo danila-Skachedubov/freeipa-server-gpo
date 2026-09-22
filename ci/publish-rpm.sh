@@ -18,7 +18,12 @@ case "$PACKAGE_GROUP" in
     *) fail 'Unexpected package group' ;;
 esac
 
-mapfile -d '' -t packages < <(find "$1" -type f -name '*.rpm' -print0)
+package_list=$(mktemp)
+trap 'rm -f -- "$package_list"' EXIT
+find "$1" -type f -name '*.rpm' -print0 > "$package_list"
+mapfile -d '' -t packages < "$package_list"
+rm -f -- "$package_list"
+trap - EXIT
 [[ ${#packages[@]} -eq 1 ]] || fail "Expected exactly one RPM, found ${#packages[@]}"
 package=${packages[0]}
 digest=$(sha256sum "$package")

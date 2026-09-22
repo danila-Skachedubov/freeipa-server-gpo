@@ -133,6 +133,11 @@ def test_missing_or_ambiguous_artifact_never_uploads(publisher, count):
     assert not calls
 
 
+def test_publisher_does_not_require_dev_fd():
+    source = (ROOT / "ci/publish-rpm.sh").read_text()
+    assert "< <(" not in source
+
+
 @pytest.mark.parametrize("overrides", [
     {"PACKAGE_TOKEN": ""},
     {"EXPECTED_SHA256": ""},
