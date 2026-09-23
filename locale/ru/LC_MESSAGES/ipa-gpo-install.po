@@ -4,9 +4,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: ipa_gpo_install 0.0.1\n"
+"Project-Id-Version: ipa_gpo_install 0.1.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-03 17:10+0400\n"
+"POT-Creation-Date: 2026-09-23 16:06+0400\n"
+"PO-Revision-Date: 2026-09-23 16:01+0400\n"
 "Last-Translator: Skachedubov Danila <skachedubov@altlinux.org>\n"
 "Language-Team: Russian <gnu@d07.ru>\n"
 "Language: ru\n"
@@ -16,150 +17,7 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
 "%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: ipa_gpo_install/cli.py:46
-msgid "Debug level: 0=errors, 1=warnings, 2=debug"
-msgstr "Уровень отладки: 0=ошибки, 1=предупреждения, 2=отладка"
-
-#: ipa_gpo_install/cli.py:48
-msgid "Only perform checks without making changes"
-msgstr "Только выполнить проверки без внесения изменений"
-
-#: ipa_gpo_install/cli.py:60
-msgid "Must be root to setup Group Policy features on server"
-msgstr ""
-"Необходимо быть пользователем root для настройки функций групповой политики "
-"на сервере"
-
-#: ipa_gpo_install/cli.py:66
-msgid "The log file for this installation can be found in {}"
-msgstr "Файл журнала для этой установки можно найти в {}"
-
-#: ipa_gpo_install/cli.py:71
-msgid "Initializing IPA API"
-msgstr "Инициализация API IPA"
-
-#: ipa_gpo_install/cli.py:77
-msgid "Connected to LDAP server"
-msgstr "Подключено к серверу LDAP"
-
-#: ipa_gpo_install/cli.py:81
-msgid ""
-"Outdated Kerberos credentials. Use kdestroy and kinit to update your ticket"
-msgstr ""
-"Устаревшие учетные данные Kerberos. Используйте kdestroy и kinit для "
-"обновления билета"
-
-#: ipa_gpo_install/cli.py:85
-msgid "Cannot connect to the LDAP database. Please check if IPA is running"
-msgstr "Невозможно подключиться к базе данных LDAP. Проверьте, работает ли IPA"
-
-#: ipa_gpo_install/cli.py:89
-msgid "Error setting up environment: {}"
-msgstr "Ошибка настройки окружения: {}"
-
-#: ipa_gpo_install/cli.py:95
-msgid "Checking Kerberos ticket"
-msgstr "Проверка билета Kerberos"
-
-#: ipa_gpo_install/cli.py:97
-msgid "Missing Kerberos ticket. Run 'kinit' to obtain a valid ticket."
-msgstr ""
-"Отсутствует билет Kerberos. Выполните 'kinit' для получения действительного "
-"билета."
-
-#: ipa_gpo_install/cli.py:100
-msgid "Checking admin privileges"
-msgstr "Проверка прав администратора"
-
-#: ipa_gpo_install/cli.py:102
-msgid "Administrative privileges required."
-msgstr "Требуются права администратора."
-
-#: ipa_gpo_install/cli.py:105 ipa_gpo_install/checks.py:118
-msgid "Checking IPA services"
-msgstr "Проверка служб IPA"
-
-#: ipa_gpo_install/cli.py:107
-msgid "Essential IPA services are not running."
-msgstr "Основные службы IPA не запущены."
-
-#: ipa_gpo_install/cli.py:116
-msgid "Checking LDAP schema for required object classes"
-msgstr "Проверка схемы LDAP на наличие необходимых классов объектов"
-
-#: ipa_gpo_install/cli.py:119
-msgid "Checking if AD Trust is enabled"
-msgstr "Проверка, включено ли доверие AD"
-
-#: ipa_gpo_install/cli.py:122
-msgid "Checking SYSVOL directory and share"
-msgstr "Проверка каталога SYSVOL и общего ресурса"
-
-#: ipa_gpo_install/cli.py:131
-msgid "Running task: {}"
-msgstr "Выполнение задачи: {}"
-
-#: ipa_gpo_install/cli.py:135
-msgid "Task succeeded: {}"
-msgstr "Задача успешно выполнена: {}"
-
-#: ipa_gpo_install/cli.py:137
-msgid "Task failed: {}"
-msgstr "Задача не выполнена: {}"
-
-#: ipa_gpo_install/cli.py:140
-msgid "Task failed with error: {} - {}"
-msgstr "Задача не выполнена с ошибкой: {} - {}"
-
-#: ipa_gpo_install/cli.py:149
-msgid "Install AD Trust"
-msgstr "Установить доверие AD"
-
-#: ipa_gpo_install/cli.py:152
-msgid "Create SYSVOL directory"
-msgstr "Создать каталог SYSVOL"
-
-#: ipa_gpo_install/cli.py:155
-msgid "Create SYSVOL share"
-msgstr "Создать общий ресурс SYSVOL"
-
-#: ipa_gpo_install/cli.py:163
-msgid "Activate plugins"
-msgstr "Активировать плагины"
-
-#: ipa_gpo_install/cli.py:166
-msgid "Plugins already activated"
-msgstr "Плагины уже активированы"
-
-#: ipa_gpo_install/cli.py:168
-msgid "Restart oddjob service"
-msgstr "Перезапуск службы oddjob"
-
-#: ipa_gpo_install/cli.py:176
-msgid "About to perform irreversible schema update"
-msgstr "Выполняется необратимое обновление схемы"
-
-#: ipa_gpo_install/cli.py:177
-msgid "Run ipa-server-upgrade"
-msgstr "Выполнить ipa-server-upgrade"
-
-#: ipa_gpo_install/cli.py:194
-msgid "Restart httpd service"
-msgstr "Перезапуск службы httpd"
-
-#: ipa_gpo_install/cli.py:191
-msgid "Checking critical requirements"
-msgstr "Проверка критических требований"
-
-#: ipa_gpo_install/cli.py:195
-msgid "Performing configuration environment checks"
-msgstr "Выполнение проверок конфигурации окружения"
-
-#: ipa_gpo_install/cli.py:199
-msgid "Check-only mode: all checks completed"
-msgstr "Режим только проверки: все проверки завершены"
-
-#: ipa_gpo_install/cli.py:206
+#: ipa_gpo_install/cli.py:223
 msgid ""
 "\n"
 "=============================================================================\n"
@@ -179,265 +37,334 @@ msgstr ""
 "Теперь вы можете приступить к настройке групповой политики.\n"
 "=============================================================================\n"
 
-#: ipa_gpo_install/checks.py:53
-msgid "Checking for valid Kerberos ticket"
-msgstr "Проверка наличия действительного билета Kerberos"
+#: ipa_gpo_install/filesystem.py:144
+msgid "ACL parent is not a real directory: {}"
+msgstr "Родительский каталог ACL не является реальным каталогом: {}"
 
-#: ipa_gpo_install/checks.py:57
-msgid "Kerberos ticket exists for {}"
-msgstr "Билет Kerberos существует для {}"
+#: ipa_gpo_install/filesystem.py:109
+msgid "ACL target is not a real directory: {}"
+msgstr "Цель ACL не является реальным каталогом: {}"
 
-#: ipa_gpo_install/checks.py:60
-msgid "Valid Kerberos ticket not found"
-msgstr "Действительный билет Kerberos не найден"
-
-#: ipa_gpo_install/checks.py:64
-msgid "Error checking Kerberos ticket: {}"
-msgstr "Ошибка проверки билета Kerberos: {}"
-
-#: ipa_gpo_install/checks.py:77
-msgid "No valid Kerberos principal found"
-msgstr "Не найден действительный принципал Kerberos"
-
-#: ipa_gpo_install/checks.py:87
-msgid "User {} has admin privileges"
-msgstr "Пользователь {} имеет права администратора"
-
-#: ipa_gpo_install/checks.py:89
-msgid "User {} does not have admin privileges"
-msgstr "Пользователь {} не имеет прав администратора"
-
-#: ipa_gpo_install/checks.py:93
-msgid "Error checking admin privileges: {}"
-msgstr "Ошибка проверки прав администратора: {}"
-
-#: ipa_gpo_install/checks.py:106
-msgid "Cannot determine domain name for services check"
-msgstr "Невозможно определить имя домена для проверки служб"
-
-#: ipa_gpo_install/checks.py:122 ipa_gpo_install/actions.py:61
-#: ipa_gpo_install/actions.py:142 ipa_gpo_install/actions.py:152
-#: ipa_gpo_install/actions.py:175
-msgid "Running: {}"
-msgstr "Выполнение: {}"
-
-#: ipa_gpo_install/checks.py:129
-msgid "Service {} is not active - will be started during installation"
-msgstr "Служба {} не активна - будет запущена во время установки"
-
-#: ipa_gpo_install/checks.py:132
-msgid "Service {} is not active"
-msgstr "Служба {} не активна"
-
-#: ipa_gpo_install/checks.py:135
-msgid "Service {} is active"
-msgstr "Служба {} активна"
-
-#: ipa_gpo_install/checks.py:137
-msgid "All essential services are running"
-msgstr "Все основные службы работают"
-
-#: ipa_gpo_install/checks.py:141
-msgid "Error checking IPA services: {}"
-msgstr "Ошибка проверки служб IPA: {}"
-
-#: ipa_gpo_install/checks.py:160
-msgid "cn=schema not found, fallback to cn=subschema"
-msgstr "cn=schema не найден, использование резервного варианта cn=subschema"
-
-#: ipa_gpo_install/checks.py:169
-msgid "Object class '{}' does not exist in schema"
-msgstr "Класс объекта '{}' не существует в схеме"
-
-#: ipa_gpo_install/checks.py:173
-msgid "All required object classes exist in schema"
-msgstr "Все необходимые классы объектов существуют в схеме"
-
-#: ipa_gpo_install/checks.py:177
-msgid "Error checking schema object classes: {}"
-msgstr "Ошибка проверки классов объектов схемы: {}"
-
-#: ipa_gpo_install/checks.py:189
+#: ipa_gpo_install/checks.py:199
 msgid "AD Trust command not available"
 msgstr "Команда доверия AD недоступна"
 
-#: ipa_gpo_install/checks.py:194
-msgid "AD Trust is enabled"
-msgstr "Доверие AD включено"
-
-#: ipa_gpo_install/checks.py:196
-msgid "AD Trust is not enabled"
-msgstr "Доверие AD не включено"
-
-#: ipa_gpo_install/checks.py:201
-msgid "Error checking AD Trust status: {}"
-msgstr "Ошибка проверки статуса доверия AD: {}"
-
-#: ipa_gpo_install/checks.py:223
-msgid "SYSVOL directory exists with required structure"
-msgstr "Каталог SYSVOL существует с требуемой структурой"
-
-#: ipa_gpo_install/checks.py:226
-msgid "SYSVOL directory exists but missing subdirectories"
-msgstr "Каталог SYSVOL существует, но отсутствуют подкаталоги"
-
-#: ipa_gpo_install/checks.py:229
-msgid "SYSVOL directory does not exist: {}"
-msgstr "Каталог SYSVOL не существует: {}"
-
-#: ipa_gpo_install/checks.py:233
-msgid "Error checking SYSVOL directory: {}"
-msgstr "Ошибка проверки каталога SYSVOL: {}"
-
-#: ipa_gpo_install/checks.py:244
-msgid "Checking if SYSVOL share exists"
-msgstr "Проверка, существует ли общий ресурс SYSVOL"
-
-#: ipa_gpo_install/checks.py:248
-msgid "Error listing Samba shares: {}"
-msgstr "Ошибка при перечислении общих ресурсов Samba: {}"
-
-#: ipa_gpo_install/checks.py:253
-msgid "SYSVOL share exists"
-msgstr "Общий ресурс SYSVOL существует"
-
-#: ipa_gpo_install/checks.py:255
-msgid "SYSVOL share does not exist"
-msgstr "Общий ресурс SYSVOL не существует"
-
-#: ipa_gpo_install/checks.py:260
-msgid "Error checking SYSVOL share: {}"
-msgstr "Ошибка проверки общего ресурса SYSVOL: {}"
-
-#: ipa_gpo_install/actions.py:55
-msgid "Installing AD Trust support"
-msgstr "Установка поддержки доверия AD"
-
-#: ipa_gpo_install/actions.py:57
-msgid "ipa-adtrust-install not found"
-msgstr "ipa-adtrust-install не найден"
-
-#: ipa_gpo_install/actions.py:65
-msgid "Failed to install AD Trust: {}"
-msgstr "Не удалось установить доверие AD: {}"
-
-#: ipa_gpo_install/actions.py:67
+#: ipa_gpo_install/actions.py:159
 msgid "AD Trust installed successfully"
 msgstr "Доверие AD успешно установлено"
 
-#: ipa_gpo_install/actions.py:71
-msgid "Error installing AD Trust: {}"
-msgstr "Ошибка установки доверия AD: {}"
+#: ipa_gpo_install/checks.py:204
+msgid "AD Trust is enabled"
+msgstr "Доверие AD включено"
 
-#: ipa_gpo_install/actions.py:91
-msgid "Created directory: {}"
-msgstr "Создание директории: {}"
+#: ipa_gpo_install/checks.py:206
+msgid "AD Trust is not enabled"
+msgstr "Доверие AD не включено"
 
-#: ipa_gpo_install/actions.py:94
-msgid "Using standard permissions for SYSVOL directories"
-msgstr "Использование стандартных разрешений для каталогов SYSVOL"
+#: ipa_gpo_install/cli.py:187
+msgid "About to perform irreversible schema update"
+msgstr "Выполняется необратимое обновление схемы"
 
-#: ipa_gpo_install/actions.py:98
-msgid "SYSVOL directory structure created successfully"
-msgstr "Структура каталога SYSVOL успешно создана"
+#: ipa_gpo_install/cli.py:178
+msgid "Activate plugins"
+msgstr "Активировать плагины"
 
-#: ipa_gpo_install/actions.py:102
-msgid "Error creating SYSVOL directory: {}"
-msgstr "Ошибка создания каталога SYSVOL: {}"
+#: ipa_gpo_install/cli.py:102
+msgid "Administrative privileges required."
+msgstr "Требуются права администратора."
 
-#: ipa_gpo_install/actions.py:113
-msgid "Setting default ACLs on {}"
-msgstr "Установка ACL по умолчанию для {}"
+#: ipa_gpo_install/checks.py:147
+msgid "All essential services are running"
+msgstr "Все основные службы работают"
 
-#: ipa_gpo_install/actions.py:118
-msgid "Failed to set ACLs on {}: {}"
-msgstr "Не удалось установить ACL для {}: {}"
+#: ipa_gpo_install/actions.py:397
+msgid "All plugin files are present"
+msgstr "Все файлы плагинов присутствуют"
 
-#: ipa_gpo_install/actions.py:121
-msgid "Successfully set default ACLs on {}"
-msgstr "Успешно установлены ACL по умолчанию для {}"
+#: ipa_gpo_install/checks.py:183
+msgid "All required object classes exist in schema"
+msgstr "Все необходимые классы объектов существуют в схеме"
 
-#: ipa_gpo_install/actions.py:133
-msgid "Creating SYSVOL share for: {}"
-msgstr "Создание общего ресурса SYSVOL для: {}"
+#: ipa_gpo_install/cli.py:85
+msgid "Cannot connect to the LDAP database. Please check if IPA is running"
+msgstr "Невозможно подключиться к базе данных LDAP. Проверьте, работает ли IPA"
 
-#: ipa_gpo_install/actions.py:137
+#: ipa_gpo_install/actions.py:253
 msgid "Cannot create share: directory {} does not exist"
 msgstr "Невозможно создать общий ресурс: каталог {} не существует"
 
-#: ipa_gpo_install/actions.py:147
-msgid "Failed to create SYSVOL share: {}"
-msgstr "Не удалось создать общий ресурс SYSVOL: {}"
+#: ipa_gpo_install/checks.py:117
+msgid "Cannot determine domain name for services check"
+msgstr "Невозможно определить имя домена для проверки служб"
 
-#: ipa_gpo_install/actions.py:156
-msgid "Failed to set create mask parameter: {}"
-msgstr "Не удалось установить параметр create mask: {}"
+#: ipa_gpo_install/checks.py:308
+msgid "Cannot read ACLs from {}"
+msgstr "Не удалось прочитать ACL из {}"
 
-#: ipa_gpo_install/actions.py:158
-msgid "SYSVOL share created successfully"
-msgstr "Общий ресурс SYSVOL успешно создан"
+#: ipa_gpo_install/cli.py:216
+msgid "Check-only mode: all checks completed"
+msgstr "Режим только проверки: все проверки завершены"
 
-#: ipa_gpo_install/actions.py:162
-msgid "Error creating SYSVOL share: {}"
-msgstr "Ошибка создания общего ресурса SYSVOL: {}"
+#: ipa_gpo_install/cli.py:126
+msgid "Checking GPO editor filesystem permissions"
+msgstr "Проверка прав доступа к файловой системе редактора GPO"
 
-#: ipa_gpo_install/actions.py:173
-msgid "Running ipa-server-upgrade to apply schema changes"
-msgstr "Запуск ipa-server-upgrade для обновления схемы"
+#: ipa_gpo_install/checks.py:128 ipa_gpo_install/cli.py:105
+msgid "Checking IPA services"
+msgstr "Проверка служб IPA"
 
-#: ipa_gpo_install/actions.py:179
-msgid "ipa-server-upgrade completed successfully"
-msgstr "Обновление схемы прошло успешно"
+#: ipa_gpo_install/cli.py:95
+msgid "Checking Kerberos ticket"
+msgstr "Проверка билета Kerberos"
 
-#: ipa_gpo_install/actions.py:182 ipa_gpo_install/actions.py:207
-msgid "Unknown error"
-msgstr "Неизвестная ошибка"
+#: ipa_gpo_install/cli.py:116
+msgid "Checking LDAP schema for required object classes"
+msgstr "Проверка схемы LDAP на наличие необходимых классов объектов"
 
-#: ipa_gpo_install/actions.py:183
-msgid "ipa-server-upgrade failed: {}"
-msgstr "ipa-server-upgrade закончилось с ошибкой"
+#: ipa_gpo_install/cli.py:122
+msgid "Checking SYSVOL directory and share"
+msgstr "Проверка каталога SYSVOL и общего ресурса"
 
-#: ipa_gpo_install/actions.py:187
-msgid "Error running ipa-server-upgrade: {}"
-msgstr "Ошибка при обновления сервера"
+#: ipa_gpo_install/cli.py:100
+msgid "Checking admin privileges"
+msgstr "Проверка прав администратора"
 
-#: ipa_gpo_install/actions.py:198
-msgid "Restarting oddjob service"
-msgstr "Выполняется перезапуск службы oddjob"
+#: ipa_gpo_install/cli.py:208
+msgid "Checking critical requirements"
+msgstr "Проверка критических требований"
 
-#: ipa_gpo_install/actions.py:204
-msgid "oddjob service restarted successfully"
-msgstr "Служба oddjob успешно перезапущена"
+#: ipa_gpo_install/checks.py:64
+msgid "Checking for valid Kerberos ticket"
+msgstr "Проверка наличия действительного билета Kerberos"
 
-#: ipa_gpo_install/actions.py:208
-msgid "Failed to restart oddjob: {}"
-msgstr "Не удалось перезапустить службу oddjob: {}"
+#: ipa_gpo_install/cli.py:119
+msgid "Checking if AD Trust is enabled"
+msgstr "Проверка, включено ли доверие AD"
 
-#: ipa_gpo_install/actions.py:212
-msgid "Error restarting oddjob service: {}"
-msgstr "Ошибка перезапуска службы oddjob: {}"
+#: ipa_gpo_install/checks.py:432
+msgid "Checking if SYSVOL share exists"
+msgstr "Проверка, существует ли общий ресурс SYSVOL"
 
-#: ipa_gpo_install/actions.py:314
-msgid "Restarting httpd service"
-msgstr "Выполняется перезапуск службы httpd"
-
-#: ipa_gpo_install/actions.py:320
-msgid "httpd service restarted successfully"
-msgstr "Служба httpd успешно перезапущена"
-
-#: ipa_gpo_install/actions.py:331
-msgid "Error restarting httpd service: {}"
-msgstr "Ошибка перезапуска службы httpd: {}"
-
-#: ipa_gpo_install/actions.py:271 ipa_gpo_install/actions.py:305
-msgid "Plugin file not found: {}"
-msgstr "Файл плагина не найден: {}"
-
-#: ipa_gpo_install/actions.py:285
+#: ipa_gpo_install/actions.py:380
 msgid "Checking plugin files installation"
 msgstr "Проверка установки файлов плагинов"
 
-#: ipa_gpo_install/actions.py:310
+#: ipa_gpo_install/cli.py:168
+msgid "Configure GPO editor filesystem"
+msgstr "Настроить файловую систему редактора GPO"
+
+#: ipa_gpo_install/actions.py:224
+msgid "Configuring GPO editor ACLs on {}"
+msgstr "Настройка ACL редактора GPO для {}"
+
+#: ipa_gpo_install/actions.py:220
+msgid "Configuring private GPO editor state"
+msgstr "Настройка закрытого каталога состояния редактора GPO"
+
+#: ipa_gpo_install/cli.py:77
+msgid "Connected to LDAP server"
+msgstr "Подключено к серверу LDAP"
+
+#: ipa_gpo_install/cli.py:158
+msgid "Create SYSVOL directory"
+msgstr "Создать каталог SYSVOL"
+
+#: ipa_gpo_install/cli.py:161
+msgid "Create SYSVOL share"
+msgstr "Создать общий ресурс SYSVOL"
+
+#: ipa_gpo_install/actions.py:183
+msgid "Created directory: {}"
+msgstr "Создание директории: {}"
+
+#: ipa_gpo_install/actions.py:249
+msgid "Creating SYSVOL share for: {}"
+msgstr "Создание общего ресурса SYSVOL для: {}"
+
+#: ipa_gpo_install/cli.py:46
+msgid "Debug level: 0=errors, 1=warnings, 2=debug"
+msgstr "Уровень отладки: 0=ошибки, 1=предупреждения, 2=отладка"
+
+#: ipa_gpo_install/checks.py:211
+msgid "Error checking AD Trust status: {}"
+msgstr "Ошибка проверки статуса доверия AD: {}"
+
+#: ipa_gpo_install/checks.py:414
+msgid "Error checking GPO editor ACLs: {}"
+msgstr "Ошибка проверки ACL редактора GPO: {}"
+
+#: ipa_gpo_install/checks.py:151
+msgid "Error checking IPA services: {}"
+msgstr "Ошибка проверки служб IPA: {}"
+
+#: ipa_gpo_install/checks.py:75
+msgid "Error checking Kerberos ticket: {}"
+msgstr "Ошибка проверки билета Kerberos: {}"
+
+#: ipa_gpo_install/checks.py:243
+msgid "Error checking SYSVOL directory: {}"
+msgstr "Ошибка проверки каталога SYSVOL: {}"
+
+#: ipa_gpo_install/checks.py:467
+msgid "Error checking SYSVOL share: {}"
+msgstr "Ошибка проверки общего ресурса SYSVOL: {}"
+
+#: ipa_gpo_install/checks.py:104
+msgid "Error checking admin privileges: {}"
+msgstr "Ошибка проверки прав администратора: {}"
+
+#: ipa_gpo_install/checks.py:187
+msgid "Error checking schema object classes: {}"
+msgstr "Ошибка проверки классов объектов схемы: {}"
+
+#: ipa_gpo_install/actions.py:236
+msgid "Error configuring GPO editor filesystem: {}"
+msgstr "Ошибка настройки файловой системы редактора GPO: {}"
+
+#: ipa_gpo_install/actions.py:194
+msgid "Error creating SYSVOL directory: {}"
+msgstr "Ошибка создания каталога SYSVOL: {}"
+
+#: ipa_gpo_install/actions.py:283
+msgid "Error creating SYSVOL share: {}"
+msgstr "Ошибка создания общего ресурса SYSVOL: {}"
+
+#: ipa_gpo_install/actions.py:163
+msgid "Error installing AD Trust: {}"
+msgstr "Ошибка установки доверия AD: {}"
+
+#: ipa_gpo_install/checks.py:436
+msgid "Error listing Samba shares: {}"
+msgstr "Ошибка при перечислении общих ресурсов Samba: {}"
+
+#: ipa_gpo_install/actions.py:349
+msgid "Error restarting httpd service: {}"
+msgstr "Ошибка перезапуска службы httpd: {}"
+
+#: ipa_gpo_install/actions.py:333
+msgid "Error restarting oddjob service: {}"
+msgstr "Ошибка перезапуска службы oddjob: {}"
+
+#: ipa_gpo_install/actions.py:308
+msgid "Error running ipa-server-upgrade: {}"
+msgstr "Ошибка при обновления сервера"
+
+#: ipa_gpo_install/cli.py:89
+msgid "Error setting up environment: {}"
+msgstr "Ошибка настройки окружения: {}"
+
+#: ipa_gpo_install/cli.py:107
+msgid "Essential IPA services are not running."
+msgstr "Основные службы IPA не запущены."
+
+#: ipa_gpo_install/actions.py:263
+msgid "Failed to create SYSVOL share: {}"
+msgstr "Не удалось создать общий ресурс SYSVOL: {}"
+
+#: ipa_gpo_install/actions.py:157
+msgid "Failed to install AD Trust: {}"
+msgstr "Не удалось установить доверие AD: {}"
+
+#: ipa_gpo_install/actions.py:329
+msgid "Failed to restart oddjob: {}"
+msgstr "Не удалось перезапустить службу oddjob: {}"
+
+#: ipa_gpo_install/actions.py:210
+msgid "Failed to set ACLs on {}: {}"
+msgstr "Не удалось установить ACL для {}: {}"
+
+#: ipa_gpo_install/actions.py:273
+msgid "Failed to set create mask parameter: {}"
+msgstr "Не удалось установить параметр create mask: {}"
+
+#: ipa_gpo_install/checks.py:395
+msgid "GPO contains an unsafe file: {}"
+msgstr "GPO содержит небезопасный файл: {}"
+
+#: ipa_gpo_install/checks.py:385
+msgid "GPO directory contains a symlink: {}"
+msgstr "Каталог GPO содержит символическую ссылку: {}"
+
+#: ipa_gpo_install/checks.py:318
+msgid "GPO editor ACL entries are incomplete on {}"
+msgstr "Записи ACL редактора GPO для {} неполны"
+
+#: ipa_gpo_install/actions.py:232
+msgid "GPO editor filesystem configured successfully"
+msgstr "Файловая система редактора GPO успешно настроена"
+
+#: ipa_gpo_install/cli.py:173
+msgid "GPO editor filesystem health check failed"
+msgstr "Проверка состояния файловой системы редактора GPO завершилась ошибкой"
+
+#: ipa_gpo_install/checks.py:256
+msgid "GPO editor state directory is not ready ({}): {}"
+msgstr "Каталог состояния редактора GPO не готов ({}): {}"
+
+#: ipa_gpo_install/checks.py:251
+msgid "GPO editor state directory is private and correctly owned"
+msgstr "Каталог состояния редактора GPO закрыт и имеет правильного владельца"
+
+#: ipa_gpo_install/filesystem.py:169
+msgid "GPO path is not a real directory: {}"
+msgstr "Путь GPO не является реальным каталогом: {}"
+
+#: ipa_gpo_install/cli.py:71
+msgid "Initializing IPA API"
+msgstr "Инициализация API IPA"
+
+#: ipa_gpo_install/cli.py:155
+msgid "Install AD Trust"
+msgstr "Установить доверие AD"
+
+#: ipa_gpo_install/actions.py:147
+msgid "Installing AD Trust support"
+msgstr "Установка поддержки доверия AD"
+
+#: ipa_gpo_install/checks.py:68
+msgid "Kerberos ticket exists for {}"
+msgstr "Билет Kerberos существует для {}"
+
+#: ipa_gpo_install/cli.py:97
+msgid "Missing Kerberos ticket. Run 'kinit' to obtain a valid ticket."
+msgstr ""
+"Отсутствует билет Kerberos. Выполните 'kinit' для получения действительного "
+"билета."
+
+#: ipa_gpo_install/cli.py:60
+msgid "Must be root to setup Group Policy features on server"
+msgstr ""
+"Необходимо быть пользователем root для настройки функций групповой политики "
+"на сервере"
+
+#: ipa_gpo_install/checks.py:88
+msgid "No valid Kerberos principal found"
+msgstr "Не найден действительный принципал Kerberos"
+
+#: ipa_gpo_install/checks.py:179
+msgid "Object class '{}' does not exist in schema"
+msgstr "Класс объекта '{}' не существует в схеме"
+
+#: ipa_gpo_install/cli.py:48
+msgid "Only perform checks without making changes"
+msgstr "Только выполнить проверки без внесения изменений"
+
+#: ipa_gpo_install/cli.py:81
+msgid ""
+"Outdated Kerberos credentials. Use kdestroy and kinit to update your ticket"
+msgstr ""
+"Устаревшие учетные данные Kerberos. Используйте kdestroy и kinit для "
+"обновления билета"
+
+#: ipa_gpo_install/cli.py:212
+msgid "Performing configuration environment checks"
+msgstr "Выполнение проверок конфигурации окружения"
+
+#: ipa_gpo_install/actions.py:366 ipa_gpo_install/actions.py:388
+msgid "Plugin file not found: {}"
+msgstr "Файл плагина не найден: {}"
+
+#: ipa_gpo_install/actions.py:393
 msgid ""
 "Plugin files missing. Please ensure the freeipa-server-gpo package is "
 "installed."
@@ -445,9 +372,216 @@ msgstr ""
 "Файлы плагинов отсутствуют. Убедитесь, что пакет freeipa-server-gpo "
 "установлен."
 
-#: ipa_gpo_install/actions.py:314
-msgid "All plugin files are present"
-msgstr "Все файлы плагинов присутствуют"
+#: ipa_gpo_install/cli.py:181
+msgid "Plugins already activated"
+msgstr "Плагины уже активированы"
+
+#: ipa_gpo_install/checks.py:367
+msgid "Policies ACLs are ready; no existing GPO needs sampling"
+msgstr ""
+"ACL каталога Policies настроены; существующие GPO отсутствуют для проверки"
+
+#: ipa_gpo_install/checks.py:409
+msgid "Policies ACLs grant access to all existing GPOs"
+msgstr "ACL каталога Policies предоставляют доступ ко всем существующим GPO"
+
+#: ipa_gpo_install/checks.py:359
+msgid "Policies contains a symlink: {}"
+msgstr "Каталог Policies содержит символическую ссылку: {}"
+
+#: ipa_gpo_install/checks.py:343 ipa_gpo_install/filesystem.py:123
+msgid "Policies path is not a real directory: {}"
+msgstr "Путь Policies не является реальным каталогом: {}"
+
+#: ipa_gpo_install/cli.py:194
+msgid "Restart httpd service"
+msgstr "Перезапуск службы httpd"
+
+#: ipa_gpo_install/cli.py:183
+msgid "Restart oddjob service"
+msgstr "Перезапуск службы oddjob"
+
+#: ipa_gpo_install/actions.py:339
+msgid "Restarting httpd service"
+msgstr "Выполняется перезапуск службы httpd"
+
+#: ipa_gpo_install/actions.py:319
+msgid "Restarting oddjob service"
+msgstr "Выполняется перезапуск службы oddjob"
+
+#: ipa_gpo_install/cli.py:188
+msgid "Run ipa-server-upgrade"
+msgstr "Выполнить ipa-server-upgrade"
+
+#: ipa_gpo_install/actions.py:294
+msgid "Running ipa-server-upgrade to apply schema changes"
+msgstr "Запуск ipa-server-upgrade для обновления схемы"
+
+#: ipa_gpo_install/cli.py:134
+msgid "Running task: {}"
+msgstr "Выполнение задачи: {}"
+
+#: ipa_gpo_install/actions.py:153 ipa_gpo_install/actions.py:258
+#: ipa_gpo_install/actions.py:268 ipa_gpo_install/actions.py:296
+#: ipa_gpo_install/checks.py:132
+msgid "Running: {}"
+msgstr "Выполнение: {}"
+
+#: ipa_gpo_install/checks.py:239
+msgid "SYSVOL directory does not exist: {}"
+msgstr "Каталог SYSVOL не существует: {}"
+
+#: ipa_gpo_install/checks.py:236
+msgid "SYSVOL directory exists but missing subdirectories"
+msgstr "Каталог SYSVOL существует, но отсутствуют подкаталоги"
+
+#: ipa_gpo_install/checks.py:233
+msgid "SYSVOL directory exists with required structure"
+msgstr "Каталог SYSVOL существует с требуемой структурой"
+
+#: ipa_gpo_install/actions.py:190
+msgid "SYSVOL directory structure created successfully"
+msgstr "Структура каталога SYSVOL успешно создана"
+
+#: ipa_gpo_install/actions.py:279
+msgid "SYSVOL share created successfully"
+msgstr "Общий ресурс SYSVOL успешно создан"
+
+#: ipa_gpo_install/checks.py:462
+msgid "SYSVOL share does not exist"
+msgstr "Общий ресурс SYSVOL не существует"
+
+#: ipa_gpo_install/checks.py:460
+msgid "SYSVOL share exists"
+msgstr "Общий ресурс SYSVOL существует"
+
+#: ipa_gpo_install/checks.py:145
+msgid "Service {} is active"
+msgstr "Служба {} активна"
+
+#: ipa_gpo_install/checks.py:142
+msgid "Service {} is not active"
+msgstr "Служба {} не активна"
+
+#: ipa_gpo_install/checks.py:139
+msgid "Service {} is not active - will be started during installation"
+msgstr "Служба {} не активна - будет запущена во время установки"
+
+#: ipa_gpo_install/actions.py:205
+msgid "Setting default ACLs on {}"
+msgstr "Установка ACL по умолчанию для {}"
+
+#: ipa_gpo_install/actions.py:213
+msgid "Successfully set default ACLs on {}"
+msgstr "Успешно установлены ACL по умолчанию для {}"
+
+#: ipa_gpo_install/cli.py:143
+msgid "Task failed with error: {} - {}"
+msgstr "Задача не выполнена с ошибкой: {} - {}"
+
+#: ipa_gpo_install/cli.py:140
+msgid "Task failed: {}"
+msgstr "Задача не выполнена: {}"
+
+#: ipa_gpo_install/cli.py:138
+msgid "Task succeeded: {}"
+msgstr "Задача успешно выполнена: {}"
+
+#: ipa_gpo_install/cli.py:66
+msgid "The log file for this installation can be found in {}"
+msgstr "Файл журнала для этой установки можно найти в {}"
+
+#: ipa_gpo_install/actions.py:303 ipa_gpo_install/actions.py:328
+msgid "Unknown error"
+msgstr "Неизвестная ошибка"
+
+#: ipa_gpo_install/checks.py:100
+msgid "User {} does not have admin privileges"
+msgstr "Пользователь {} не имеет прав администратора"
+
+#: ipa_gpo_install/checks.py:98
+msgid "User {} has admin privileges"
+msgstr "Пользователь {} имеет права администратора"
+
+#: ipa_gpo_install/actions.py:186
+msgid "Using standard permissions for SYSVOL directories"
+msgstr "Использование стандартных разрешений для каталогов SYSVOL"
+
+#: ipa_gpo_install/checks.py:71
+msgid "Valid Kerberos ticket not found"
+msgstr "Действительный билет Kerberos не найден"
+
+#: ipa_gpo_install/checks.py:170
+msgid "cn=schema not found, fallback to cn=subschema"
+msgstr "cn=schema не найден, использование резервного варианта cn=subschema"
+
+#: ipa_gpo_install/filesystem.py:65
+msgid "editor identity is not available: {}:{}"
+msgstr "Учетная запись редактора недоступна: {}:{}"
+
+#: ipa_gpo_install/filesystem.py:57
+msgid "editor state path is not a directory: {}"
+msgstr "Путь к состоянию редактора не является каталогом: {}"
+
+#: ipa_gpo_install/filesystem.py:49
+msgid "editor state path must not be a symbolic link: {}"
+msgstr "Путь к состоянию редактора не должен быть символической ссылкой: {}"
+
+#: ipa_gpo_install/actions.py:344
+msgid "httpd service restarted successfully"
+msgstr "Служба httpd успешно перезапущена"
+
+#: ipa_gpo_install/actions.py:149
+msgid "ipa-adtrust-install not found"
+msgstr "ipa-adtrust-install не найден"
+
+#: ipa_gpo_install/actions.py:300
+msgid "ipa-server-upgrade completed successfully"
+msgstr "Обновление схемы прошло успешно"
+
+#: ipa_gpo_install/actions.py:304
+msgid "ipa-server-upgrade failed: {}"
+msgstr "ipa-server-upgrade закончилось с ошибкой"
+
+#: ipa_gpo_install/filesystem.py:201
+msgid "mode is not 0700"
+msgstr "права доступа отличаются от 0700"
+
+#: ipa_gpo_install/filesystem.py:176
+msgid "new GPO directory is not a real directory: {}"
+msgstr "Новый каталог GPO не является реальным каталогом: {}"
+
+#: ipa_gpo_install/actions.py:325
+msgid "oddjob service restarted successfully"
+msgstr "Служба oddjob успешно перезапущена"
+
+#: ipa_gpo_install/filesystem.py:203
+msgid "owner is not {}:{}"
+msgstr "владелец отличается от {}:{}"
+
+#: ipa_gpo_install/filesystem.py:199
+msgid "path is not a real directory"
+msgstr "путь не является реальным каталогом"
+
+#: ipa_gpo_install/filesystem.py:34
+msgid "unknown error"
+msgstr "неизвестная ошибка"
+
+#: ipa_gpo_install/checks.py:323
+msgid "{} cannot access GPO directory {}"
+msgstr "{} не имеет доступа к каталогу GPO {}"
+
+#: ipa_gpo_install/checks.py:402
+msgid "{} cannot edit GPO file {}"
+msgstr "{} не может изменять файл GPO {}"
+
+#: ipa_gpo_install/filesystem.py:36
+msgid "{} failed: {}"
+msgstr "Команда {} завершилась ошибкой: {}"
+
+#: ipa_gpo_install/checks.py:330
+msgid "{} must not write to Policies root {}"
+msgstr "{} не должен иметь права записи в корневой каталог Policies {}"
 
 #~ msgid "Initiating oddjob service restart"
 #~ msgstr "Инициирование перезапуска службы oddjob"

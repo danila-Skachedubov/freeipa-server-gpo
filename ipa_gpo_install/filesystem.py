@@ -2,6 +2,7 @@
 """Filesystem provisioning shared by the installer and oddjob handlers."""
 
 import grp
+import gettext
 import os
 import pwd
 import stat
@@ -12,7 +13,15 @@ from .config import (
     GPO_EDITOR_GROUP,
     GPO_EDITOR_STATE_DIR,
     GPO_EDITOR_USER,
+    LOCALE_DIR,
 )
+
+
+_ = gettext.translation(
+    "ipa-gpo-install",
+    LOCALE_DIR,
+    fallback=True,
+).gettext
 
 
 class FilesystemConfigurationError(RuntimeError):
@@ -22,9 +31,9 @@ class FilesystemConfigurationError(RuntimeError):
 def _run_checked(command, runner=subprocess.run):
     result = runner(command, capture_output=True, text=True, check=False)
     if result.returncode != 0:
-        detail = (result.stderr or result.stdout or "unknown error").strip()
+        detail = (result.stderr or result.stdout or _("unknown error")).strip()
         raise FilesystemConfigurationError(
-            "{} failed: {}".format(command[0], detail)
+            _("{} failed: {}").format(command[0], detail)
         )
 
 
@@ -37,13 +46,15 @@ def ensure_editor_state_directory(
     state_path = Path(path)
     if state_path.is_symlink():
         raise FilesystemConfigurationError(
-            "editor state path must not be a symbolic link: {}".format(state_path)
+            _("editor state path must not be a symbolic link: {}").format(
+                state_path
+            )
         )
 
     state_path.mkdir(mode=0o700, parents=True, exist_ok=True)
     if state_path.is_symlink() or not state_path.is_dir():
         raise FilesystemConfigurationError(
-            "editor state path is not a directory: {}".format(state_path)
+            _("editor state path is not a directory: {}").format(state_path)
         )
 
     try:
@@ -51,7 +62,7 @@ def ensure_editor_state_directory(
         gid = grp.getgrnam(editor_group).gr_gid
     except KeyError as exc:
         raise FilesystemConfigurationError(
-            "editor identity is not available: {}:{}".format(
+            _("editor identity is not available: {}:{}").format(
                 editor_user, editor_group
             )
         ) from exc
@@ -95,7 +106,7 @@ def ensure_directory_editor_acl(
     directory = Path(path)
     if directory.is_symlink() or not directory.is_dir():
         raise FilesystemConfigurationError(
-            "ACL target is not a real directory: {}".format(directory)
+            _("ACL target is not a real directory: {}").format(directory)
         )
     _set_directory_acls([directory], editor_user, runner=runner)
 
@@ -109,7 +120,7 @@ def ensure_policies_root_acl(
     policies = Path(path)
     if policies.is_symlink() or not policies.is_dir():
         raise FilesystemConfigurationError(
-            "Policies path is not a real directory: {}".format(policies)
+            _("Policies path is not a real directory: {}").format(policies)
         )
     _set_directory_acls(
         [policies],
@@ -130,7 +141,7 @@ def ensure_path_traversal_acls(
     for directory in trusted_directories:
         if directory.is_symlink() or not directory.is_dir():
             raise FilesystemConfigurationError(
-                "ACL parent is not a real directory: {}".format(directory)
+                _("ACL parent is not a real directory: {}").format(directory)
             )
 
     for offset in range(0, len(trusted_directories), 128):
@@ -155,14 +166,14 @@ def ensure_new_gpo_acls(
     policy = Path(policy_path)
     if policy.is_symlink() or not policy.is_dir():
         raise FilesystemConfigurationError(
-            "GPO path is not a real directory: {}".format(policy)
+            _("GPO path is not a real directory: {}").format(policy)
         )
     directories = [policy]
     for name in ("Machine", "User"):
         directory = policy / name
         if directory.is_symlink() or not directory.is_dir():
             raise FilesystemConfigurationError(
-                "new GPO directory is not a real directory: {}".format(
+                _("new GPO directory is not a real directory: {}").format(
                     directory
                 )
             )
@@ -185,9 +196,11 @@ def editor_state_directory_status(
         return False, str(exc)
 
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
-        return False, "path is not a real directory"
+        return False, _("path is not a real directory")
     if stat.S_IMODE(info.st_mode) != 0o700:
-        return False, "mode is not 0700"
+        return False, _("mode is not 0700")
     if info.st_uid != expected_uid or info.st_gid != expected_gid:
-        return False, "owner is not {}:{}".format(editor_user, editor_group)
+        return False, _("owner is not {}:{}").format(
+            editor_user, editor_group
+        )
     return True, "ok"
