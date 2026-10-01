@@ -21,6 +21,18 @@ def test_python_version_matches_rpm_spec():
     assert __version__ == match.group(1)
 
 
+def test_security_definitions_runtime_dependencies_are_declared():
+    spec = (ROOT / "ipa-gpo-install.spec").read_text(encoding="utf-8")
+    requirements = set(re.findall(r"^Requires:\s*(.+)$", spec, re.MULTILINE))
+
+    assert "sdmx-basealt >= 1.0.0" in requirements
+    assert "/usr/share/sdmx/schema/1.0/sdmx-1.0.xsd" in requirements
+    assert "/usr/share/sdmx/schema/1.0/sdml-1.0.xsd" in requirements
+    assert not any("/usr/share/sdmx/schema/0.1/" in row for row in requirements)
+    assert "python3-module-admix >= 0.3.0" in requirements
+    assert "python3-module-admix < 0.4.0" in requirements
+
+
 def test_installed_entry_point_reports_package_version():
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT)
