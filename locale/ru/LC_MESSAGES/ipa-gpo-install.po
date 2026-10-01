@@ -583,6 +583,46 @@ msgstr "Команда {} завершилась ошибкой: {}"
 msgid "{} must not write to Policies root {}"
 msgstr "{} не должен иметь права записи в корневой каталог Policies {}"
 
+#: plugin/ipaserver/plugins/chain.py
+msgid "Group Policy installation is incomplete"
+msgstr "Настройка групповых политик не завершена"
+
+#: plugin/ipaserver/plugins/chain.py
+msgid "The Chains LDAP container is missing. Run ipa-gpo-install on the IPA server to repair the installation."
+msgstr "Отсутствует контейнер Chains в LDAP. Запустите ipa-gpo-install на сервере IPA, чтобы исправить настройку."
+
+#: ipa_gpo_install/cli.py
+msgid "Checking Group Policy LDAP infrastructure"
+msgstr "Проверка инфраструктуры групповых политик в LDAP"
+
+#: ipa_gpo_install/cli.py
+msgid "Verify Group Policy update assets"
+msgstr "Проверить файлы обновлений групповых политик"
+
+#: ipa_gpo_install/cli.py
+msgid "Group Policy LDAP infrastructure is incomplete after applying updates. Inspect /var/log/ipaupgrade.log before retrying ipa-gpo-install."
+msgstr "После применения обновлений инфраструктура групповых политик в LDAP остаётся неполной. Проверьте /var/log/ipaupgrade.log перед повторным запуском ipa-gpo-install."
+
+#: ipa_gpo_install/cli.py
+msgid "Group Policy installation is incomplete. Run ipa-gpo-install on the IPA server to repair the installation."
+msgstr "Настройка групповых политик не завершена. Запустите ipa-gpo-install на сервере IPA, чтобы исправить настройку."
+
+#: ipa_gpo_install/checks.py
+msgid "Required Group Policy LDAP entry '{}' is missing."
+msgstr "Отсутствует необходимая запись групповых политик «{}» в LDAP."
+
+#: ipa_gpo_install/checks.py
+msgid "Required Group Policy LDAP entry '{}' has an unexpected object class."
+msgstr "Необходимая запись групповых политик «{}» в LDAP имеет неверный класс объекта."
+
+#: ipa_gpo_install/checks.py
+msgid "Unable to verify Group Policy LDAP infrastructure: {}"
+msgstr "Не удалось проверить инфраструктуру групповых политик в LDAP: {}"
+
+#: ipa_gpo_install/actions.py
+msgid "Required Group Policy update asset '{}' is missing or unreadable. Reinstall the freeipa-server-gpo package."
+msgstr "Необходимый файл обновления групповых политик «{}» отсутствует или недоступен для чтения. Переустановите пакет freeipa-server-gpo."
+
 #~ msgid "Initiating oddjob service restart"
 #~ msgstr "Инициирование перезапуска службы oddjob"
 

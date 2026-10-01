@@ -116,6 +116,9 @@ def perform_configuration_checks(checker: IPAChecker) -> Dict[str, Any]:
     logger.info(_("Checking LDAP schema for required object classes"))
     results['schema_complete'] = checker.check_schema_complete(REQUIRED_SCHEMA_CLASSES)
 
+    logger.info(_("Checking Group Policy LDAP infrastructure"))
+    results['ldap_infrastructure'] = checker.check_group_policy_infrastructure()
+
     logger.info(_("Checking if AD Trust is enabled"))
     results['adtrust_enabled'] = checker.check_adtrust_installed()
 
@@ -151,6 +154,12 @@ def execute_required_actions(
     """Execute required actions based on check results"""
     tasks = []
 
+    if not run_task(
+            _("Verify Group Policy update assets"),
+            actions.check_group_policy_update_assets):
+        return False
+    checker = checker or IPAChecker(logger, actions.api)
+
     if not check_results['adtrust_enabled']:
         tasks.append((_("Install AD Trust"), actions.install_adtrust))
 
@@ -169,7 +178,7 @@ def execute_required_actions(
             actions.configure_editor_filesystem):
         return False
 
-    if checker is not None and not checker.check_editor_filesystem():
+    if not checker.check_editor_filesystem():
         logger.error(_("GPO editor filesystem health check failed"))
         return False
 
@@ -183,10 +192,22 @@ def execute_required_actions(
     if not run_task(_("Restart oddjob service"), actions.restart_oddjob):
         return False
 
-    if not check_results['schema_complete']:
+    if (not check_results['schema_complete'] or
+            not check_results['ldap_infrastructure']):
         logger.warning(_("About to perform irreversible schema update"))
         if not run_task(_("Run ipa-server-upgrade"), actions.run_ipa_server_upgrade):
             return False
+
+    # Installed object classes can predate later data migrations. Verify the
+    # actual entries even when a schema-only check said the server was ready.
+    if (not checker.check_schema_complete(REQUIRED_SCHEMA_CLASSES) or
+            not checker.check_group_policy_infrastructure()):
+        logger.error(_(
+            "Group Policy LDAP infrastructure is incomplete after applying "
+            "updates. Inspect /var/log/ipaupgrade.log before retrying "
+            "ipa-gpo-install."
+        ))
+        return False
 
     # RPM installation updates server-side IPA modules while Apache workers
     # may still have the old command registry in memory.  Reload them after
@@ -214,6 +235,13 @@ def main():
 
         if options.check_only:
             print(_("Check-only mode: all checks completed"))
+            if (not check_results['schema_complete'] or
+                    not check_results['ldap_infrastructure']):
+                logger.error(_(
+                    "Group Policy installation is incomplete. Run "
+                    "ipa-gpo-install on the IPA server to repair the installation."
+                ))
+                return 1
             return 0
 
         actions = IPAActions(logger, api)

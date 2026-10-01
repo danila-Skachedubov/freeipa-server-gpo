@@ -283,6 +283,20 @@ class IPAActions:
             self.logger.error(_("Error creating SYSVOL share: {}").format(e))
             return False
 
+    def check_group_policy_update_assets(self):
+        """Fail before installation mutates anything if update assets are missing."""
+        for target_dir, filenames in (
+                (TARGET_SCHEMA_DIR, ('75-chain.ldif', '75-gpc.ldif', '75-gpmaster.ldif')),
+                (TARGET_UPDATE_DIR, ('75-chain.update', '75-gpc.update', '75-gpmaster.update'))):
+            for filename in filenames:
+                path = os.path.join(target_dir, filename)
+                if not os.path.isfile(path) or not os.access(path, os.R_OK):
+                    self.logger.error(
+                        _("Required Group Policy update asset '{}' is missing or unreadable. Reinstall the freeipa-server-gpo package.").format(path)
+                    )
+                    return False
+        return True
+
     def run_ipa_server_upgrade(self):
         """
         Run ipa-server-upgrade to apply schema changes and updates.
