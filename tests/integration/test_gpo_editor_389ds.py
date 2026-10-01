@@ -1580,6 +1580,9 @@ def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
     )["result"]
     assert computer_classic["publication"]["changed"] is True
     assert (context.gpo_root / "Machine/Scripts/Startup/computer.cmd").is_file()
+    assert "computer.cmd" in (context.gpo_root / "Machine/Scripts/scripts.ini").read_text(
+        encoding="utf-16"
+    )
 
     computer = computer_classic["scripts"]
     computer_powershell = api.Command.gpo_editor_script_entry_add(
@@ -1595,6 +1598,9 @@ def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
         },
     )["result"]
     assert computer_powershell["publication"]["changed"] is True
+    assert "computer.ps1" in (context.gpo_root / "Machine/Scripts/psscripts.ini").read_text(
+        encoding="utf-16"
+    )
 
     user = show("user", "logon")
     user_classic = api.Command.gpo_editor_script_entry_add(
@@ -1610,6 +1616,9 @@ def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
         },
     )["result"]
     assert user_classic["publication"]["changed"] is True
+    assert "user-logon.cmd" in (context.gpo_root / "User/Scripts/scripts.ini").read_text(
+        encoding="utf-16"
+    )
 
     user = user_classic["scripts"]
     user_powershell = api.Command.gpo_editor_script_upload_and_add(
@@ -1626,6 +1635,28 @@ def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
     )["result"]
     assert user_powershell["publication"]["changed"] is True
     assert (context.gpo_root / "User/Scripts/Logon/user.ps1").is_file()
+    assert "user.ps1" in (context.gpo_root / "User/Scripts/psscripts.ini").read_text(
+        encoding="utf-16"
+    )
+    assert any(
+        item["command_line"] == "computer.cmd"
+        for item in show("computer", "startup")["classic"]["entries"]
+    )
+    assert any(
+        item["command_line"] == "user.ps1"
+        for item in show("user", "logon")["powershell"]["entries"]
+    )
+
+    asset = next(
+        item for item in show("computer", "startup")["assets"]
+        if item["name"] == "computer.cmd"
+    )
+    download = api.Command.gpo_editor_script_asset_download(
+        displayname, "computer", "startup",
+        request={"name": asset["name"], "revision": asset["revision"]},
+    )["result"]["asset"]
+    assert base64.b64decode(download["content_base64"]) == b"echo computer\r\n"
+    assert download["byte_size"] == len(b"echo computer\r\n")
 
     # Leave one successful LDAP update unacknowledged, then use a new public
     # mutation to prove that recovery acknowledges the old plan before it
@@ -1677,6 +1708,11 @@ def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
     )
     assert "{42B5FAAE-6536-11D2-AE5A-0000F87571E3}" in (
         published["user_extension_names"]
+    )
+    assert published["version_number"] == _gpt_version(context.gpo_root / "GPT.INI")
+    assert any(
+        item["command_line"] == "computer.cmd"
+        for item in show("computer", "startup")["classic"]["entries"]
     )
     public_payload = json.dumps(recovered, sort_keys=True)
     for private_fragment in (

@@ -1,5 +1,6 @@
 import base64
 import binascii
+import copy
 import json
 import logging
 import os
@@ -85,9 +86,16 @@ def verify_gpo_schema(ldap, api):
 
 
 GPO_TEMPLATE_ROOT = Path('/usr/share/PolicyDefinitions')
+GPO_SECURITY_DEFINITION_ROOT = GPO_TEMPLATE_ROOT
+GPO_SDMX_SCHEMA_ROOT = Path('/usr/share/sdmx/schema/1.0')
+GPO_SDMX_SCHEMA = GPO_SDMX_SCHEMA_ROOT / 'sdmx-1.0.xsd'
+GPO_SDML_SCHEMA = GPO_SDMX_SCHEMA_ROOT / 'sdml-1.0.xsd'
 GPO_SYSVOL_ROOT = Path('/var/lib/freeipa/sysvol')
 GPO_EDITOR_STATE_DIRECTORY = Path('/var/lib/freeipa/gpo-editor-state')
 GPO_CATALOG_REFRESH_INTERVAL = 5.0
+# Fail explicitly rather than returning a partial index if a broken catalog
+# produces an unbounded inventory. Ordinary system catalogs fit well below it.
+GPO_POLICY_INDEX_MAX_NODES = 100000
 GPO_SCRIPT_UPLOAD_MAX_BYTES = 16 * 1024 * 1024
 GPO_SCRIPT_UPLOAD_MAX_ENCODED_BYTES = (
     4 * ((GPO_SCRIPT_UPLOAD_MAX_BYTES + 2) // 3)
@@ -137,9 +145,16 @@ _UNC_RE = re.compile(
 _LOCALE_RE = re.compile(r'^[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*$')
 
 _catalog_lock = threading.RLock()
+_catalog_update_lock = threading.Lock()
+_catalog_lifecycle_lock = threading.Lock()
 _catalog = None
+_catalog_state = None
 _catalog_last_refresh = 0.0
 _catalog_refresh_result = None
+_catalog_monitor_thread = None
+_catalog_monitor_stop = None
+_security_catalog_lock = threading.RLock()
+_security_catalogs = {}
 _admix_module = None
 
 
@@ -446,6 +461,8 @@ def _sanitize_diagnostics(diagnostics):
             message = str(diagnostic)
         for internal in (
             str(GPO_TEMPLATE_ROOT),
+            str(GPO_SECURITY_DEFINITION_ROOT),
+            str(GPO_SDMX_SCHEMA_ROOT),
             str(GPO_SYSVOL_ROOT),
             str(GPO_EDITOR_STATE_DIRECTORY),
         ):
@@ -467,8 +484,24 @@ def _sanitize_diagnostics(diagnostics):
             message,
             flags=re.IGNORECASE,
         )
-        result.append({'message': message})
+        public = {'message': message}
+        if isinstance(diagnostic, dict):
+            for field in ('severity', 'stage', 'code', 'policy_id', 'element_id'):
+                value = diagnostic.get(field)
+                if isinstance(value, str) and value:
+                    public[field] = value
+            source = diagnostic.get('file')
+            if isinstance(source, str) and source:
+                public['file'] = Path(source).name
+        result.append(public)
     return result
+
+
+def _exception_diagnostics(exc):
+    diagnostics = getattr(exc, 'diagnostics', None)
+    if diagnostics is None:
+        diagnostics = [{'message': str(exc)}]
+    return _sanitize_diagnostics(diagnostics)
 
 
 def _catalog_public_state(catalog, refresh_result=None):
@@ -496,39 +529,261 @@ def _catalog_public_state(catalog, refresh_result=None):
     return result
 
 
-def _get_catalog(module=None, now=None):
-    """Return the worker-local healthy catalog, refreshing it at most once per interval."""
-    global _catalog, _catalog_last_refresh, _catalog_refresh_result
-    module = module or _load_admix()
-    now = time.monotonic() if now is None else now
-    with _catalog_lock:
-        if _catalog is None:
+def _refresh_catalog(module=None, now=None, stop_event=None):
+    """Prepare/publish catalog state outside the short request-facing lock.
+
+    The native catalog serializes acquisition and atomically publishes immutable
+    generations. Its Python binding releases the GIL during that work. Never
+    hold _catalog_lock across native parsing, source checks or index preparation.
+    """
+    global _catalog, _catalog_state
+    global _catalog_last_refresh, _catalog_refresh_result
+    with _catalog_update_lock:
+        if stop_event is not None and stop_event.is_set():
+            return
+        checked_at = time.monotonic() if now is None else now
+        with _catalog_lock:
+            catalog = _catalog
+            state = _catalog_state
+            last_refresh = _catalog_last_refresh
+        if (catalog is not None
+                and checked_at - last_refresh < GPO_CATALOG_REFRESH_INTERVAL):
+            return catalog, copy.deepcopy(state)
+        module = module or _load_admix()
+        refresh = None
+        if catalog is None:
             try:
-                _catalog = module.TemplateCatalog(
+                catalog = module.TemplateCatalog(
                     str(GPO_TEMPLATE_ROOT), all_locales=True
                 )
             except Exception as exc:
                 raise EditorFailure(
-                    'operational',
-                    'Administrative templates are unavailable.',
+                    'operational', 'Administrative templates are unavailable.',
                 ) from exc
-            _catalog_last_refresh = now
-            _catalog_refresh_result = None
-        elif now - _catalog_last_refresh >= GPO_CATALOG_REFRESH_INTERVAL:
+        else:
             try:
-                _catalog_refresh_result = _catalog.refresh_if_changed()
+                refresh = catalog.refresh_if_changed()
+            except Exception:
+                # Keep serving the last-good generation even if the binding
+                # raises unexpectedly instead of returning a failed result.
+                logger.exception('Administrative template background refresh failed')
+                generation = state['generation']
+                refresh = {
+                    'status': 'failed',
+                    'previous_generation': generation['number'],
+                    'current_generation': generation['number'],
+                    'parse_performed': False,
+                    'content_fingerprint': generation['content_fingerprint'],
+                    'inventory_fingerprint': generation['inventory_fingerprint'],
+                    'diagnostics': [],
+                    'failure': {
+                        'code': 'internal',
+                        'message': 'The latest template refresh was unusable.',
+                        'diagnostics': [],
+                    },
+                }
+        public_state = _catalog_public_state(catalog, refresh)
+        completed_at = time.monotonic() if now is None else now
+        with _catalog_lock:
+            if stop_event is not None and stop_event.is_set():
+                return
+            was_empty = _catalog is None
+            _catalog = catalog
+            _catalog_state = public_state
+            _catalog_refresh_result = refresh
+            _catalog_last_refresh = completed_at
+        if was_empty or (refresh and refresh.get('status') == 'changed'):
+            logger.info(
+                'Administrative template catalog ready: generation=%s, locales=%s',
+                public_state['generation']['number'],
+                len(public_state['generation']['loaded_locales']),
+            )
+        return catalog, copy.deepcopy(public_state)
+
+
+def _catalog_monitor_loop(stop_event, module=None):
+    while not stop_event.wait(GPO_CATALOG_REFRESH_INTERVAL):
+        try:
+            _refresh_catalog(module, stop_event=stop_event)
+        except Exception:
+            # A failed initial load must not prevent FreeIPA/LDAP CRUD startup.
+            # Retry independently of editor traffic, including after package
+            # installation makes a previously missing source/binding usable.
+            logger.exception('Administrative template catalog maintenance failed')
+
+
+def _start_catalog_monitor(module=None):
+    """Called during server API finalization, before WSGI accepts traffic."""
+    global _catalog_monitor_thread, _catalog_monitor_stop
+    with _catalog_lifecycle_lock:
+        with _catalog_lock:
+            if (_catalog_monitor_thread is not None
+                    and _catalog_monitor_thread.is_alive()):
+                return _catalog_monitor_thread
+        try:
+            _refresh_catalog(module)
+        except Exception:
+            logger.exception('Administrative template catalog preloading failed')
+        stop_event = threading.Event()
+        thread = threading.Thread(
+            target=_catalog_monitor_loop, args=(stop_event, module),
+            name='gpo-template-catalog', daemon=True,
+        )
+        with _catalog_lock:
+            _catalog_monitor_stop = stop_event
+            _catalog_monitor_thread = thread
+        try:
+            thread.start()
+        except Exception:
+            stop_event.set()
+            logger.exception('Administrative template catalog monitor could not start')
+        return thread
+
+
+def _stop_catalog_monitor():
+    """Stop maintenance for deterministic tests; never join under a state lock."""
+    global _catalog_monitor_thread, _catalog_monitor_stop
+    with _catalog_lifecycle_lock:
+        with _catalog_lock:
+            thread = _catalog_monitor_thread
+            stop_event = _catalog_monitor_stop
+            _catalog_monitor_thread = None
+            _catalog_monitor_stop = None
+        if stop_event is not None:
+            stop_event.set()
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=5.0)
+
+
+def _get_catalog(module=None, now=None):
+    """Read prepared state only; a running WSGI worker never refreshes on RPC."""
+    with _catalog_lock:
+        catalog = _catalog
+        state = _catalog_state
+        monitored = _catalog_monitor_thread is not None
+    if catalog is not None:
+        return catalog, copy.deepcopy(state)
+    if monitored:
+        raise EditorFailure(
+            'operational', 'Administrative templates are unavailable.',
+        )
+    # Non-WSGI consumers and unit tests keep the existing lazy public behavior.
+    # Server finalization always starts maintenance, including on preload failure.
+    return _refresh_catalog(module, now)
+
+
+def _security_definition_locales(root=None):
+    """Discover only direct SDML locale directories under the trusted root."""
+    root = Path(root or GPO_SECURITY_DEFINITION_ROOT)
+    try:
+        children = tuple(root.iterdir())
+    except OSError:
+        return []
+    return sorted(
+        child.name for child in children
+        if child.is_dir() and not child.is_symlink()
+        and _LOCALE_RE.fullmatch(child.name)
+        and any(child.glob('*.sdml'))
+    )
+
+
+def _select_security_locale(requested, available=None):
+    available = list(
+        _security_definition_locales() if available is None else available
+    )
+    if isinstance(requested, str):
+        requested = [requested]
+    requested = list(requested or ())
+    for locale in requested:
+        if not isinstance(locale, str) or not _LOCALE_RE.fullmatch(locale):
+            raise EditorFailure(
+                'validation', 'A requested locale is invalid.', field='locales'
+            )
+    by_casefold = {
+        locale.replace('_', '-').casefold(): locale for locale in available
+    }
+    for locale in requested:
+        normalized = locale.replace('_', '-').casefold()
+        if normalized in by_casefold:
+            return by_casefold[normalized]
+        language = normalized.split('-', 1)[0]
+        match = next((
+            value for value in available
+            if value.replace('_', '-').casefold().split('-', 1)[0] == language
+        ), None)
+        if match is not None:
+            return match
+    return by_casefold.get('en-us') or (available[0] if available else 'en-US')
+
+
+def _security_catalog_public_state(catalog, refresh_result=None):
+    return {
+        'generation': dict(catalog.generation()),
+        'diagnostics': _sanitize_diagnostics(catalog.diagnostics()),
+        'refresh': refresh_result,
+    }
+
+
+def _get_security_catalog(requested=(), module=None, now=None):
+    """Cache one healthy SDMX catalog per locale and retain it on refresh errors."""
+    module = module or _load_admix()
+    now = time.monotonic() if now is None else now
+    locale = _select_security_locale(requested)
+    with _security_catalog_lock:
+        cached = _security_catalogs.get(locale)
+        if cached is None:
+            try:
+                catalog = module.SecurityDefinitionCatalog(
+                    str(GPO_SECURITY_DEFINITION_ROOT),
+                    locale=locale,
+                    sdmx_schema=str(GPO_SDMX_SCHEMA),
+                    sdml_schema=str(GPO_SDML_SCHEMA),
+                )
             except Exception as exc:
-                # Unexpected binding failures are operational.  A normal
-                # failed refresh is returned as a result and retains the last
-                # healthy generation inside TemplateCatalog.
                 raise EditorFailure(
                     'operational',
-                    'Administrative templates could not be refreshed.',
+                    'Security policy definitions are unavailable.',
+                    field='security_catalog',
+                    details={'diagnostics': _exception_diagnostics(exc)},
                 ) from exc
-            _catalog_last_refresh = now
-        return _catalog, _catalog_public_state(
-            _catalog, _catalog_refresh_result
-        )
+            cached = {
+                'catalog': catalog,
+                'last_refresh': now,
+                'refresh': None,
+            }
+            _security_catalogs[locale] = cached
+        elif now - cached['last_refresh'] >= GPO_CATALOG_REFRESH_INTERVAL:
+            catalog = cached['catalog']
+            try:
+                refresh = dict(catalog.refresh_if_changed())
+                refresh['diagnostics'] = _sanitize_diagnostics(
+                    refresh.get('diagnostics', ())
+                )
+                if refresh.get('failure'):
+                    failure = dict(refresh['failure'])
+                    failure['message'] = (
+                        'The latest security definition refresh was unusable.'
+                    )
+                    failure['diagnostics'] = _sanitize_diagnostics(
+                        failure.get('diagnostics', ())
+                    )
+                    refresh['failure'] = failure
+            except Exception as exc:
+                refresh = {
+                    'status': 'retained',
+                    'generation': dict(catalog.generation()),
+                    'failure': {
+                        'code': str(getattr(exc, 'code', 'catalog_refresh_failed')),
+                        'message': 'The latest security definition refresh was unusable.',
+                        'diagnostics': _exception_diagnostics(exc),
+                    },
+                }
+            cached['last_refresh'] = now
+            cached['refresh'] = refresh
+        catalog = cached['catalog']
+        return catalog, _security_catalog_public_state(
+            catalog, cached['refresh']
+        ), locale
 
 
 def _select_locales(requested, generation):
@@ -584,7 +839,7 @@ def _comments_config(scope, locales):
 
 def _open_workspace(
     context, requested_locales=(), load_preferences=False,
-    comment_scope=None, with_catalog=True,
+    comment_scope=None, with_catalog=True, with_security_catalog=False,
 ):
     module = _load_admix()
     kwargs = {
@@ -593,6 +848,7 @@ def _open_workspace(
         'state_key': context.guid,
     }
     catalog_state = None
+    security_catalog_state = None
     locales = []
     if with_catalog:
         catalog, catalog_state = _get_catalog(module)
@@ -601,26 +857,78 @@ def _open_workspace(
         )
         kwargs['template_catalog'] = catalog
         kwargs['locales'] = locales
+    if with_security_catalog:
+        security_catalog, security_catalog_state, security_locale = (
+            _get_security_catalog(requested_locales, module)
+        )
+        kwargs['security_catalog'] = security_catalog
+        if not locales:
+            locales = [security_locale]
     if comment_scope is not None:
         kwargs['comments'] = _comments_config(comment_scope, locales)
-    try:
-        workspace = module.HighLevelApi(str(context.gpo_root), **kwargs)
-    except Exception:
-        raise
+    workspace_class = getattr(module, 'GroupPolicyWorkspace', None)
+    if workspace_class is None:
+        workspace_class = module.HighLevelApi
+    # The constructor pins an immutable native generation. A background
+    # refresh may publish between cached-state acquisition and that pin.
+    for _attempt in range(3):
+        try:
+            workspace = workspace_class(str(context.gpo_root), **kwargs)
+        except Exception:
+            if not with_catalog:
+                raise
+            # A removed ADML locale can make the constructor reject a locale
+            # selected from the previous generation. Retry only that race;
+            # unrelated workspace errors retain their original error contract.
+            selected = _select_locales(requested_locales, catalog.generation())
+            if selected == locales:
+                raise
+            locales = selected
+            kwargs['locales'] = locales
+            if comment_scope is not None:
+                kwargs['comments'] = _comments_config(comment_scope, locales)
+            continue
+        generation_reader = getattr(workspace, 'template_generation', None)
+        if not with_catalog or generation_reader is None:
+            break
+        generation = dict(generation_reader())
+        if catalog_state['generation'] != generation:
+            # Workspace diagnostics include the pinned catalog's diagnostics.
+            # Do not attach refresh/diagnostics from a different generation.
+            catalog_state = {
+                **catalog_state, 'generation': generation,
+                'diagnostics': [], 'refresh': None,
+            }
+        selected = _select_locales(requested_locales, generation)
+        if selected == locales:
+            break
+        locales = selected
+        kwargs['locales'] = locales
+        if comment_scope is not None:
+            kwargs['comments'] = _comments_config(comment_scope, locales)
+    else:
+        raise EditorFailure(
+            'operational', 'Administrative templates could not be refreshed.',
+        )
     return workspace, {
         'catalog': catalog_state,
+        'security_catalog': security_catalog_state,
         'locales': locales,
     }
 
 
 def _reset_editor_globals_for_tests():
-    global _catalog, _catalog_last_refresh, _catalog_refresh_result
+    global _catalog, _catalog_state, _catalog_last_refresh, _catalog_refresh_result
     global _admix_module
+    _stop_catalog_monitor()
     with _catalog_lock:
         _catalog = None
+        _catalog_state = None
         _catalog_last_refresh = 0.0
         _catalog_refresh_result = None
         _admix_module = None
+    with _security_catalog_lock:
+        _security_catalogs.clear()
 
 
 def _validate_publication_plan(plan, expected_snapshot):
@@ -941,6 +1249,9 @@ def _editor_envelope(context, runtime, workspace=None):
     catalog = runtime.get('catalog')
     if catalog:
         diagnostics = catalog.get('diagnostics', []) + diagnostics
+    security_catalog = runtime.get('security_catalog')
+    if security_catalog:
+        diagnostics = security_catalog.get('diagnostics', []) + diagnostics
     return {
         'gpo': {
             'displayname': context.displayname,
@@ -949,6 +1260,7 @@ def _editor_envelope(context, runtime, workspace=None):
         },
         'snapshot': _public_snapshot(context.snapshot),
         'template': catalog,
+        'security_catalog_status': security_catalog,
         'locales': list(runtime.get('locales') or ()),
         'diagnostics': diagnostics,
         'pending_publication': _public_pending(pending),
@@ -1398,6 +1710,17 @@ def _apply_filter_operations(workspace, scope, kind, identity, operations):
                 identity,
                 list(operation.get('path') or ()),
             )
+        elif action == 'move':
+            # Both paths address the pre-move tree; the library rebases the
+            # destination and applies index after removing the source.
+            workspace.move_preference_filter(
+                scope,
+                kind,
+                identity,
+                list(operation.get('source_path') or ()),
+                list(operation.get('collection_path') or ()),
+                int(operation.get('index', 0)),
+            )
         elif action == 'edit':
             workspace.edit_preference_filter_fields(
                 scope,
@@ -1446,12 +1769,19 @@ def _translate_editor_exception(exc):
         }
         if code in mapping:
             category, message = mapping[code]
+            details = script_details
+            security_diagnostics = _sanitize_diagnostics(
+                getattr(exc, 'diagnostics', ())
+            )
+            if security_diagnostics:
+                details = dict(details or {})
+                details['diagnostics'] = security_diagnostics
             failure = EditorFailure(
                 category,
                 message,
                 field=getattr(exc, 'field', None),
                 path=getattr(exc, 'path', None),
-                details=script_details,
+                details=details,
             )
         else:
             logger.exception('Unexpected GPO editor failure')
@@ -1653,6 +1983,8 @@ class gpo(LDAPObject):
         self.env._merge(**dict(PLUGIN_CONFIG))
         self.container_dn = self.env.container_grouppolicy
         super(gpo, self)._on_finalize()
+        if getattr(self.env, 'context', None) == 'server':
+            _start_catalog_monitor()
 
     def find_gpo_by_displayname(self, ldap, displayname):
         try:
@@ -1949,6 +2281,71 @@ def _validated_scope(scope):
     return normalized
 
 
+def _policy_catalog_index(workspace, scope, locales):
+    """Project the complete native catalog without opening policy snapshots."""
+    def children(category_id):
+        nodes = workspace.list_policies(scope, category_id, locales)
+        if not isinstance(nodes, (list, tuple)):
+            raise EditorFailure(
+                'operational',
+                'The editor binding returned an invalid policy catalog.',
+            )
+        return iter(nodes)
+
+    policies = []
+    seen_policies = set()
+    seen_categories = set()
+    path = []
+    # Iterators and one mutable display path avoid recursion limits and copies
+    # of every ancestor path while visiting deeply nested categories.
+    pending = [children(None)]
+    node_count = 0
+    while pending:
+        try:
+            node = next(pending[-1])
+        except StopIteration:
+            pending.pop()
+            if path:
+                path.pop()
+            continue
+        node_count += 1
+        if node_count > GPO_POLICY_INDEX_MAX_NODES:
+            raise EditorFailure(
+                'operational',
+                'The policy catalog exceeds the editor index resource limit.',
+            )
+        if not isinstance(node, dict):
+            raise EditorFailure(
+                'operational',
+                'The editor binding returned an invalid policy catalog node.',
+            )
+        kind = node.get('kind')
+        identity = node.get('id')
+        label = node.get('label')
+        if (
+            kind not in ('category', 'policy')
+            or not isinstance(identity, str)
+            or not identity
+            or (label is not None and not isinstance(label, str))
+        ):
+            raise EditorFailure(
+                'operational',
+                'The editor binding returned an invalid policy catalog node.',
+            )
+        label = label or identity
+        if kind == 'policy':
+            if identity not in seen_policies:
+                seen_policies.add(identity)
+                policies.append({
+                    'id': identity, 'label': label, 'path': list(path),
+                })
+        elif identity not in seen_categories:
+            seen_categories.add(identity)
+            path.append(label)
+            pending.append(children(identity))
+    return policies
+
+
 def _validated_script_context(scope, event):
     normalized_scope = _validated_scope(scope)
     normalized_event = str(event or '').lower()
@@ -2113,6 +2510,351 @@ class _GpoEditorCommand(Command):
         )
 
 
+def _security_invalid(message, field='request'):
+    raise EditorFailure('validation', message, field=field)
+
+
+def _restore_rpc_arrays(value):
+    """Undo FreeIPA's JSON object-hook conversion of arrays to tuples.
+
+    ``ipalib.ipajson._ipa_obj_hook`` changes every JSON array stored in an
+    object to a tuple, including nested policy actions and typed values.
+    The editor DTOs require lists.  Keep already-correct Python inputs intact
+    and only copy containers along paths containing converted arrays.
+    """
+    if isinstance(value, tuple):
+        return [_restore_rpc_arrays(item) for item in value]
+    if isinstance(value, list):
+        restored = [_restore_rpc_arrays(item) for item in value]
+        return (value if all(a is b for a, b in zip(value, restored))
+                else restored)
+    if isinstance(value, dict):
+        restored = {key: _restore_rpc_arrays(item) for key, item in value.items()}
+        return (value if all(restored[key] is item for key, item in value.items())
+                else restored)
+    return value
+
+
+def _security_nonempty(value, field):
+    if not isinstance(value, str) or not value:
+        _security_invalid('A non-empty identifier is required.', field)
+
+
+def _security_reject_unknown(value, allowed, field):
+    if set(value) - set(allowed):
+        _security_invalid(
+            'The security definition update contains unknown fields.', field
+        )
+
+
+def _security_validate_value(value, field):
+    if not isinstance(value, dict):
+        _security_invalid('A typed security definition value is required.', field)
+    _security_reject_unknown(value, ('kind', 'value'), field)
+    _security_nonempty(value.get('kind'), '{}.kind'.format(field))
+    if 'value' not in value:
+        _security_invalid('A typed security definition value is required.', field)
+
+
+def _security_validate_element_state(value, field):
+    if not isinstance(value, dict):
+        _security_invalid('A keyed-row field state is required.', field)
+    state = value.get('state')
+    if state == 'unset':
+        _security_reject_unknown(value, ('state',), field)
+    elif state == 'set':
+        _security_reject_unknown(value, ('state', 'value'), field)
+        _security_validate_value(value.get('value'), '{}.value'.format(field))
+    else:
+        _security_invalid('A keyed-row field state must be set or unset.', field)
+
+
+def _security_validate_row(value, field):
+    if not isinstance(value, dict):
+        _security_invalid('A keyed-row action is required.', field)
+    action = value.get('action')
+    if action == 'delete':
+        _security_reject_unknown(value, ('action', 'key'), field)
+    elif action == 'upsert':
+        _security_reject_unknown(value, ('action', 'key', 'fields'), field)
+        fields = value.get('fields', {})
+        if not isinstance(fields, dict):
+            _security_invalid('Keyed-row fields must be an object.', '{}.fields'.format(field))
+        for name, state in fields.items():
+            _security_nonempty(name, '{}.fields'.format(field))
+            _security_validate_element_state(
+                state, '{}.fields.{}'.format(field, name)
+            )
+    else:
+        _security_invalid('A keyed-row action must be upsert or delete.', field)
+    _security_validate_value(value.get('key'), '{}.key'.format(field))
+
+
+def _security_validate_element(value, field):
+    if not isinstance(value, dict):
+        _security_invalid('A security element action is required.', field)
+    _security_nonempty(value.get('element_id'), '{}.element_id'.format(field))
+    action = value.get('action')
+    if action == 'unset':
+        _security_reject_unknown(value, ('element_id', 'action'), field)
+    elif action == 'set':
+        _security_reject_unknown(value, ('element_id', 'action', 'value'), field)
+        _security_validate_value(value.get('value'), '{}.value'.format(field))
+    elif action == 'rows':
+        _security_reject_unknown(value, ('element_id', 'action', 'rows'), field)
+        rows = value.get('rows')
+        if not isinstance(rows, list):
+            _security_invalid('Keyed-row actions must be a list.', '{}.rows'.format(field))
+        for index, row in enumerate(rows):
+            _security_validate_row(row, '{}.rows[{}]'.format(field, index))
+    else:
+        _security_invalid('An element action must be set, unset, or rows.', field)
+
+
+def _validate_security_update(request):
+    if not isinstance(request, dict):
+        _security_invalid('A structured security definition update is required.')
+    request = _restore_rpc_arrays(request)
+    _security_reject_unknown(
+        request, ('expected_semantic_revision', 'policies'), 'request'
+    )
+    _security_nonempty(
+        request.get('expected_semantic_revision'),
+        'request.expected_semantic_revision',
+    )
+    policies = request.get('policies')
+    if not isinstance(policies, list):
+        _security_invalid('Security policy actions must be a list.', 'request.policies')
+    seen = set()
+    for policy_index, policy in enumerate(policies):
+        field = 'request.policies[{}]'.format(policy_index)
+        if not isinstance(policy, dict):
+            _security_invalid('A security policy action is required.', field)
+        _security_reject_unknown(
+            policy, ('namespace', 'policy_id', 'transition', 'elements'), field
+        )
+        _security_nonempty(policy.get('namespace'), '{}.namespace'.format(field))
+        _security_nonempty(policy.get('policy_id'), '{}.policy_id'.format(field))
+        identity = (policy['namespace'], policy['policy_id'])
+        if identity in seen:
+            _security_invalid('A security policy may be updated only once.', field)
+        seen.add(identity)
+        transition = policy.get('transition')
+        if 'transition' in policy and transition not in ('define', 'undefine'):
+            _security_invalid(
+                'A policy transition must be define or undefine.',
+                '{}.transition'.format(field),
+            )
+        elements = policy.get('elements', [])
+        if not isinstance(elements, list):
+            _security_invalid(
+                'Security element actions must be a list.', '{}.elements'.format(field)
+            )
+        element_ids = set()
+        for element_index, element in enumerate(elements):
+            element_field = '{}.elements[{}]'.format(field, element_index)
+            _security_validate_element(element, element_field)
+            if element['element_id'] in element_ids:
+                _security_invalid(
+                    'A security element may be updated only once.', element_field
+                )
+            element_ids.add(element['element_id'])
+        if transition == 'undefine' and elements:
+            _security_invalid(
+                'Undefine cannot include element actions.', '{}.elements'.format(field)
+            )
+    return request
+
+
+def _assert_safe_security_projection(value, path='result'):
+    """Reject library DTOs containing secret fields before exposing them by RPC."""
+    prohibited = {
+        'cpassword', 'plaintext', 'plaintext_password',
+        'ciphertext', 'encrypted_password', 'secret_value',
+    }
+    if isinstance(value, dict):
+        for key, child in value.items():
+            normalized = str(key).replace('-', '_').casefold()
+            if normalized in prohibited:
+                raise EditorFailure(
+                    'operational', 'The editor library returned a prohibited secret field.',
+                    details={'path': path},
+                )
+            _assert_safe_security_projection(child, '{}.{}'.format(path, key))
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            _assert_safe_security_projection(
+                child, '{}[{}]'.format(path, index)
+            )
+
+
+def _security_definition_result(context, runtime, workspace):
+    result = _editor_envelope(context, runtime, workspace)
+    result['security_catalog'] = workspace.security_definition_catalog()
+    snapshot = dict(workspace.security_definition_snapshot())
+    snapshot['diagnostics'] = _sanitize_diagnostics(
+        snapshot.get('diagnostics', ())
+    )
+    result['security_snapshot'] = snapshot
+    # The target service inventory is intentionally supplied by the operator;
+    # the FreeIPA host cannot infer a Windows fleet's installed services.
+    result['security_service_catalog'] = []
+    _assert_safe_security_projection(result)
+    return result
+
+
+def _security_definition_show(command, displayname, locales):
+    context = command._context(displayname)
+    workspace, runtime = _open_workspace(
+        context, locales or (), load_preferences=False,
+        with_catalog=False, with_security_catalog=True,
+    )
+    return _security_definition_result(context, runtime, workspace)
+
+
+def _security_definition_update(command, displayname, request, locales):
+    request = _validate_security_update(request)
+    context = command._context(displayname, write=True)
+    ldap_backend = command.api.Backend.ldap2
+    workspace, runtime = _open_workspace(
+        context, locales or (), load_preferences=False,
+        with_catalog=False, with_security_catalog=True,
+    )
+    _recover_before_mutation(workspace, ldap_backend, context)
+    workspace.update_security_definitions(request)
+    publication = _commit_external_once(workspace, ldap_backend, context)
+    result = _security_definition_result(context, runtime, workspace)
+    result['publication'] = publication
+    return result
+
+
+@register()
+class gpo_editor_security_definitions_show(_GpoEditorCommand):
+    __doc__ = _('Display Security Settings from external SDMX/SDML definitions.')
+
+    takes_args = (Str('displayname', label=_('Policy name')),)
+    takes_options = (Str('locales*', label=_('Preferred locales')),)
+
+    def execute(self, displayname, locales=None, **options):
+        return self._run(
+            lambda: _security_definition_show(self, displayname, locales)
+        )
+
+
+@register()
+class gpo_editor_security_definitions_update(_GpoEditorCommand):
+    __doc__ = _('Atomically update externally defined Security Settings.')
+
+    takes_args = (Str('displayname', label=_('Policy name')),)
+    takes_options = (
+        Dict('request', label=_('Structured security definition update')),
+        Str('locales*', label=_('Preferred locales')),
+    )
+
+    def execute(self, displayname, request, locales=None, **options):
+        return self._run(
+            lambda: _security_definition_update(self, displayname, request, locales)
+        )
+
+
+@register()
+class gpo_editor_security_show(gpo_editor_security_definitions_show):
+    __doc__ = _('Display externally defined Security Settings (compatibility alias).')
+
+
+@register()
+class gpo_editor_security_update(gpo_editor_security_definitions_update):
+    __doc__ = _('Update externally defined Security Settings (compatibility alias).')
+
+
+def _validate_advanced_audit_update(request):
+    if not isinstance(request, dict):
+        raise EditorFailure(
+            'validation', 'A structured Advanced Audit update is required.',
+            field='request',
+        )
+    request = _restore_rpc_arrays(request)
+    fields = (
+        'set_subcategories', 'clear_subcategories',
+        'set_options', 'clear_options',
+        'set_global_sacls', 'clear_global_sacls',
+    )
+    if set(request) - set(fields):
+        raise EditorFailure(
+            'validation', 'The Advanced Audit update contains unknown fields.',
+            field='request',
+        )
+    normalized = {}
+    for field in fields:
+        operations = request.get(field, [])
+        if not isinstance(operations, list):
+            raise EditorFailure(
+                'validation', 'Advanced Audit operations must be lists.',
+                field='request.{}'.format(field),
+            )
+        objects = field.startswith('set_') or field == 'clear_subcategories'
+        if objects and not all(isinstance(item, dict) for item in operations):
+            raise EditorFailure(
+                'validation', 'Advanced Audit operations must be objects.',
+                field='request.{}'.format(field),
+            )
+        if not objects and not all(isinstance(item, str) for item in operations):
+            raise EditorFailure(
+                'validation', 'Advanced Audit clear operations must be strings.',
+                field='request.{}'.format(field),
+            )
+        normalized[field] = operations
+    return normalized
+
+
+@register()
+class gpo_editor_advanced_audit_show(_GpoEditorCommand):
+    __doc__ = _('Display Advanced Audit Policy Configuration.')
+
+    takes_args = (Str('displayname', label=_('Policy name')),)
+
+    def execute(self, displayname, **options):
+        def operation():
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(
+                context, load_preferences=False, with_catalog=False
+            )
+            advanced_audit = workspace.get_advanced_audit()
+            _assert_safe_security_projection(advanced_audit)
+            result = _editor_envelope(context, runtime, workspace)
+            result['advanced_audit'] = advanced_audit
+            return result
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_advanced_audit_update(_GpoEditorCommand):
+    __doc__ = _('Atomically update Advanced Audit Policy Configuration.')
+
+    takes_args = (Str('displayname', label=_('Policy name')),)
+    takes_options = (Dict('request', label=_('Structured Advanced Audit update')),)
+
+    def execute(self, displayname, request, **options):
+        def operation():
+            normalized = _validate_advanced_audit_update(request)
+            context = self._context(displayname, write=True)
+            ldap_backend = self.api.Backend.ldap2
+            workspace, runtime = _open_workspace(
+                context, load_preferences=False, with_catalog=False
+            )
+            _recover_before_mutation(workspace, ldap_backend, context)
+            advanced_audit = workspace.update_advanced_audit(normalized)
+            _assert_safe_security_projection(advanced_audit)
+            publication = _commit_external_once(
+                workspace, ldap_backend, context
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result['advanced_audit'] = advanced_audit
+            result['publication'] = publication
+            return result
+        return self._run(operation)
+
+
 @register()
 class gpo_editor_open(_GpoEditorCommand):
     __doc__ = _('Open a high-level Group Policy editor context.')
@@ -2171,6 +2913,34 @@ class gpo_editor_children(_GpoEditorCommand):
 
 
 @register()
+class gpo_editor_policy_index(_GpoEditorCommand):
+    __doc__ = _('List the complete Administrative Template policy index.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Policy scope')),
+    )
+    takes_options = (
+        Str('locales*', label=_('Preferred locales')),
+    )
+
+    def execute(self, displayname, scope, locales=None, **options):
+        def operation():
+            normalized_scope = _validated_scope(scope)
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(
+                context, locales or (), load_preferences=False
+            )
+            policies = _policy_catalog_index(
+                workspace, normalized_scope, runtime['locales']
+            )
+            result = _editor_envelope(context, runtime, workspace)
+            result['policies'] = policies
+            return result
+        return self._run(operation)
+
+
+@register()
 class gpo_editor_policy_show(_GpoEditorCommand):
     __doc__ = _('Display a high-level Administrative Template policy.')
 
@@ -2222,8 +2992,9 @@ class gpo_editor_policy_update(_GpoEditorCommand):
         locales=None, **options
     ):
         def operation():
+            policy_request = _restore_rpc_arrays(request)
             _structured_request(
-                request,
+                policy_request,
                 ('state', 'set_parameters', 'clear_parameters', 'comment'),
             )
             normalized_scope = _validated_scope(scope)
@@ -2244,8 +3015,8 @@ class gpo_editor_policy_update(_GpoEditorCommand):
                 ('set_parameters', 'set_parameters'),
                 ('clear_parameters', 'clear_parameters'),
             ):
-                if request_key in request:
-                    update_kwargs[binding_key] = request[request_key]
+                if request_key in policy_request:
+                    update_kwargs[binding_key] = policy_request[request_key]
                     has_policy_update = True
             if has_policy_update:
                 policy = workspace.update_policy(
@@ -2256,7 +3027,7 @@ class gpo_editor_policy_update(_GpoEditorCommand):
                     normalized_scope, policy_id, runtime['locales']
                 )
 
-            comment = request.get('comment')
+            comment = policy_request.get('comment')
             if comment is not None:
                 if not isinstance(comment, dict):
                     raise EditorFailure(
@@ -2347,7 +3118,7 @@ class gpo_editor_preference_documents(_GpoEditorCommand):
         def operation():
             context = self._context(displayname)
             workspace, runtime = _open_workspace(
-                context, load_preferences=True
+                context, load_preferences=True, with_catalog=False
             )
             result = _editor_envelope(context, runtime, workspace)
             result['documents'] = _public_documents(
@@ -2372,7 +3143,7 @@ class gpo_editor_preference_items(_GpoEditorCommand):
             normalized_scope = _validated_scope(scope)
             context = self._context(displayname)
             workspace, runtime = _open_workspace(
-                context, load_preferences=True
+                context, load_preferences=True, with_catalog=False
             )
             result = _editor_envelope(context, runtime, workspace)
             result['items'] = workspace.list_preference_items(
@@ -2401,7 +3172,7 @@ class gpo_editor_preference_show(_GpoEditorCommand):
             _structured_request(request, ('identity',))
             context = self._context(displayname)
             workspace, runtime = _open_workspace(
-                context, load_preferences=True
+                context, load_preferences=True, with_catalog=False
             )
             result = _editor_envelope(context, runtime, workspace)
             if request.get('identity') is None:
@@ -2443,7 +3214,7 @@ class gpo_editor_preference_create(_GpoEditorCommand):
             context = self._context(displayname, write=True)
             ldap_backend = self.api.Backend.ldap2
             workspace, runtime = _open_workspace(
-                context, load_preferences=True
+                context, load_preferences=True, with_catalog=False
             )
             _recover_before_mutation(workspace, ldap_backend, context)
             item = workspace.create_preference_item(
@@ -2497,7 +3268,7 @@ class gpo_editor_preference_update(_GpoEditorCommand):
             context = self._context(displayname, write=True)
             ldap_backend = self.api.Backend.ldap2
             workspace, runtime = _open_workspace(
-                context, load_preferences=True
+                context, load_preferences=True, with_catalog=False
             )
             _recover_before_mutation(workspace, ldap_backend, context)
             _find_preference_item(
@@ -2558,7 +3329,7 @@ class gpo_editor_preference_delete(_GpoEditorCommand):
             context = self._context(displayname, write=True)
             ldap_backend = self.api.Backend.ldap2
             workspace, runtime = _open_workspace(
-                context, load_preferences=True
+                context, load_preferences=True, with_catalog=False
             )
             _recover_before_mutation(workspace, ldap_backend, context)
             _find_preference_item(
@@ -2620,6 +3391,66 @@ class gpo_editor_script_files(_GpoEditorCommand):
             return _scripts_response(
                 context, runtime, workspace, normalized_scope, normalized_event
             )
+        return self._run(operation)
+
+
+@register()
+class gpo_editor_script_asset_download(_GpoEditorCommand):
+    __doc__ = _('Download a revision-checked managed Group Policy script file.')
+
+    takes_args = (
+        Str('displayname', label=_('Policy name')),
+        Str('scope', label=_('Script scope')),
+        Str('event', label=_('Script event')),
+    )
+    takes_options = (
+        Dict('request', label=_('Structured script download request')),
+    )
+
+    def execute(self, displayname, scope, event, request, **options):
+        def operation():
+            normalized_scope, normalized_event = _validated_script_context(
+                scope, event
+            )
+            request_data = _script_request(
+                request, ('name', 'revision'), ('name', 'revision')
+            )
+            name = _script_asset_name(request_data)
+            revision = _script_identity(request_data, 'revision')
+            context = self._context(displayname)
+            workspace, runtime = _open_workspace(context, with_catalog=False)
+            asset = workspace.read_script_asset(
+                normalized_scope, normalized_event, name, revision
+            )
+            if (
+                not isinstance(asset, dict)
+                or asset.get('name') != name
+                or asset.get('revision') != revision
+            ):
+                raise EditorFailure(
+                    'operational',
+                    'The editor binding returned an invalid script asset.',
+                )
+            content = asset.get('content')
+            if not isinstance(content, bytes):
+                raise EditorFailure(
+                    'operational',
+                    'The editor binding returned invalid script content.',
+                )
+            if len(content) > GPO_SCRIPT_UPLOAD_MAX_BYTES:
+                raise EditorFailure(
+                    'size_limit', 'The script download exceeds the allowed size.',
+                    field='name',
+                    details={'limit_bytes': GPO_SCRIPT_UPLOAD_MAX_BYTES},
+                )
+            result = _editor_envelope(context, runtime, workspace)
+            result['asset'] = {
+                'name': name,
+                'byte_size': len(content),
+                'revision': revision,
+                'content_base64': base64.b64encode(content).decode('ascii'),
+            }
+            return result
         return self._run(operation)
 
 
@@ -2844,6 +3675,9 @@ class gpo_editor_script_entries_reorder(_GpoEditorCommand):
             group = _script_group(request_data)
             snapshot = _script_identity(request_data, 'snapshot')
             identities = request_data.get('identities')
+            if isinstance(identities, tuple):
+                # FreeIPA's JSON object hook turns nested JSON arrays into tuples.
+                identities = list(identities)
             if not isinstance(identities, list) or not all(
                 isinstance(identity, str) and identity and '\x00' not in identity
                 for identity in identities
