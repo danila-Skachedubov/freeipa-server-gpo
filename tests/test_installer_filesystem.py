@@ -522,6 +522,10 @@ def test_install_configures_fresh_filesystem_and_health_check():
     calls = []
 
     class Actions:
+        def check_group_policy_update_assets(self):
+            calls.append("update assets")
+            return True
+
         def configure_editor_filesystem(self):
             calls.append("filesystem")
             return True
@@ -539,6 +543,14 @@ def test_install_configures_fresh_filesystem_and_health_check():
             return True
 
     class Checker:
+        def check_schema_complete(self, _classes):
+            calls.append("schema health")
+            return True
+
+        def check_group_policy_infrastructure(self):
+            calls.append("LDAP health")
+            return True
+
         def check_editor_filesystem(self):
             calls.append("health")
             return True
@@ -548,8 +560,12 @@ def test_install_configures_fresh_filesystem_and_health_check():
         "sysvol_directory": True,
         "sysvol_share": True,
         "schema_complete": True,
+        "ldap_infrastructure": True,
         "editor_filesystem": True,
     }
 
     assert execute_required_actions(Actions(), checks, Checker()) is True
-    assert calls == ["filesystem", "health", "plugins", "oddjob", "httpd"]
+    assert calls == [
+        "update assets", "filesystem", "health", "plugins", "oddjob",
+        "schema health", "LDAP health", "httpd",
+    ]

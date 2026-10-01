@@ -7,6 +7,7 @@ from ipalib import api, errors, _, ngettext
 from ipalib import Str, Command, output, Flag, Bool
 from ipalib.plugable import Registry
 from ipalib import constants
+from ipalib.text import GettextFactory
 from ipapython.dn import DN
 
 from ipaserver.plugins.baseldap import (
@@ -16,6 +17,7 @@ from ipaserver.plugins.baseldap import (
 
 logger = logging.getLogger(__name__)
 register = Registry()
+_gpo = GettextFactory(domain='ipa-gpo-install')
 
 PLUGIN_CONFIG = (
     ('container_system', DN(('cn', 'System'))),
@@ -868,6 +870,26 @@ class chain_find(LDAPSearch):
         options_copy.update(converted)
         return super(chain_find, self).args_options_2_entry(*args, **options_copy)
 
+    def exc_callback(self, args, options, exc, call_func,
+                     *call_args, **call_kwargs):
+        """Report missing installation infrastructure without hiding failures."""
+        if (isinstance(exc, errors.NotFound) and
+                not isinstance(exc, errors.EmptyResult) and
+                call_func == self.obj.backend.find_entries):
+            # LDAPSearch otherwise resolves parent_object='', raising KeyError
+            # instead of returning a public diagnostic. Intercept
+            # only the original LDAP search, not errors from other callbacks.
+            raise errors.DatabaseError(
+                desc=_gpo("Group Policy installation is incomplete"),
+                info=_gpo(
+                    "The Chains LDAP container is missing. Run ipa-gpo-install "
+                    "on the IPA server to repair the installation."
+                ),
+            ) from exc
+        return super(chain_find, self).exc_callback(
+            args, options, exc, call_func, *call_args, **call_kwargs
+        )
+
     def post_callback(self, ldap, entries, truncated, *args, **options):
         """Sort chains by GPMaster order."""
         raw = options.get('raw', False)
@@ -933,20 +955,6 @@ class chain_find(LDAPSearch):
         inactive_entries.sort(key=lambda x: x.get('cn', [''])[0])
 
         return [entry for _, entry in active_entries] + inactive_entries
-
-    def execute(self, *args, **options):
-        """Override execute to preserve GPMaster ordering."""
-        try:
-            result = super(chain_find, self).execute(*args, **options)
-        except errors.NotFound:
-            return {
-                'result': [],
-                'count': 0,
-                'truncated': False,
-                'summary': self.msg_summary % {'count': 0}
-            }
-
-        return result
 
 class ChainResolveBase(Command):
     def _get_active_chains_optimized(self):

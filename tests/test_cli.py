@@ -21,6 +21,14 @@ def _make_actions():
     return actions
 
 
+def _execute_actions(actions, check_results, checker=None):
+    # Existing orchestration scenarios start with a healthy data migration.
+    check_results.setdefault('ldap_infrastructure', True)
+    return cli.execute_required_actions(
+        actions, check_results, checker or _make_checker()
+    )
+
+
 class TestCheckCriticalRequirements:
     """
     check_critical_requirements(checker) -> bool
@@ -65,6 +73,7 @@ class TestPerformConfigurationChecks:
 
     Runs non-critical checks and returns results dict:
       - schema_complete
+      - ldap_infrastructure
       - adtrust_enabled
       - sysvol_directory
       - sysvol_share
@@ -74,12 +83,14 @@ class TestPerformConfigurationChecks:
     def test_all_pass(self):
         checker = _make_checker()
         checker.check_schema_complete.return_value = True
+        checker.check_group_policy_infrastructure.return_value = True
         checker.check_adtrust_installed.return_value = True
         checker.check_sysvol_directory.return_value = True
         checker.check_sysvol_share.return_value = True
         checker.check_editor_filesystem.return_value = True
         results = cli.perform_configuration_checks(checker)
         assert results['schema_complete'] is True
+        assert results['ldap_infrastructure'] is True
         assert results['adtrust_enabled'] is True
         assert results['sysvol_directory'] is True
         assert results['sysvol_share'] is True
@@ -88,6 +99,7 @@ class TestPerformConfigurationChecks:
     def test_all_fail(self):
         checker = _make_checker()
         checker.check_schema_complete.return_value = False
+        checker.check_group_policy_infrastructure.return_value = False
         checker.check_adtrust_installed.return_value = False
         checker.check_sysvol_directory.return_value = False
         checker.check_sysvol_share.return_value = False
@@ -163,7 +175,7 @@ class TestExecuteRequiredActions:
             'sysvol_share': True,
             'schema_complete': True,
         }
-        assert cli.execute_required_actions(actions, check_results) is True
+        assert _execute_actions(actions, check_results) is True
         actions.install_adtrust.assert_not_called()
         actions.create_sysvol_directory.assert_not_called()
         actions.create_sysvol_share.assert_not_called()
@@ -181,7 +193,7 @@ class TestExecuteRequiredActions:
             'sysvol_share': True,
             'schema_complete': True,
         }
-        assert cli.execute_required_actions(actions, check_results) is True
+        assert _execute_actions(actions, check_results) is True
         actions.install_adtrust.assert_called_once()
 
     def test_sysvol_missing_triggers_create(self):
@@ -197,7 +209,7 @@ class TestExecuteRequiredActions:
             'sysvol_share': False,
             'schema_complete': True,
         }
-        assert cli.execute_required_actions(actions, check_results) is True
+        assert _execute_actions(actions, check_results) is True
         actions.create_sysvol_directory.assert_called_once()
         actions.create_sysvol_share.assert_called_once()
 
@@ -213,7 +225,7 @@ class TestExecuteRequiredActions:
             'sysvol_share': True,
             'schema_complete': True,
         }
-        assert cli.execute_required_actions(actions, check_results) is True
+        assert _execute_actions(actions, check_results) is True
         actions.activate_plugins.assert_called_once()
 
     def test_schema_incomplete_triggers_upgrade(self):
@@ -228,7 +240,7 @@ class TestExecuteRequiredActions:
             'sysvol_share': True,
             'schema_complete': False,
         }
-        assert cli.execute_required_actions(actions, check_results) is True
+        assert _execute_actions(actions, check_results) is True
         actions.run_ipa_server_upgrade.assert_called_once()
         actions.restart_httpd.assert_called_once_with()
 
@@ -241,7 +253,7 @@ class TestExecuteRequiredActions:
             'sysvol_share': False,
             'schema_complete': False,
         }
-        assert cli.execute_required_actions(actions, check_results) is False
+        assert _execute_actions(actions, check_results) is False
         actions.create_sysvol_directory.assert_not_called()
 
     def test_plugins_activate_failure_stops(self):
@@ -254,7 +266,7 @@ class TestExecuteRequiredActions:
             'sysvol_share': True,
             'schema_complete': True,
         }
-        assert cli.execute_required_actions(actions, check_results) is False
+        assert _execute_actions(actions, check_results) is False
 
     def test_oddjob_failure_stops(self):
         actions = _make_actions()
@@ -266,7 +278,7 @@ class TestExecuteRequiredActions:
             'sysvol_share': True,
             'schema_complete': True,
         }
-        assert cli.execute_required_actions(actions, check_results) is False
+        assert _execute_actions(actions, check_results) is False
 
     def test_editor_filesystem_failure_stops(self):
         actions = _make_actions()
@@ -277,7 +289,7 @@ class TestExecuteRequiredActions:
             'sysvol_share': True,
             'schema_complete': True,
         }
-        assert cli.execute_required_actions(actions, check_results) is False
+        assert _execute_actions(actions, check_results) is False
 
     def test_editor_filesystem_health_check_failure_stops_later_actions(self):
         actions = _make_actions()
@@ -291,6 +303,7 @@ class TestExecuteRequiredActions:
             'schema_complete': False,
         }
 
+        check_results['ldap_infrastructure'] = True
         assert cli.execute_required_actions(
             actions, check_results, checker
         ) is False
@@ -314,7 +327,7 @@ class TestExecuteRequiredActions:
             'sysvol_share': True,
             'schema_complete': False,
         }
-        assert cli.execute_required_actions(actions, check_results) is False
+        assert _execute_actions(actions, check_results) is False
         actions.restart_httpd.assert_not_called()
 
     def test_httpd_failure_stops(self):
@@ -330,5 +343,5 @@ class TestExecuteRequiredActions:
             'schema_complete': True,
         }
 
-        assert cli.execute_required_actions(actions, check_results) is False
+        assert _execute_actions(actions, check_results) is False
         actions.restart_httpd.assert_called_once_with()
