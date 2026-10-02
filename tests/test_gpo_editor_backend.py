@@ -3790,11 +3790,11 @@ def test_security_catalog_passes_packaged_sdmx_1_0_schemas_to_native(
     assert isinstance(catalog, Catalog)
     assert selected_locale == locale
     assert state["generation"]["locale"] == locale
-    assert GPO.GPO_SDMX_SCHEMA_ROOT == Path("/usr/share/sdmx/schema/1.0")
+    assert GPO.GPO_SDMX_SCHEMA_ROOT == Path("/usr/share/xml/sdmx/1.0")
     assert calls == [("/usr/share/PolicyDefinitions", {
         "locale": locale,
-        "sdmx_schema": "/usr/share/sdmx/schema/1.0/sdmx-1.0.xsd",
-        "sdml_schema": "/usr/share/sdmx/schema/1.0/sdml-1.0.xsd",
+        "sdmx_schema": "/usr/share/xml/sdmx/1.0/sdmx-1.0.xsd",
+        "sdml_schema": "/usr/share/xml/sdmx/1.0/sdml-1.0.xsd",
     })]
 
 

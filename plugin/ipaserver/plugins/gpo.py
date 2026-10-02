@@ -87,7 +87,7 @@ def verify_gpo_schema(ldap, api):
 
 GPO_TEMPLATE_ROOT = Path('/usr/share/PolicyDefinitions')
 GPO_SECURITY_DEFINITION_ROOT = GPO_TEMPLATE_ROOT
-GPO_SDMX_SCHEMA_ROOT = Path('/usr/share/sdmx/schema/1.0')
+GPO_SDMX_SCHEMA_ROOT = Path('/usr/share/xml/sdmx/1.0')
 GPO_SDMX_SCHEMA = GPO_SDMX_SCHEMA_ROOT / 'sdmx-1.0.xsd'
 GPO_SDML_SCHEMA = GPO_SDMX_SCHEMA_ROOT / 'sdml-1.0.xsd'
 GPO_SYSVOL_ROOT = Path('/var/lib/freeipa/sysvol')
