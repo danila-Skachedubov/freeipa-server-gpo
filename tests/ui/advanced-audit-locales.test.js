@@ -86,7 +86,7 @@ test('unknown audit GUIDs and options retain their source labels', () => {
     assert.equal(model.familyById(response, 'audit_options').rows[0].display_name, 'Vendor option');
 });
 
-test('all 58 localized GUIDs match the installed native audit catalog', { skip: !fs.existsSync('/usr/share/sdmx/schema/1.0/sdmx-1.0.xsd') }, () => {
+test('all 58 localized GUIDs match the installed native audit catalog', { skip: !fs.existsSync('/usr/share/xml/sdmx/1.0/sdmx-1.0.xsd') }, () => {
     const nativeCatalog = JSON.parse(execFileSync('/usr/bin/python3', ['-B', '-c', [
         'import json,tempfile,pathlib',
         'from admix import Workspace',

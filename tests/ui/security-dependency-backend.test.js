@@ -12,7 +12,7 @@ const catalogRoot = process.env.SDMX_BASEALT_ROOT || null;
 const definitions = catalogRoot ? path.join(catalogRoot, 'definitions')
     : '/usr/share/PolicyDefinitions';
 const schemas = catalogRoot ? path.join(catalogRoot, 'docs/schema')
-    : '/usr/share/sdmx/schema/1.0';
+    : '/usr/share/xml/sdmx/1.0';
 const schema = path.join(schemas, 'sdmx-1.0.xsd');
 
 function load(name, dependencies = {}) {

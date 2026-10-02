@@ -112,11 +112,11 @@ test('Advanced Audit supports all catalog rows and opaque global SACL editing wi
     assert.equal(option.display_name, 'Localized audit option');
     assert.equal(option.machine_name, 'DC1');
 });
-test('installed 185-policy catalog remains complete and sorted when Advanced Audit RPC fails', { skip: !fs.existsSync('/usr/share/sdmx/schema/1.0/sdmx-1.0.xsd') }, async () => {
+test('installed 185-policy catalog remains complete and sorted when Advanced Audit RPC fails', { skip: !fs.existsSync('/usr/share/xml/sdmx/1.0/sdmx-1.0.xsd') }, async () => {
     const fixture = JSON.parse(execFileSync('/usr/bin/python3', ['-B', '-c', [
         'import json,tempfile,pathlib',
         'from admix import SecurityDefinitionCatalog,Workspace',
-        'c=SecurityDefinitionCatalog("/usr/share/PolicyDefinitions",locale="en-US",sdmx_schema="/usr/share/sdmx/schema/1.0/sdmx-1.0.xsd",sdml_schema="/usr/share/sdmx/schema/1.0/sdml-1.0.xsd")',
+        'c=SecurityDefinitionCatalog("/usr/share/PolicyDefinitions",locale="en-US",sdmx_schema="/usr/share/xml/sdmx/1.0/sdmx-1.0.xsd",sdml_schema="/usr/share/xml/sdmx/1.0/sdml-1.0.xsd")',
         'with tempfile.TemporaryDirectory() as d:',
         ' p=pathlib.Path(d); (p/"gpo").mkdir()',
         ' w=Workspace.open(p/"gpo",security_catalog=c,load_preferences=False,state_directory=p/"state",state_key="ui-test")',
