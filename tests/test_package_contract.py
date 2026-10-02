@@ -26,9 +26,8 @@ def test_security_definitions_runtime_dependencies_are_declared():
     requirements = set(re.findall(r"^Requires:\s*(.+)$", spec, re.MULTILINE))
 
     assert "sdmx-basealt >= 1.0.0" in requirements
-    assert "/usr/share/sdmx/schema/1.0/sdmx-1.0.xsd" in requirements
-    assert "/usr/share/sdmx/schema/1.0/sdml-1.0.xsd" in requirements
-    assert not any("/usr/share/sdmx/schema/0.1/" in row for row in requirements)
+    assert "sdmx-schemas >= 1.0.0" in requirements
+    assert not any(row.startswith("/usr/share/") for row in requirements)
     assert "python3-module-admix >= 0.3.0" in requirements
     assert "python3-module-admix < 0.4.0" in requirements
 
