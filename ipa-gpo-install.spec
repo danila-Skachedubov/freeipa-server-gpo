@@ -102,7 +102,7 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
   is open , the information merges (thx vladimirovicp)
 - feat: list of children, added scrolling for large lists (thx vladimirovicp)
   text than a block (thx vladimirovicp)
-  is now at a9afdf0 fix:admx window height 100% (thx vladimirovicp)
+  is now at a9afdf0 fix:admx window height 100%% (thx vladimirovicp)
 - fix:indents in the tree structure (thx vladimirovicp)
 - feat(ui): show chain description in web interface
 - refactor: replace displayName with description for chain entity
