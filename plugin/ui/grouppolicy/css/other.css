@@ -96,6 +96,15 @@
   padding: 20px 10px;
   min-height: 60px;
 }
+.gp__container .policy-changed__modal-content .preference__table {
+  width: 100%;
+  margin-top: 10px;
+}
+.gp__container .policy-changed__modal-content .preference__table th,
+.gp__container .policy-changed__modal-content .preference__table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .gp__container .policy-changed__modal-footer {
   height: 45px;
   background-color: #fff;
@@ -108,6 +117,16 @@
 .gp__container .policy-changed__modal-footer .btn {
   width: auto;
   padding: 0 10px;
+}
+.gp__container .policy-changed__modal-footer button.btn {
+  appearance: none;
+  background: #fff;
+  color: #363636;
+  font: inherit;
+}
+.gp__container .policy-changed__modal-footer button.btn:focus-visible {
+  outline: 2px solid #297fb0;
+  outline-offset: 2px;
 }
 .gp__container .policy-changed__modal-footer .btn-yes {
   margin-left: auto;

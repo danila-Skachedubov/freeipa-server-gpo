@@ -1,15 +1,15 @@
-define(['../../util/element-creator', '../../locales/translations'], function(__dep0, __dep1) {
+define(['../../util/element-creator', '../../locales/translations', '../list-navigation'], function(__dep0, __dep1, listNavigation) {
 var { createElement } = __dep0;
 var { t } = __dep1;
 
 
-function renderChildRow(item, onItemClick) {
+function renderChildRow(item, onItemClick, onSelect) {
     const row = createElement('span', {
         className: 'workspace-list-item',
         attrs: typeof onItemClick === 'function'
             ? {
                 role: 'button',
-                tabindex: '0',
+                tabindex: '-1',
             }
             : {},
         children: [
@@ -22,13 +22,11 @@ function renderChildRow(item, onItemClick) {
     });
 
     if (typeof onItemClick === 'function') {
-        row.on('click', () => onItemClick(item));
-        row.on('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                onItemClick(item);
-            }
+        row.on('click', () => {
+            onSelect(item);
+            if (item.type === 'folder') onItemClick(item);
         });
+        row.on('dblclick', () => { if (item.type !== 'folder') { onSelect(item); onItemClick(item); } });
     }
 
     return createElement('li', {
@@ -58,10 +56,13 @@ function renderHelpBlock({ help = undefined, isOpen = false } = {}) {
 }
 
 function renderFolderTemplate({
+    categoryPath = '',
+    hideHeading = false,
     children = [],
     help = undefined,
     onItemClick = null,
     isHelpOpen = false,
+    listState = {},
 } = {}) {
     const folderChildren = Array.isArray(children)
         ? children
@@ -71,21 +72,65 @@ function renderFolderTemplate({
         isOpen: isHelpOpen,
     });
 
-    return createElement('div', {
+    const list = createElement('ul', { className: 'gp__list-children__list' });
+    let rowItems = new Map();
+    let navigation = null;
+    function select(item) {
+        listState.selectedItem = item;
+        rowItems.forEach((value, row) => { row.classList.toggle('active', value === item); });
+        if (navigation) navigation.sync();
+    }
+    const search = createElement('input', { attrs: {
+        type: 'search', value: listState.query || '',
+        placeholder: t('policySearch.categoryPlaceholder'),
+        'aria-label': t('policySearch.categoryPlaceholder'),
+        'data-policy-filter': '',
+    } });
+    const empty = createElement('p', { text: t('policySearch.noMatches'), attrs: { role: 'status' } });
+    function filter() {
+        listState.query = search.getElement().value;
+        const query = listState.query.trim().toLocaleLowerCase();
+        const visible = folderChildren.filter(child => String(child.title || '').toLocaleLowerCase().includes(query));
+        rowItems = new Map();
+        list.getElement().replaceChildren(...visible.map(child => {
+            const record = renderChildRow(child, onItemClick, select);
+            const row = record.getElement().querySelector('.workspace-list-item');
+            rowItems.set(row, child);
+            row.classList.toggle('active', listState.selectedItem === child);
+            return record.getElement();
+        }));
+        if (navigation) navigation.sync();
+        empty.getElement().hidden = visible.length !== 0 || !query;
+    }
+    search.on('input', filter);
+    search.on('keydown', event => {
+        if (event.key === 'Escape') { search.getElement().value = ''; filter(); }
+    });
+    const content = createElement('div', {
+        className: 'gp__list-children',
+        children: [createElement('div', { className: 'gpo-security-workbench__toolbar', children: [
+            !hideHeading && categoryPath ? createElement('h2', { text: categoryPath, attrs: { 'data-category-path': '', title: categoryPath } }) : null,
+            search,
+        ] }), list, empty],
+    });
+    const root = createElement('div', {
         className: 'gp__list-children-wrapper',
         children: [
-            createElement('div', {
-                className: 'gp__list-children',
-                children: [
-                    createElement('ul', {
-                        className: 'gp__list-children__list',
-                        children: folderChildren.map((child) => renderChildRow(child, onItemClick)),
-                    }),
-                ],
-            }),
+            content,
             helpBlock,
         ],
     });
+    filter();
+    navigation = listNavigation.bind(list.getElement(), {
+        rows: () => Array.from(rowItems.keys()),
+        selected: () => Array.from(rowItems.keys()).find(row => rowItems.get(row) === listState.selectedItem) || null,
+        select: row => select(rowItems.get(row)),
+        activate: row => { if (onItemClick) onItemClick(rowItems.get(row)); },
+        busy: () => Boolean(root.getElement().querySelector('[role="dialog"]'))
+    });
+    root.onMounted = () => { content.getElement().scrollTop = listState.scrollTop || 0; };
+    root.cleanup = () => { listState.scrollTop = content.getElement().scrollTop; navigation.cleanup(); };
+    return root;
 }
     return { renderHelpBlock, renderFolderTemplate };
 });

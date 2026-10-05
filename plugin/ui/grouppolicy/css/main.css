@@ -1,4 +1,5 @@
 @charset "UTF-8";
+@import url("icons.css");
 .gp__container {
   min-width: 1200px;
 }
@@ -42,8 +43,10 @@
 }
 
 .gp__container .tree-view {
+  box-sizing: border-box;
   padding-top: 24px;
   padding-left: 24px;
+  padding-right: 6px;
   width: 432px;
   height: 100%;
   overflow: auto;
@@ -85,6 +88,9 @@
   cursor: pointer;
   transition: color 0.3s ease;
 }
+.gp__container .tree-view .view.file > .tree-item {
+  padding-left: 20px;
+}
 .gp__container .tree-view .tree-item.active {
   color: #297FB0;
 }
@@ -109,12 +115,17 @@
   border-radius: 50%;
 }
 .gp__container .tree-view .view.loading > .tree-item .icon-switcher {
-  display: none;
+  display: flex;
 }
 .gp__container .tree-view .view.loading > .tree-item .tree-view__status-spinner {
   display: inline-flex;
+  position: absolute;
+  right: 0;
+  margin-right: 0;
+  pointer-events: none;
   animation: tree-view-spinner 0.8s linear infinite;
 }
+.gp__container .tree-view .view.loading > .tree-item { position: relative; padding-right: 20px; }
 
 .gp__container .tree-view .icon {
   width: 16px;
@@ -147,6 +158,16 @@
 .gp__container .tree-view .view.folder.opened {
   grid-template-rows: auto 1fr;
 }
+.gp__container .tree-view .view.folder.opened > .tree-view__list {
+  overflow: visible;
+}
+.gp__container .tree-view .view.folder.opened.is-expanding > .tree-view__list {
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gp__container .tree-view .view.folder,
+  .gp__container .tree-view .icon-switcher { transition: none; }
+}
 .gp__container .tree-view .view.folder.opened .icon-switcher {
   transform: rotate(0deg);
 }
@@ -159,7 +180,49 @@
 .gp__container .workspace {
   flex: 1 1 0px;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
+.gp__container .workspace > :not(.gpo-category-path) { flex: 1 1 0; min-height: 0; height: auto; }
+.gp__container .gpo-category-path {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  margin: 0;
+  color: #777;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+}
+.gp__container .gpo-category-path__list { display: flex; flex: 1 1 240px; flex-wrap: wrap; list-style: none; padding: 0; margin: 0; }
+.gp__container .gpo-category-path__filter {
+  box-sizing: border-box;
+  flex: 0 1 220px;
+  width: 220px;
+  max-width: 100%;
+  height: 28px;
+  margin: 0 0 0 auto;
+  padding: 3px 8px;
+  border: 1px solid #d1d1d1;
+  border-radius: 0;
+  background: #fff;
+  color: #363636;
+  font: inherit;
+}
+.gp__container .gpo-category-path__list > li { display: inline-flex; align-items: baseline; max-width: 100%; }
+.gp__container .gpo-category-path__segment {
+  padding: 0; margin: 0; border: 0; background: none;
+  color: inherit; font: inherit; text-align: left;
+  cursor: pointer; overflow-wrap: anywhere;
+}
+.gp__container .gpo-category-path__segment:hover { color: #297FB0; text-decoration: underline; }
+.gp__container .gpo-category-path__segment:focus-visible { outline: 1px solid #297FB0; outline-offset: 3px; }
+.gp__container .gpo-category-path__separator { white-space: pre; color: #aaa; }
 .gp__container .workspace .workspace-list-item {
   display: flex;
   align-items: center;
@@ -682,6 +745,9 @@
   color: #363636;
 }
 .gp__preference .preference__modal-header .close {
+  border: 0;
+  padding: 0;
+  background-color: transparent;
   width: 16px;
   height: 16px;
   position: absolute;
@@ -703,6 +769,12 @@
   height: 26px;
 }
 .gp__preference .preference__modal-tabs .tab-buttons .preference__tab-button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   width: 50%;
   height: 26px;
   display: flex;
@@ -765,10 +837,19 @@
   z-index: 1050;
 }
 .gp__preference .targetting__modal .preference__modal-wrapper {
-  width: 680px;
+  width: min(700px, calc(100vw - 40px));
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 80px);
 }
 .gp__preference .targetting__modal .preference__modal-content {
-  padding: 20px;
+  padding: 12px;
+  min-height: 0;
+  overflow: hidden;
+}
+.gp__preference .targetting__modal .preference__modal-header,
+.gp__preference .targetting__modal .preference__modal-footer {
+  flex-shrink: 0;
 }
 .gp__preference .targetting__modal .preference__modal-filters {
   margin-top: 0;
@@ -1084,11 +1165,92 @@
   border-bottom: 1px solid #d1d1d1;
 }
 
-.gp__preference .gpo-editor-filters .gpo-editor-filter-add,
-.gp__preference .gpo-editor-filters .gpo-editor-filter-replace,
-.gp__preference .gpo-editor-filters .gpo-editor-filter-remove{
-  width: 120px;
+.gp__preference .gpo-editor-filters .button {
+  width: auto;
+  min-width: 70px;
+  padding: 0 8px;
 }
+.gp__preference .gpo-editor-filters__toolbar .button {
+  box-sizing: border-box;
+  height: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: normal;
+}
+.gp__preference .gpo-editor-filters .gpo-editor-filter-remove {
+  min-width: 28px;
+  width: 28px;
+  padding: 0;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.gpo-editor-filter-remove > span { display: inline-flex; align-items: center; justify-content: center; }
+.gpo-editor-filter-remove svg { display: block; }
+.gpo-editor-filter-operator { display: inline-flex; align-items: center; height: 28px; margin: 0; }
+.gpo-editor-filter-operator select { box-sizing: border-box; height: 28px; min-width: 64px; margin: 0; padding: 0 4px; font: inherit; color: inherit; border: 1px solid #d1d1d1; background: #fff; }
+.gpo-editor-filter-negation { display: inline-flex; align-items: center; height: 28px; margin: 0; padding: 0; gap: 5px; cursor: pointer; line-height: normal; }
+.gp__container .gpo-editor-filter-negation input[type=checkbox] { appearance: auto; position: static; display: inline-block; opacity: 1; width: 14px; height: 14px; min-width: 14px; margin: 0; clip: auto; }
+.gpo-editor-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.gpo-editor-filter-node.is-hidden-filter:not(.active) { color: #8b8d8f; }
+.gp__container .gpo-editor-filters__fields .field { height: auto; min-height: 25px; align-items: flex-start; margin-bottom: 8px; }
+.gp__container .gpo-editor-filters__fields .field__label { min-height: 25px; padding-right: 8px; box-sizing: border-box; }
+.gpo-editor-filters__fields .field__element { min-width: 0; }
+.gp__container .gpo-editor-filters__fields .field__element > input,
+.gp__container .gpo-editor-filters__fields .field__element > select { height: 25px; min-height: 25px; }
+.gpo-editor-filters__fields .gpo-editor-field__error:not(:empty) { position: static; display: block; margin-top: 3px; }
+.gpo-editor-filters__fields textarea { box-sizing: border-box; width: 100%; min-height: 56px; resize: vertical; font: inherit; border: 1px solid #d1d1d1; }
+.gpo-editor-filters__fields input[type=date],
+.gpo-editor-filters__fields input[type=time] { box-sizing: border-box; height: 25px; font: inherit; border: 1px solid #d1d1d1; }
+.gpo-editor-targeting-calendar { width: 224px; max-width: 100%; margin: 0 0 8px 144px; }
+.gpo-editor-targeting-calendar__days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.gpo-editor-targeting-calendar__weekday { text-align: center; color: #8b8d8f; padding: 3px 0; }
+.gp__preference .gpo-editor-filters .gpo-editor-targeting-calendar__day { width: 100%; min-width: 0; height: 25px; padding: 0; }
+.gp__preference .gpo-editor-filters .gpo-editor-targeting-calendar__day.active,
+.gp__preference .gpo-editor-filters .gpo-editor-targeting-calendar__day.active:hover { color: #fff; background: #297fb0; border-color: #297fb0; }
+.gpo-editor-targeting-operands__note { line-height: 1.4; margin: 6px 0; }
+.gpo-targeting-language__hint { margin: 4px 0 0; line-height: 1.4; }
+.gp__container .gpo-targeting-typed-input {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 28px;
+  max-width: 100%;
+  border: 1px solid #d1d1d1;
+  border-radius: 3px;
+  background: #fff;
+  padding: 0 4px;
+  overflow: hidden;
+}
+.gp__container .gpo-targeting-typed-input:focus-within { border-color: #297fb0; }
+.gp__container .gpo-editor-filters__fields .gpo-targeting-typed-input input[type=text] {
+  box-sizing: border-box;
+  height: 26px;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0 2px;
+  font: inherit;
+  outline: none;
+  background: transparent;
+}
+.gp__container .gpo-editor-filters__fields .gpo-targeting-typed-input input[type=text]:disabled { color: #8b8d8f; }
+.gp__container .gpo-editor-filters__fields .gpo-targeting-typed-input input.gpo-targeting-typed-input__segment { width: 3.5ch; flex: 0 1 3.5ch; text-align: center; }
+.gp__container .gpo-editor-filters__fields .gpo-targeting-typed-input--mac input.gpo-targeting-typed-input__segment { width: 2.8ch; flex-basis: 2.8ch; }
+.gp__container .gpo-editor-filters__fields .gpo-targeting-typed-input--version input.gpo-targeting-typed-input__segment { width: 5.5ch; flex-basis: 5.5ch; }
+.gp__container .gpo-editor-filters__fields .gpo-editor-field--typed .field__label { min-height: 28px; }
+.gpo-targeting-typed-input__separator { flex: 0 0 auto; color: #8b8d8f; user-select: none; }
+.gp__container .gpo-targeting-typed-input--guid,
+.gp__container .gpo-targeting-typed-input--ipv6,
+.gp__container .gpo-targeting-typed-input:has(.gpo-targeting-typed-input__fallback) { display: flex; width: 100%; }
+.gp__container .gpo-editor-filters__fields .gpo-targeting-typed-input--guid input[type=text],
+.gp__container .gpo-editor-filters__fields .gpo-targeting-typed-input--ipv6 input[type=text],
+.gp__container .gpo-editor-filters__fields .gpo-targeting-typed-input input.gpo-targeting-typed-input__fallback { width: 100%; flex: 1 1 auto; text-align: left; }
+.gp__container .gpo-editor-filters__fields .field__element input.gpo-targeting-prefix { box-sizing: border-box; width: 80px; height: 28px; min-height: 28px; }
+.gpo-targeting-prefix__hint { display: inline-block; max-width: calc(100% - 8px); margin-left: 8px; vertical-align: middle; line-height: 1.4; }
 
 .gpo-editor-filters__toolbar--disabled,
 .gpo-editor-filters__toolbar.is-disabled {
@@ -1105,24 +1267,41 @@
   opacity: 0.6;
 }
 .gpo-editor-filters__layout {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(300px, 2fr);
-  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  height: min(420px, max(80px, calc(100vh - 240px)));
+  min-height: 0;
 }
 .gpo-editor-filters__tree,
 .gpo-editor-filters__fields {
+  box-sizing: border-box;
   padding: 10px;
   overflow: auto;
 }
 .gpo-editor-filters__tree {
-  border-right: 1px solid #d1d1d1;
+  flex: 1 1 0;
+  min-height: min(140px, 33%);
+  padding: 4px;
+  border-bottom: 1px solid #d1d1d1;
+  user-select: none;
+}
+.gpo-editor-filters__fields {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: min(280px, 67%);
+}
+.gpo-editor-filters__fields h3 {
+  margin: 0 0 10px;
+  font-size: inherit;
+  font-weight: 600;
 }
 .gpo-editor-filter-node {
-  display: block;
-  width: calc(100% - 4px);
-  padding: 5px;
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 6px;
   text-align: left;
-  border: 0;
+  position: relative;
   background: transparent;
   cursor: pointer;
 }
@@ -1130,6 +1309,81 @@
   color: #297fb0;
   background: #f5f5f5;
 }
+.gpo-editor-filter-node:focus-visible,
+.gpo-editor-filter-handle:focus-visible,
+.gpo-editor-filter-arrow:focus-visible {
+  outline: 1px solid #297fb0;
+  outline-offset: -1px;
+}
+.gpo-editor-filter-handle,
+.gpo-editor-filter-arrow {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  width: 20px;
+  height: 28px;
+  flex-shrink: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  line-height: normal;
+}
+.gpo-editor-filter-handle { cursor: grab; color: #8b8d8f; }
+.gpo-editor-filter-handle svg { display: block; pointer-events: none; }
+.gpo-editor-filter-handle:active { cursor: grabbing; }
+.gpo-editor-filter-handle:disabled { cursor: default; opacity: .4; }
+.gpo-editor-filter-arrow { cursor: pointer; font-size: 18px; }
+.gpo-editor-filter-arrow:disabled { cursor: default; }
+.gpo-editor-filter-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-right: 6px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.gpo-editor-filter-icon.is-collection { background-image: url(../img/svg/ico/folder.svg); }
+.gpo-editor-filter-icon.is-condition { background-image: url(../img/svg/ico/file.svg); }
+.gpo-editor-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.gpo-editor-filter-label > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.gpo-editor-filter-detail { color: #8b8d8f; flex: 1; }
+.targeting-drop-before::before,
+.targeting-drop-after::after { content: ''; position: absolute; left: 0; right: 0; height: 2px; background: #297fb0; }
+.targeting-drop-before::before { top: 0; }
+.targeting-drop-after::after { bottom: 0; }
+.targeting-drop-inside { outline: 1px solid #297fb0; outline-offset: -1px; }
+.targeting-drop-invalid { cursor: not-allowed; }
+.gpo-editor-filter-node--error { box-shadow: inset 3px 0 #c9190b; }
+.gpo-editor-filters__empty { padding: 12px 8px; color: #8b8d8f; }
+.gpo-editor-filters__root-drop { display: none; min-height: 28px; padding: 6px; color: #8b8d8f; }
+.is-dragging .gpo-editor-filters__root-drop { display: block; }
+.gpo-editor-filters__notice:not(:empty) { padding: 6px 10px; border-bottom: 1px solid #d1d1d1; }
+.gpo-editor-filters__create { position: relative; }
+.gpo-editor-filters__menu {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  z-index: 2;
+  max-height: min(320px, 45vh);
+  overflow-y: auto;
+  min-width: 200px;
+  border: 1px solid #d1d1d1;
+  background: #fff;
+}
+.gpo-editor-filters__menu button { display: flex; align-items: center; width: 100%; padding: 6px 10px; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.gpo-editor-filters__menu button:hover,
+.gpo-editor-filters__menu button:focus-visible { background: #f5f5f5; color: #297fb0; }
+.gpo-editor-filters__menu[hidden] { display: none; }
 .gpo-editor-preference-notice {
   margin: 10px 0;
   padding: 8px 10px;
@@ -1440,6 +1694,364 @@
   padding-bottom: 10px;
 }
 
+/* Scripts reuse the Preferences tables, controls, and modal windows. */
+.gp__container .gpo-editor-scripts {
+  overflow: auto;
+  align-items: stretch;
+}
+.gp__container .gpo-editor-scripts__overview {
+  flex: 0 0 auto;
+  height: auto;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  box-sizing: border-box;
+}
+.gp__container .gpo-editor-scripts > .scripts__overlay {
+  z-index: 99;
+}
+.gp__container .gpo-editor-scripts .gpo-editor-scripts__event-dialog,
+.gp__container .gpo-editor-scripts .gpo-editor-scripts__explorer {
+  z-index: 100;
+}
+.gp__container .gpo-editor-scripts__event-dialog .scripts__overlay,
+.gp__container .gpo-editor-scripts__explorer .scripts__overlay {
+  z-index: 101;
+}
+.gp__container .gpo-editor-scripts .gpo-editor-scripts__form {
+  z-index: 102;
+}
+.gp__container .gpo-editor-scripts .scripts__overlay.gpo-editor-scripts__picker-overlay {
+  z-index: 103;
+}
+.gp__container .gpo-editor-scripts .gpo-editor-scripts__picker {
+  z-index: 104;
+}
+.gp__container .gpo-editor-scripts__event-table {
+  table-layout: fixed;
+}
+.gp__container .gpo-editor-scripts__event-table th:first-child {
+  width: 60%;
+}
+.gp__container .gpo-editor-scripts__event-table td {
+  border-top: 1px solid #eee;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.gp__container .gpo-editor-scripts .preference__table tbody tr:focus-visible {
+  outline: 2px solid #0088ce;
+  outline-offset: -2px;
+}
+.gp__container .gpo-editor-scripts__event-dialog .preference__modal-wrapper {
+  width: min(600px, calc(100vw - 32px));
+}
+.gp__container .gpo-editor-scripts__explorer .preference__modal-wrapper {
+  width: min(620px, calc(100vw - 32px));
+}
+.gp__container .gpo-editor-scripts__event-dialog .preference__modal-content,
+.gp__container .gpo-editor-scripts__explorer .preference__modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+}
+.gp__container .gpo-editor-scripts__event-dialog .gpo-editor-scripts__detail-host,
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-scripts__detail-host {
+  width: 100%;
+  min-width: 0;
+}
+.gp__container .gpo-editor-scripts__event-dialog .gpo-editor-scripts__detail-host > .gp__scripts,
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-scripts__detail-host > .gp__scripts {
+  padding: 0;
+  height: auto;
+  overflow: visible;
+}
+.gp__container .gpo-editor-scripts .gpo-editor-scripts__file-input {
+  display: none !important;
+}
+.gp__container .gpo-editor-scripts__event-dialog .preference__modal-header,
+.gp__container .gpo-editor-scripts__explorer .preference__modal-header {
+  height: auto;
+  min-height: 40px;
+}
+.gp__container .gpo-editor-scripts__event-dialog .preference__modal-header .title,
+.gp__container .gpo-editor-scripts__explorer .preference__modal-header .title {
+  padding: 10px 40px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.gp__container .gpo-editor-scripts__event-dialog .preference__modal-header .close,
+.gp__container .gpo-editor-scripts__explorer .preference__modal-header .close {
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+}
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-field select {
+  flex: 1;
+  min-width: 160px;
+  height: 26px;
+  border: 1px solid #d1d1d1;
+  background: #fff;
+}
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-scripts__hint {
+  overflow-wrap: anywhere;
+}
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-scripts__assets .preference__table th:first-child,
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-scripts__assets .preference__table td:first-child {
+  box-sizing: border-box;
+  width: 32px;
+  padding: 4px 6px;
+  text-align: center;
+}
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-scripts__assets input[type="checkbox"] {
+  margin: 0;
+  vertical-align: middle;
+}
+.gp__container .gpo-editor-scripts__title {
+  flex: 0 0 auto;
+  margin: 0;
+  color: #363636;
+  font-size: 16px;
+  font-weight: 600;
+}
+.gp__container .gpo-editor-scripts .scripts__modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 1100px;
+}
+.gp__container .gpo-editor-scripts__hint {
+  margin: 0;
+  color: #8b8d8f;
+  font-size: 12px;
+}
+.gp__container .gpo-editor-scripts .preference__modal-tabs {
+  min-height: 0;
+  border: 1px solid #d1d1d1;
+}
+.gp__container .gpo-editor-scripts .preference__modal-tabs .tab-buttons {
+  height: 26px;
+}
+.gp__container .gpo-editor-scripts__entries,
+.gp__container .gpo-editor-scripts__assets {
+  min-width: 0;
+  border: 1px solid #d1d1d1;
+}
+.gp__container .gpo-editor-scripts .preference__modal-tabs .gpo-editor-scripts__entries {
+  border: 0;
+}
+.gp__container .gpo-editor-scripts__entries .preference__table,
+.gp__container .gpo-editor-scripts__assets .preference__table {
+  table-layout: fixed;
+}
+.gp__container .gpo-editor-scripts__list {
+  min-width: 0;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #d1d1d1;
+}
+.gp__container .gpo-editor-scripts__list .preference__table th,
+.gp__container .gpo-editor-scripts__list .preference__table td {
+  padding: 6px 10px;
+}
+.gp__container .gpo-editor-scripts__list .preference__table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fafafa;
+}
+.gp__container .gpo-editor-scripts__list .preference__table .gpo-editor-scripts__empty-row td {
+  padding: 18px 10px;
+  white-space: normal;
+  text-align: center;
+  cursor: default;
+}
+.gp__container .gpo-editor-scripts__event-dialog .gpo-editor-scripts__entries {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 108px;
+  gap: 10px;
+  padding: 10px;
+}
+.gp__container .gpo-editor-scripts__event-dialog .gpo-editor-scripts__entries .gpo-editor-scripts__list {
+  min-height: 172px;
+}
+.gp__container .gpo-editor-scripts__entries .preference__table td,
+.gp__container .gpo-editor-scripts__assets .preference__table td {
+  border-top: 1px solid #eee;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.gp__container .gpo-editor-scripts__assets h3 {
+  margin: 0;
+  padding: 10px 20px;
+  color: #363636;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid #d1d1d1;
+}
+.gp__container .gpo-editor-scripts__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid #d1d1d1;
+}
+.gp__container .gpo-editor-scripts .preference__modal .gpo-editor-scripts__toolbar .button {
+  width: auto;
+  min-width: 64px;
+  padding: 0 8px;
+}
+.gp__container .gpo-editor-scripts__toolbar .button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.gp__container .gpo-editor-scripts__event-dialog .gpo-editor-scripts__entries .gpo-editor-scripts__toolbar {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+}
+.gp__container .gpo-editor-scripts__event-dialog .gpo-editor-scripts__entries .gpo-editor-scripts__toolbar .button {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 28px;
+}
+.gp__container .gpo-editor-scripts__event-dialog .gpo-editor-scripts__entries .gpo-editor-scripts__toolbar .button:nth-child(3) {
+  margin-top: 8px;
+}
+.gp__container .gpo-editor-scripts .preference__modal .gpo-editor-scripts__show-files {
+  box-sizing: border-box;
+  align-self: flex-start;
+  width: auto;
+  min-width: 132px;
+  min-height: 30px;
+  padding: 0 12px;
+}
+.gp__container .gpo-editor-scripts .preference__modal .button.active:hover {
+  border-color: #297fb0;
+  background: #f5f9fc;
+}
+.gp__container .gpo-editor-scripts .preference__modal .button:focus-visible,
+.gp__container .gpo-editor-scripts .preference__tab-button:focus-visible {
+  outline: 2px solid #0088ce;
+  outline-offset: 2px;
+}
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-scripts__assets {
+  border: 0;
+}
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-scripts__assets .gpo-editor-scripts__toolbar {
+  gap: 6px;
+  padding: 0 0 10px;
+  border: 0;
+}
+.gp__container .gpo-editor-scripts__explorer .gpo-editor-scripts__assets .gpo-editor-scripts__list {
+  min-height: 112px;
+}
+.gp__container .gpo-editor-scripts__order {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.gp__container .gpo-editor-scripts__order select {
+  flex: 1;
+  min-width: 180px;
+  height: 26px;
+  border: 1px solid #d1d1d1;
+  background: #fff;
+}
+.gp__container .gpo-editor-scripts__order > .button {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 80px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+.gp__container .gpo-editor-scripts__save-status {
+  margin: 0;
+  font-size: 12px;
+  color: #8b8d8f;
+}
+.gp__container .gpo-editor-scripts__save-status:empty {
+  display: none;
+}
+@media (max-width: 480px) {
+  .gp__container .gpo-editor-scripts__event-dialog .gpo-editor-scripts__entries {
+    grid-template-columns: minmax(0, 1fr) 86px;
+    gap: 8px;
+    padding: 8px;
+  }
+  .gp__container .gpo-editor-scripts__order label {
+    flex-basis: 100%;
+  }
+}
+.gp__container .gpo-editor-scripts__form {
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+.gp__container .gpo-editor-scripts__form .preference__modal-wrapper,
+.gp__container .gpo-editor-scripts__picker .preference__modal-wrapper {
+  width: min(500px, calc(100vw - 32px));
+}
+.gp__container .gpo-editor-scripts__form .preference__modal-content,
+.gp__container .gpo-editor-scripts__picker .preference__modal-content {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+}
+.gp__container .gpo-editor-scripts__form .gpo-editor-field {
+  display: grid;
+  gap: 6px;
+}
+.gp__container .gpo-editor-scripts__form .gpo-editor-field input,
+.gp__container .gpo-editor-scripts__form .gpo-editor-field select {
+  width: 100%;
+  box-sizing: border-box;
+  height: 26px;
+}
+.gp__container .gpo-editor-scripts__asset-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.gp__container .gpo-editor-scripts__asset-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.gp__container .gpo-editor-scripts__asset-field .gpo-editor-scripts__browse {
+  flex: 0 0 auto;
+}
+.gp__container .gpo-editor-scripts .preference__modal .gpo-editor-scripts__ellipsis {
+  flex: 0 0 28px;
+  width: 28px;
+  padding: 0;
+  font-size: 16px;
+}
+.gp__container .gpo-editor-scripts__picker-overlay {
+  z-index: 101;
+}
+.gp__container .gpo-editor-scripts__picker {
+  z-index: 102;
+}
+.gp__container .gpo-editor-scripts__picker .preference__modal-content {
+  max-height: min(400px, 55vh);
+  min-height: 130px;
+  overflow-y: auto;
+}
+.gp__container .gpo-editor-scripts__form-error:not(:empty) {
+  padding: 4px 0;
+  color: #a52b2b;
+}
+
 @keyframes tree-view-spinner {
   to {
     transform: rotate(360deg);
@@ -1452,16 +2064,10 @@
     width: calc(100vw - 32px);
   }
   .gp__preference .targetting__modal .preference__modal-wrapper {
-    width: calc(100vw - 32px);
+    width: min(700px, calc(100vw - 32px));
   }
-  .gpo-editor-fields,
-  .gpo-editor-filters__layout {
+  .gpo-editor-fields {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .gpo-editor-filters__tree {
-    max-height: 180px;
-    border-right: 0;
-    border-bottom: 1px solid #d1d1d1;
   }
 }
 @media (max-width: 600px) {
@@ -1476,10 +2082,349 @@
   .gp__preference .preference__modal-content {
     padding: 12px;
   }
-  .gpo-editor-filters__toolbar > * {
-    flex: 1 1 100%;
-  }
+  .gpo-editor-filters__toolbar { gap: 6px; padding: 6px; }
+  .gpo-editor-filters__toolbar > .gpo-editor-filters__create { flex: 1 1 auto; }
+  .gpo-editor-targeting-calendar { margin-left: 0; }
 }
 .tree-view__lazy-error {
   color: #8c2b2b;
+}
+
+/* Security Settings: scoped additions to the existing editor visual language. */
+.icon-switcher.icon-switcher--empty { visibility: hidden; }
+.gpo-security-workbench { min-width: 0; width: 100%; height: 100%; }
+.gpo-security-workbench__panel { flex: 1; min-width: 0; overflow: auto; padding: 16px 20px; }
+.gpo-security-workbench__toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.gpo-security-workbench__toolbar h2 { margin: 0 auto 0 0; font-size: 14px; font-weight: 600; }
+.gpo-security-workbench__toolbar h2,
+.gpo-editor-preferences__header h2,
+.gpo-editor-scripts__title { min-width: 0; overflow-wrap: anywhere; }
+.gpo-editor-preferences__header h2 { margin: 0 auto 0 0; font-size: 14px; font-weight: 600; }
+.gpo-security-workbench__toolbar input { flex-shrink: 0; }
+.gp__admx-wrapper > .gpo-security-workbench__toolbar { flex: 0 0 100%; padding: 20px 20px 0; box-sizing: border-box; margin-bottom: 0; }
+.gpo-security-workbench__toolbar input { width: 220px; padding: 6px 9px; border: 1px solid #bbb; border-radius: 2px; }
+.gpo-security-workbench--embedded { height: auto; }
+.gpo-security-workbench--embedded .gpo-security-workbench__panel { padding: 0; }
+.gpo-security-workbench--embedded .gpo-security-workbench__toolbar { flex-wrap: wrap; }
+.gpo-security-table { table-layout: fixed; }
+.gpo-security-table th:first-child { width: 60%; }
+.gpo-security-table tbody tr, .gpo-security-table tbody td { user-select: none; -webkit-user-select: none; }
+.gpo-security-table__empty { text-align: center; color: #666; padding: 30px 12px !important; }
+.gpo-security-workbench__notice { padding: 10px 12px; background: #f5f5f5; border-left: 3px solid #bbb; line-height: 1.5; }
+.gpo-policy-search__status { margin: 0 0 10px; color: #8b8d8f; font-size: 12px; }
+.gpo-policy-search__errors { margin-bottom: 10px; }
+.gpo-policy-search__errors:empty { display: none; }
+.gpo-policy-search__errors .button { margin-top: 8px; }
+.gpo-policy-search__table td { min-width: 0; }
+.gpo-policy-search__paging { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 12px; }
+.gpo-policy-search__paging[hidden] { display: none; }
+.gpo-policy-search__paging .button { padding: 4px 10px; border: 1px solid #d1d1d1; }
+.gpo-policy-search__back { padding: 4px 10px; }
+.gpo-editor-dialog-host { z-index: 1100; }
+.gp__preference .gpo-editor-dialog { outline: none; }
+.gp__preference .gpo-editor-dialog .preference__modal-wrapper { width: 560px; max-width: calc(100vw - 48px); }
+.gp__preference .gpo-editor-dialog .preference__modal-header { height: auto; min-height: 40px; }
+.gp__preference .gpo-editor-dialog .preference__modal-header .title { padding: 10px 40px; text-align: center; overflow-wrap: anywhere; }
+.gp__preference .gpo-editor-dialog .close { border: 0; padding: 0; background-color: transparent; }
+.gpo-editor-dialog__body { min-height: 0; }
+.gpo-editor-dialog__error:empty { display: none; }
+.gpo-editor-dialog__error:not(:empty) { margin: 20px; }
+.gpo-security-dialog__body { min-height: 0; }
+.gpo-security-dialog__body > .gpo-security-error:not(:empty) { margin: 20px; }
+.gpo-security-dialog__body > :not(.gpo-security-policy-editor):not(.gpo-security-error) { padding: 20px; }
+.gpo-security-workbench__toolbar > .button { width: 80px; height: 25px; border: 1px solid #d1d1d1; cursor: pointer; }
+.gpo-editor-dialog button:disabled, .gpo-security-workbench__toolbar button:disabled { opacity: .55; cursor: default; }
+.gpo-editor-dialog :focus-visible, .gpo-security-workbench :focus-visible { outline: 2px solid #297fb0; outline-offset: 2px; }
+.gpo-editor-dialog--confirming { filter: brightness(.75); }
+
+/* AT properties reuse the Preferences modal, tabs, fields and buttons. */
+.gp__preference .gpo-admx-dialog { overflow: hidden; }
+.gp__preference .gpo-admx-dialog .preference__modal-wrapper { width: 640px; max-height: calc(100vh - 80px); display: flex; flex-direction: column; }
+.gpo-admx-dialog .preference__modal-header, .gpo-admx-dialog .preference__modal-footer { flex-shrink: 0; }
+.gpo-admx-dialog .gpo-editor-dialog__body { display: flex; flex-direction: column; overflow: hidden; }
+.gp__preference .gpo-admx-dialog .preference__modal-content { padding: 0; }
+.gpo-admx-dialog__content, .gpo-admx-dialog .gpo-editor-policy { display: flex; flex-direction: column; min-height: 0; height: auto; }
+.gp__preference .gpo-admx-dialog .preference__modal-tabs { min-height: 0; overflow: hidden; }
+.gpo-admx-dialog .tab-buttons { flex-shrink: 0; }
+.gp__preference .gpo-admx-dialog .tab-content { height: auto; min-height: min(360px, calc(100vh - 217px)); max-height: 540px; flex: 1 1 auto; box-sizing: border-box; }
+.gp__preference .gpo-admx-dialog .tab-content[hidden] { display: none; }
+.gpo-admx-dialog .gp__admx-state-policy { padding-bottom: 0; }
+.gpo-admx-dialog .gp__admx-item { display: grid; gap: 7px; margin-top: 16px; padding: 0; min-width: 0; }
+.gpo-admx-dialog .gp__admx-options, .gpo-admx-dialog .gp__admx-options .field__element { min-width: 0; width: 100%; }
+.gp__container .gpo-admx-dialog input[type=text], .gp__container .gpo-admx-dialog select { height: 25px; }
+.gp__container .gpo-admx-dialog input[type=number] { height: 25px; max-width: 190px; }
+.gpo-admx-dialog__comment { display: grid; gap: 7px; margin-top: 16px; }
+.gp__container .gpo-admx-dialog__comment textarea { height: 80px; min-height: 80px; width: 100%; box-sizing: border-box; resize: vertical; }
+.gpo-admx-dialog__explanation { line-height: 1.5; overflow-wrap: anywhere; }
+.gpo-admx-dialog__explanation h3 { font-size: inherit; font-weight: 600; margin: 0; }
+.gpo-admx-dialog__explanation p { margin: 7px 0 20px; }
+.gpo-admx-dialog__explanation p:last-child { margin-bottom: 0; }
+.gpo-admx-dialog__loading { padding: 20px; }
+.gpo-admx-dialog .gpo-editor-form__error:empty { display: none; }
+.gpo-admx-dialog .gpo-editor-status { margin: 0 0 16px; }
+.gpo-admx-dialog .gpo-editor-unsupported { max-width: 100%; }
+.gp__preference .gpo-admx-dialog .gpo-editor-dialog__apply { min-width: 96px; }
+@media (max-width: 760px) {
+  .gp__preference .gpo-admx-dialog .preference__modal-wrapper { max-height: calc(100vh - 24px); }
+  .gp__preference .gpo-admx-dialog .tab-content { min-height: min(360px, calc(100vh - 161px)); }
+}
+.gpo-security-policy-editor .field.field__checkbox { display: flex; height: auto; gap: 8px; align-items: flex-start; margin: 0; line-height: 1.5; }
+.gp__container .gpo-security-policy-editor input[type=checkbox] { appearance: auto; -webkit-appearance: auto; position: static; display: inline-block; opacity: 1; width: 14px; height: 14px; min-width: 14px; margin: 3px 0 0; clip: auto; flex: 0 0 auto; cursor: pointer; }
+.gp__container .gpo-security-policy-editor input[type=checkbox]:disabled { cursor: default; }
+.gpo-security-policy-editor .gpo-security-policy-editor__define { padding-bottom: 20px; font-weight: 400; }
+.gpo-security-policy-editor .gpo-editor-field { display: grid; gap: 7px; margin-bottom: 18px; }
+.gpo-security-policy-editor .field__element { min-width: 0; }
+.gpo-security-policy-editor .field__element input[type=number] { max-width: 190px; }
+.gpo-security-policy-editor .field__element textarea { min-height: 112px; height: auto; resize: vertical; line-height: 1.5; }
+.gpo-security-policy-editor [data-security-value-kind=sddl] { font-family: monospace; }
+.gpo-editor-security-group { border: 1px solid #d1d1d1; padding: 16px; margin: 0 0 16px; min-width: 0; }
+.gpo-editor-security-group legend { width: auto; margin: 0; padding: 0 6px; font: inherit; font-weight: 600; border: 0; }
+.gpo-editor-security-flags { display: grid; gap: 7px; }
+.gpo-editor-security-range, .gpo-editor-security-suffix { color: #666; font-size: 12px; }
+.gp__preference .gpo-security-tabs .tab-content[hidden] { display: none; }
+.gpo-security-explanation { line-height: 1.55; }
+.gpo-security-explanation h3 { margin: 0; font-size: inherit; font-weight: 600; }
+.gpo-security-explanation p { margin: 12px 0 0; white-space: pre-line; }
+.gpo-security-error, .gpo-security-policy-editor .gpo-editor-preferences__error { line-height: 1.5; }
+.gpo-security-error:not(:empty), .gpo-security-policy-editor .gpo-editor-preferences__error:not(:empty) { margin-bottom: 14px; }
+.gpo-security-policy-editor .gpo-editor-preference-notice { margin-bottom: 14px; line-height: 1.5; }
+.gpo-editor-security-record__field { display: grid; gap: 7px; margin: 0 0 16px; }
+.gpo-editor-security-record-identity { display: grid; grid-template-columns: 100px 1fr; gap: 6px 12px; margin-bottom: 16px; }
+.gpo-editor-security-record-identity dd { margin: 0; overflow-wrap: anywhere; }
+.gpo-security-preserved-value { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .gpo-security-workbench__toolbar { flex-wrap: wrap; }
+  .gpo-security-workbench__toolbar h2 { flex: 1 1 100%; }
+  .gpo-security-table th:first-child { width: 55%; }
+  .gp__preference .gpo-editor-dialog { max-height: calc(100vh - 24px); }
+  .gp__preference .gpo-editor-dialog .preference__modal-wrapper { max-width: calc(100vw - 24px); }
+}
+
+/* Collection layout uses the Preferences table, fields and modal buttons. */
+.gp__admx--collections { min-width: 0; }
+.gp__admx-options--collection { min-width: 0; }
+.gpo-collection-control { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; }
+.gp__container .gpo-collection-control > .button { color: inherit; border: 1px solid #d1d1d1; min-width: 80px; height: 25px; padding: 0 10px; cursor: pointer; flex-shrink: 0; }
+.gp__container .gpo-collection-control > .button:disabled { cursor: default; opacity: .55; }
+.gpo-collection-control__summary { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.gpo-collection-control__dialog-host { display: contents; }
+.gpo-collection-control__count { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gpo-collection-control__preview { color: #8b8d8f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gpo-collection-control__preview:empty { display: none; }
+.gp__preference .gpo-collection-dialog { overflow: hidden; }
+.gp__preference .gpo-collection-dialog .preference__modal-wrapper { width: 640px; display: flex; flex-direction: column; max-height: calc(100vh - 80px); }
+.gpo-collection-dialog .preference__modal-header, .gpo-collection-dialog .preference__modal-footer { flex-shrink: 0; }
+.gpo-collection-dialog .preference__modal-content { min-height: 0; overflow: hidden; display: flex; }
+.gpo-collection-editor { width: 100%; box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.gpo-collection-editor__toolbar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.gpo-collection-editor__toolbar input { margin-left: auto; min-width: 0; width: 180px; border: 1px solid #d1d1d1; border-radius: 3px; font: inherit; padding: 5px; height: 25px; box-sizing: border-box; }
+.gpo-collection-editor__toolbar input[hidden] { display: none; }
+.gpo-collection-editor__toolbar:has(> input[hidden]:only-child) { display: none; }
+.gpo-collection-editor__table-scroll { overflow: auto; border: 1px solid #d1d1d1; min-height: 0; max-height: min(360px, calc(100vh - 240px)); }
+.gpo-collection-table { table-layout: fixed; }
+.gp__preference .gpo-collection-table th, .gp__preference .gpo-collection-table td { padding: 4px 8px; max-width: none; }
+.gp__preference .gpo-collection-table tbody td { vertical-align: middle; }
+.gpo-collection-table thead { position: sticky; top: 0; background: #fff; z-index: 1; }
+.gpo-collection-table__handle-column { width: 28px; }
+.gpo-collection-table__index-column { width: 40px; }
+.gpo-collection-table__key-column { width: 34%; }
+.gpo-collection-table tbody { user-select: none; -webkit-user-select: none; }
+.gpo-collection-table__index { color: #8b8d8f; }
+.gp__preference .gpo-collection-table .gpo-collection-table__handle-cell { padding: 4px 0; }
+.gpo-collection-table__handle { appearance: none; border: 0; background: none; padding: 0; width: 100%; height: 24px; font: inherit; font-size: 20px; color: inherit; cursor: grab; }
+.gpo-collection-row--dragging { opacity: .55; }
+.gpo-collection-row--dragging .gpo-collection-table__handle { cursor: grabbing; }
+.gpo-collection-row--before td { box-shadow: inset 0 2px #297fb0; }
+.gpo-collection-row--after td { box-shadow: inset 0 -2px #297fb0; }
+.gpo-collection-cell__text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 24px; line-height: 24px; }
+.gp__preference .gpo-collection-dialog .field__element { width: auto; min-width: 0; }
+.gp__container .gpo-collection-cell textarea, .gp__container .gpo-collection-cell input[type=text] { box-sizing: border-box; max-height: 128px; min-height: 28px; display: block; font: inherit; line-height: 1.4; user-select: text; -webkit-user-select: text; }
+.gp__container .gpo-collection-cell textarea { overflow: auto; }
+.gp__container .gpo-collection-cell input[type=text] { height: 28px; }
+.gpo-collection-cell__error { display: block; white-space: normal; margin-top: 3px; }
+.gpo-collection-editor__validation:empty { display: none; }
+.gpo-collection-editor__validation, .gpo-collection-cell__error { color: #c9190b; }
+.gpo-collection-editor__count { color: #8b8d8f; flex-shrink: 0; }
+.gp__preference .gpo-collection-table__empty td { white-space: normal; text-align: center; color: #8b8d8f; padding: 24px 8px; cursor: default; }
+.gpo-collection-editor__live { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 760px) {
+  .gp__preference .gpo-collection-dialog .preference__modal-wrapper { max-height: calc(100vh - 24px); }
+  .gpo-collection-editor { padding: 16px; }
+  .gpo-collection-editor__toolbar { flex-wrap: wrap; }
+  .gpo-collection-editor__toolbar input { flex: 1; }
+  .gpo-collection-control__preview { display: none; }
+}
+
+/* Catalogs share Preferences metrics; editable collection tables stay separate. */
+.gp__container .gpo-editor-scripts {
+  box-sizing: border-box;
+}
+.gp__container .gp__preference .gpo-catalog-table {
+  width: 100%;
+  align-self: start;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+  color: #363636;
+}
+.gp__container .gp__preference .gpo-catalog-table thead {
+  background: #fff;
+}
+.gp__container .gp__preference .gpo-catalog-table th,
+.gp__container .gp__preference .gpo-catalog-table td {
+  box-sizing: border-box;
+  padding: 4px 20px;
+  max-width: none;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-top: 0;
+  border-bottom: 0;
+}
+.gp__container .gp__preference .gpo-catalog-table th {
+  height: 28px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+  color: #8b8d8f;
+}
+.gp__container .gp__preference .gpo-catalog-table th:not(:last-child) {
+  border-right: 1px solid #d1d1d1;
+}
+.gp__container .gp__preference .gpo-catalog-table td {
+  height: 32px;
+  line-height: 24px;
+}
+.gp__container .gp__preference .gpo-catalog-table thead tr {
+  cursor: default;
+}
+.gp__container .gp__preference .gpo-catalog-table tbody tr,
+.gp__container .gp__preference .gpo-catalog-table tbody td {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.gp__container .gp__preference .gpo-catalog-table tbody tr.active {
+  background: #f5f5f5;
+}
+.gp__container .gp__preference .gpo-catalog-table tbody tr:focus-visible {
+  outline: 2px solid #297fb0;
+  outline-offset: -2px;
+}
+.gp__container .gp__preference .gpo-catalog-table .gpo-editor-scripts__empty-row td,
+.gp__container .gp__preference .gpo-catalog-table .gpo-security-table__empty {
+  height: auto;
+  padding: 24px 20px !important;
+  color: #8b8d8f;
+  text-align: center;
+  white-space: normal;
+  cursor: default;
+}
+
+/* In-place family browsers reuse the existing Preferences and script dialogs. */
+.gp__container .gpo-editor-dialog.gpo-preferences-family-dialog .preference__modal-wrapper {
+  width: min(680px, calc(100vw - 32px));
+}
+.gpo-preferences-family-dialog > .preference__modal-wrapper > .gpo-editor-dialog__body {
+  padding: 14px;
+}
+.gpo-preferences-family-dialog__content > .gp__control {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 0;
+}
+.gpo-preferences-family-dialog__content > .gpo-editor-preferences {
+  height: auto;
+  min-height: 160px;
+}
+.gpo-preferences-family-dialog__content .preference__data-table {
+  padding: 0;
+}
+.gpo-preferences-family-dialog__content .gpo-editor-preferences__header {
+  margin-bottom: 12px;
+}
+.gpo-preferences-family-dialog__content .preference__info {
+  display: none;
+}
+.gp__container .gpo-editor-dialog.gpo-editor-scripts__event-dialog .preference__modal-wrapper {
+  width: min(600px, calc(100vw - 32px));
+}
+.gp__container .gpo-editor-dialog.gpo-editor-scripts__explorer .preference__modal-wrapper {
+  width: min(620px, calc(100vw - 32px));
+}
+
+/* Navigation behaves like controls; explanatory and editable content stays copyable. */
+.gp__container,
+.gp__container * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.gp__container :is(input, textarea, select, pre, [contenteditable="true"], .gpo-copyable,
+  .gpo-security-explanation, .gpo-admx-dialog__explanation, .gp__admx-help,
+  .gp__admx-content, .gp__list-children-help, .preference__info,
+  .gpo-editor-status__message, .gpo-editor-status__field, .gpo-editor-status__diagnostics,
+  .gpo-editor-field__diagnostic, .gpo-editor-field__hint, .gpo-editor-targeting-operands__note),
+.gp__container :is(pre, [contenteditable="true"], .gpo-copyable,
+  .gpo-security-explanation, .gpo-admx-dialog__explanation, .gp__admx-help,
+  .gp__admx-content, .gp__list-children-help, .preference__info,
+  .gpo-editor-status__message, .gpo-editor-status__field, .gpo-editor-status__diagnostics,
+  .gpo-editor-field__diagnostic, .gpo-editor-field__hint, .gpo-editor-targeting-operands__note) * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* The same selected/inactive/focused treatment applies to every list family. */
+.gp__container :is(.gpo-catalog-table, .gpo-collection-table) tbody tr.active,
+.gp__container .workspace-list-item.active,
+.gp__container .gpo-editor-filter-node.active {
+  background: #f5f5f5;
+  color: #363636;
+  box-shadow: inset 3px 0 #d1d1d1;
+}
+.gp__container :is(.gpo-catalog-table, .gpo-collection-table):focus-within tbody tr.active,
+.gp__container .gp__list-children__list:focus-within .workspace-list-item.active,
+.gp__container .gpo-editor-filters__tree:focus-within .gpo-editor-filter-node.active {
+  color: #297fb0;
+  box-shadow: inset 3px 0 #297fb0;
+}
+.gp__container :is(.workspace-list-item, .gpo-editor-filter-node):focus-visible,
+.gp__container :is(.gpo-catalog-table, .gpo-collection-table) tbody tr:focus-visible {
+  outline: 2px solid #297fb0;
+  outline-offset: -2px;
+}
+.gp__container .tree-view .tree-item {
+  position: relative;
+  isolation: isolate;
+}
+.gp__container .tree-view .tree-item::before {
+  content: "";
+  position: absolute;
+  inset: -3px -4px;
+  z-index: -1;
+  pointer-events: none;
+}
+.gp__container .tree-view .tree-item.active {
+  color: #363636;
+  background: transparent;
+  box-shadow: none;
+}
+.gp__container .tree-view .tree-item.active::before {
+  background: #f5f5f5;
+}
+.gp__container .tree-view:focus-within .tree-item.active {
+  color: #297fb0;
+}
+.gp__container .tree-view .tree-item:focus-visible {
+  outline: none;
+}
+.gp__container .tree-view .tree-item:focus-visible::before {
+  outline: 2px solid #297fb0;
+  outline-offset: -1px;
+}
+.gp__container [data-list-navigation][tabindex="0"]:focus-visible {
+  outline: 2px solid #297fb0;
+  outline-offset: -2px;
 }
