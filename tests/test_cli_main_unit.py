@@ -3,6 +3,8 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from ipa_gpo_install import cli
 
 
@@ -29,7 +31,7 @@ def _prepare_main(monkeypatch, *, check_only=False, connected=True):
     monkeypatch.setattr(
         cli,
         "perform_configuration_checks",
-        MagicMock(return_value={"schema_complete": True}),
+        MagicMock(return_value={"schema_complete": True, "ldap_infrastructure": True}),
     )
     monkeypatch.setattr(
         cli, "execute_required_actions", MagicMock(return_value=True)
@@ -77,6 +79,21 @@ def test_main_check_only_skips_actions_and_disconnects(monkeypatch, capsys):
     cli.execute_required_actions.assert_not_called()
     api.Backend.ldap2.disconnect.assert_called_once_with()
     assert "Check-only mode" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("incomplete", ["schema_complete", "ldap_infrastructure"])
+def test_main_check_only_reports_incomplete_installation_without_repair(
+        monkeypatch, incomplete, caplog):
+    api, _options, _checker, _actions, _checker_factory, actions_factory = (
+        _prepare_main(monkeypatch, check_only=True)
+    )
+    cli.perform_configuration_checks.return_value[incomplete] = False
+
+    assert cli.main() == 1
+    assert "Run ipa-gpo-install" in caplog.text
+    actions_factory.assert_not_called()
+    cli.execute_required_actions.assert_not_called()
+    api.Backend.ldap2.disconnect.assert_called_once_with()
 
 
 def test_main_returns_failure_when_required_action_fails(monkeypatch):

@@ -1912,21 +1912,15 @@ def test_chain_find_execute_preserves_callback_order_without_shared_state(
     assert result["count"] == 2
 
 
-def test_chain_find_execute_returns_empty_result_for_not_found(monkeypatch):
+def test_chain_find_execute_preserves_non_search_not_found(monkeypatch):
     def base_execute(instance, *args, **options):
         raise errors.NotFound(reason="missing")
 
     monkeypatch.setattr(CHAIN.LDAPSearch, "execute", base_execute)
     subject = _chain_find_harness()
 
-    result = CHAIN.chain_find.execute(subject)
-
-    assert result == {
-        "result": [],
-        "count": 0,
-        "truncated": False,
-        "summary": subject.msg_summary % {"count": 0},
-    }
+    with pytest.raises(errors.NotFound, match="missing"):
+        CHAIN.chain_find.execute(subject)
 
 
 def test_chain_find_execute_propagates_unexpected_backend_error(monkeypatch):

@@ -23,8 +23,10 @@ Requires: freeipa-server-core
 Requires: freeipa-server-trust-ad
 Requires: samba-common-tools
 Requires: admx-basealt
-Requires: python3-module-admix >= 0.1.0
-Requires: python3-module-admix < 0.2.0
+Requires: sdmx-basealt >= 1.0.0
+Requires: sdmx-schemas >= 1.0.0
+Requires: python3-module-admix >= 0.3.0
+Requires: python3-module-admix < 0.4.0
 Requires: acl
 Requires: coreutils
 Requires: libgio

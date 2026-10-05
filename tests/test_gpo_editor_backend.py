@@ -11,6 +11,7 @@ from unittest.mock import MagicMock
 import ldap
 import pytest
 from ipalib import errors
+from ipalib.ipajson import json_decode_binary
 from ipapython.dn import DN
 
 
@@ -151,7 +152,7 @@ def test_admix_binding_failure_is_structured_and_keeps_cache_empty(monkeypatch):
     assert GPO._admix_module is None
 
 
-def test_lazy_catalog_refresh_is_throttled_and_retains_healthy_generation():
+def test_maintenance_refresh_is_throttled_and_retains_healthy_generation():
     class Catalog:
         constructions = 0
 
@@ -189,7 +190,9 @@ def test_lazy_catalog_refresh_is_throttled_and_retains_healthy_generation():
 
     module = SimpleNamespace(TemplateCatalog=Catalog)
     first, first_state = GPO._get_catalog(module, now=10.0)
+    GPO._refresh_catalog(module, now=12.0)
     second, _ = GPO._get_catalog(module, now=12.0)
+    GPO._refresh_catalog(module, now=20.0)
     third, third_state = GPO._get_catalog(module, now=20.0)
 
     assert first is second is third
@@ -1510,6 +1513,17 @@ class PolicyReadWorkspace(PolicyWorkspace):
         return self.policy
 
 
+class PolicyIndexWorkspace(PolicyWorkspace):
+    def __init__(self, catalog):
+        super().__init__()
+        self.catalog = catalog
+        self.categories = []
+
+    def list_policies(self, scope, category_id, locales):
+        self.categories.append((scope, category_id, locales))
+        return self.catalog[(scope, category_id)]
+
+
 def runtime():
     return {
         "binding": {"api_version": 1, "capabilities": []},
@@ -1596,6 +1610,22 @@ class ScriptWorkspace:
     def list_script_assets(self, scope, event):
         self.operations.append(("assets", scope, event))
         return self._copy(self.assets)
+
+    def read_script_asset(self, scope, event, name, revision):
+        self.operations.append(("download", scope, event, name, revision))
+        asset = next((item for item in self.assets if item["name"] == name), None)
+        if asset is None:
+            error = RuntimeError("missing asset")
+            error.code = "not_found"
+            raise error
+        if asset["revision"] != revision:
+            error = RuntimeError("stale asset")
+            error.code = "asset_revision_conflict"
+            raise error
+        return {
+            "name": name, "byte_size": 3, "revision": revision,
+            "content": b"ABC",
+        }
 
     def script_asset_collision(self, scope, event, name):
         for asset in self.assets:
@@ -1778,6 +1808,298 @@ def test_editor_open_returns_documents_from_one_preference_workspace(
     }]
 
 
+@pytest.mark.parametrize(("command", "args"), [
+    (GPO.gpo_editor_preference_documents, ("Test GPO",)),
+    (GPO.gpo_editor_preference_items, ("Test GPO", "computer", "files")),
+    (GPO.gpo_editor_preference_show, ("Test GPO", "computer", "files", {})),
+    (GPO.gpo_editor_preference_create, ("Test GPO", "computer", "files", {"fields": []})),
+    (GPO.gpo_editor_preference_update, ("Test GPO", "computer", "files", {"identity": ["opaque"]})),
+    (GPO.gpo_editor_preference_delete, ("Test GPO", "computer", "files", {"identity": ["opaque"]})),
+])
+def test_preference_requests_do_not_initialize_unrelated_template_catalog(
+    monkeypatch, command, args,
+):
+    context = editor_context()
+    opened = []
+
+    class OpenedWorkspace(Exception):
+        pass
+
+    def open_workspace(*positional, **kwargs):
+        opened.append((positional, kwargs))
+        raise OpenedWorkspace()
+
+    monkeypatch.setattr(GPO, "_open_workspace", open_workspace)
+    with pytest.raises(OpenedWorkspace):
+        command.execute(CommandHarness(context), *args)
+
+    assert opened == [((context,), {"load_preferences": True, "with_catalog": False})]
+
+
+@pytest.mark.parametrize(("requested_scope", "scope"), [
+    ("computer", "computer"),
+    ("user", "user"),
+    ("machine", "computer"),
+])
+def test_policy_index_traverses_one_workspace_with_opaque_ids_and_display_paths(
+    monkeypatch, requested_scope, scope,
+):
+    catalog = {
+        (scope, None): [
+            {"kind": "policy", "id": "opaque:root/orphan", "label": "Root"},
+            {"kind": "category", "id": "opaque:category/A", "label": "Система"},
+            {"kind": "policy", "id": "opaque:root/orphan", "label": "Duplicate"},
+            {"kind": "category", "id": "opaque:category/B", "label": "Другие"},
+        ],
+        (scope, "opaque:category/A"): [
+            {"kind": "policy", "id": "unconfigured:id", "label": "Не задана"},
+            {"kind": "category", "id": "opaque:deep/category", "label": "Вложено"},
+            {"kind": "category", "id": "opaque:category/A", "label": "Cycle"},
+            {"kind": "policy", "id": "opaque:deep/policy", "label": "Duplicate"},
+        ],
+        (scope, "opaque:deep/category"): [
+            {"kind": "policy", "id": "opaque:deep/policy", "label": ""},
+        ],
+        (scope, "opaque:category/B"): [
+            {"kind": "category", "id": "opaque:deep/category", "label": "Repeated"},
+            {"kind": "policy", "id": "opaque:last policy", "label": None},
+        ],
+    }
+    workspace = PolicyIndexWorkspace(catalog)
+    workspace.get_policy = MagicMock(side_effect=AssertionError("no snapshots"))
+    context = editor_context()
+    command = CommandHarness(context)
+    contexts = []
+    command._context = lambda displayname, write=False: (
+        contexts.append((displayname, write)) or context
+    )
+    opened = []
+    selected_runtime = runtime()
+    selected_runtime["locales"] = ["ru-RU"]
+    monkeypatch.setattr(GPO, "_open_workspace", lambda *args, **kwargs: (
+        opened.append((args, kwargs)) or (workspace, selected_runtime)
+    ))
+    mutation = MagicMock(side_effect=AssertionError("read-only index"))
+    monkeypatch.setattr(GPO, "_recover_before_mutation", mutation)
+    monkeypatch.setattr(GPO, "_commit_external_once", mutation)
+    requested_locales = ("ru", "en-US")
+
+    result = GPO.gpo_editor_policy_index.execute(
+        command, "Test GPO", requested_scope, locales=requested_locales,
+    )
+
+    assert contexts == [("Test GPO", False)]
+    assert opened == [(
+        (context, requested_locales), {"load_preferences": False},
+    )]
+    assert workspace.categories == [
+        (scope, None, ["ru-RU"]),
+        (scope, "opaque:category/A", ["ru-RU"]),
+        (scope, "opaque:deep/category", ["ru-RU"]),
+        (scope, "opaque:category/B", ["ru-RU"]),
+    ]
+    assert result["policies"] == [
+        {"id": "opaque:root/orphan", "label": "Root", "path": []},
+        {"id": "unconfigured:id", "label": "Не задана", "path": ["Система"]},
+        {"id": "opaque:deep/policy", "label": "opaque:deep/policy",
+         "path": ["Система", "Вложено"]},
+        {"id": "opaque:last policy", "label": "opaque:last policy",
+         "path": ["Другие"]},
+    ]
+    assert result["locales"] == ["ru-RU"]
+    assert workspace.updates == workspace.comments == []
+    workspace.get_policy.assert_not_called()
+    mutation.assert_not_called()
+    assert catalog[(scope, "opaque:deep/category")][0]["label"] == ""
+
+
+def test_policy_index_handles_deep_categories_without_recursion(monkeypatch):
+    depth = 1500
+    catalog = {
+        ("user", None): [{"kind": "category", "id": "c0", "label": "0"}],
+    }
+    for index in range(depth):
+        catalog[("user", f"c{index}")] = (
+            [{"kind": "category", "id": f"c{index + 1}",
+              "label": str(index + 1)}]
+            if index + 1 < depth
+            else [{"kind": "policy", "id": "last", "label": "Last"}]
+        )
+    workspace = PolicyIndexWorkspace(catalog)
+    opened = []
+    monkeypatch.setattr(GPO, "_open_workspace", lambda *args, **kwargs: (
+        opened.append((args, kwargs)) or (workspace, runtime())
+    ))
+
+    result = GPO.gpo_editor_policy_index.execute(
+        CommandHarness(editor_context()), "Test GPO", "user",
+    )
+
+    assert len(opened) == 1
+    assert len(workspace.categories) == depth + 1
+    assert result["policies"] == [{
+        "id": "last", "label": "Last",
+        "path": [str(index) for index in range(depth)],
+    }]
+
+
+def test_policy_index_has_registered_rpc_schema_and_public_envelope(monkeypatch):
+    command_class = GPO.gpo_editor_policy_index
+    assert command_class in {item["plugin"] for item in GPO.register}
+    assert [argument.name for argument in command_class.takes_args] == [
+        "displayname", "scope",
+    ]
+    assert all(argument.required for argument in command_class.takes_args)
+    assert len(command_class.takes_options) == 1
+    locale_option = command_class.takes_options[0]
+    assert locale_option.name == "locales"
+    assert locale_option.multivalue and not locale_option.required
+    context = editor_context()
+    workspace = PolicyIndexWorkspace({("computer", None): []})
+    workspace.diagnostics = lambda: [{
+        "message": f"check {GPO.GPO_TEMPLATE_ROOT}/source.admx",
+    }]
+    selected_runtime = runtime()
+    selected_runtime["catalog"] = {"diagnostics": [{"message": "Catalog"}]}
+    monkeypatch.setattr(GPO, "_open_workspace", lambda *args, **kwargs: (
+        workspace, selected_runtime,
+    ))
+    command = CommandHarness(context)
+    command._run = lambda callback: GPO._GpoEditorCommand._run(command, callback)
+
+    response = command_class.execute(command, "Test GPO", "computer")
+
+    assert response["summary"] == "Group Policy editor operation completed"
+    result = response["result"]
+    assert result["policies"] == []
+    assert result["gpo"] == {
+        "displayname": "Test GPO", "guid": GUID,
+        "distinguished_name": str(DN_VALUE),
+    }
+    assert result["snapshot"]["version_number"] == 0
+    assert result["template"] is selected_runtime["catalog"]
+    assert result["pending_publication"] is None
+    assert result["locales"] == ["en-US"]
+    assert result["diagnostics"] == [
+        {"message": "Catalog"},
+        {"message": "check <server-path>/source.admx"},
+    ]
+    assert str(GPO.GPO_TEMPLATE_ROOT) not in str(result)
+
+
+@pytest.mark.parametrize("nodes", [
+    None, {}, "invalid", [None], [{"id": "missing-kind"}],
+    [{"kind": "unknown", "id": "x"}],
+    [{"kind": "policy", "id": ""}],
+    [{"kind": "category", "id": 12}],
+    [{"kind": "policy", "id": "x", "label": {"private": "/server/path"}}],
+    [{"kind": "category", "id": "x", "label": False}],
+])
+def test_policy_index_rejects_malformed_nodes_instead_of_partial_success(
+    monkeypatch, nodes,
+):
+    workspace = PolicyIndexWorkspace({
+        ("computer", None): [
+            {"kind": "policy", "id": "valid", "label": "Valid"},
+            {"kind": "category", "id": "broken", "label": "Broken"},
+        ],
+        ("computer", "broken"): nodes,
+    })
+    monkeypatch.setattr(GPO, "_open_workspace", lambda *args, **kwargs: (
+        workspace, runtime(),
+    ))
+    command = CommandHarness(editor_context())
+    command._run = lambda callback: GPO._GpoEditorCommand._run(command, callback)
+
+    with pytest.raises(errors.ExecutionError) as failure:
+        GPO.gpo_editor_policy_index.execute(command, "Test GPO", "computer")
+
+    assert failure.value.kw["error_category"] == "operational"
+    assert "/server/path" not in str(failure.value)
+    assert workspace.updates == workspace.comments == []
+
+
+def test_policy_index_reports_child_source_failure_without_partial_result(
+    monkeypatch,
+):
+    workspace = PolicyIndexWorkspace({
+        ("computer", None): [{"kind": "category", "id": "broken"}],
+    })
+    binding_failure = RuntimeError("private /server/path")
+    binding_failure.code = "io"
+    workspace.list_policies = MagicMock(side_effect=[
+        workspace.catalog[("computer", None)], binding_failure,
+    ])
+    monkeypatch.setattr(GPO, "_open_workspace", lambda *args, **kwargs: (
+        workspace, runtime(),
+    ))
+    command = CommandHarness(editor_context())
+    command._run = lambda callback: GPO._GpoEditorCommand._run(command, callback)
+
+    with pytest.raises(errors.ExecutionError) as failure:
+        GPO.gpo_editor_policy_index.execute(command, "Test GPO", "computer")
+
+    assert failure.value.kw["error_category"] == "operational"
+    assert "/server/path" not in str(failure.value)
+    assert workspace.list_policies.call_count == 2
+
+
+def test_policy_index_resource_limit_fails_instead_of_truncating(monkeypatch):
+    workspace = PolicyIndexWorkspace({("user", None): [
+        {"kind": "policy", "id": str(index)} for index in range(4)
+    ]})
+    monkeypatch.setattr(GPO, "GPO_POLICY_INDEX_MAX_NODES", 3)
+    monkeypatch.setattr(GPO, "_open_workspace", lambda *args, **kwargs: (
+        workspace, runtime(),
+    ))
+
+    with pytest.raises(GPO.EditorFailure, match="resource limit") as failure:
+        GPO.gpo_editor_policy_index.execute(
+            CommandHarness(editor_context()), "Test GPO", "user",
+        )
+
+    assert failure.value.category == "operational"
+
+
+def test_policy_index_invalid_scope_fails_before_context_or_binding(monkeypatch):
+    command = CommandHarness(editor_context())
+    command._context = MagicMock(side_effect=AssertionError("invalid scope"))
+    command._run = lambda callback: GPO._GpoEditorCommand._run(command, callback)
+    opened = MagicMock(side_effect=AssertionError("invalid scope"))
+    monkeypatch.setattr(GPO, "_open_workspace", opened)
+
+    with pytest.raises(errors.ExecutionError) as failure:
+        GPO.gpo_editor_policy_index.execute(command, "Test GPO", "invalid")
+
+    assert failure.value.kw["error_category"] == "validation"
+    assert failure.value.kw["field"] == "scope"
+    command._context.assert_not_called()
+    opened.assert_not_called()
+
+
+def test_policy_index_unauthorized_fails_before_filesystem_or_binding(monkeypatch):
+    backend = FakeLdap(rights=False)
+    command = CommandHarness(editor_context(), ldap_backend=backend)
+    command.api.env = fake_api().env
+    command._context = lambda displayname, write=False: (
+        GPO._GpoEditorCommand._context(command, displayname, write=write)
+    )
+    command._run = lambda callback: GPO._GpoEditorCommand._run(command, callback)
+    trusted_root = MagicMock(side_effect=AssertionError("unauthorized"))
+    opened = MagicMock(side_effect=AssertionError("unauthorized"))
+    monkeypatch.setattr(GPO, "_trusted_gpo_root", trusted_root)
+    monkeypatch.setattr(GPO, "_open_workspace", opened)
+
+    with pytest.raises(errors.ACIError):
+        GPO.gpo_editor_policy_index.execute(command, "Test GPO", "user")
+
+    assert [call[2] for call in backend.calls if call[0] == "can_write"] == [
+        "versionnumber",
+    ]
+    trusted_root.assert_not_called()
+    opened.assert_not_called()
+
+
 def test_editor_reconcile_uses_write_context_and_public_result(monkeypatch):
     workspace = SimpleNamespace(
         pending_external_publication=lambda: None,
@@ -1853,7 +2175,15 @@ def test_preference_items_normalizes_machine_scope(monkeypatch):
     assert item_calls == [("computer", "files")]
 
 
-def test_policy_form_update_is_one_workspace_and_one_commit(monkeypatch):
+@pytest.mark.parametrize("value", [
+    {"kind": "integer", "value": 4},
+    {"kind": "text_list", "value": ["firefox", "chromium"]},
+    {"kind": "key_value_list", "value": [
+        {"key": "OpenSC", "value": "C:\\Program Files\\OpenSC\\module.dll"},
+        {"key": "Provider=two:module", "value": ""},
+    ]},
+])
+def test_policy_form_update_is_one_workspace_and_one_commit(monkeypatch, value):
     workspace = PolicyWorkspace()
     context = editor_context()
     monkeypatch.setattr(
@@ -1870,7 +2200,7 @@ def test_policy_form_update_is_one_workspace_and_one_commit(monkeypatch):
         "state": "enabled",
         "set_parameters": [{
             "parameter_id": "p",
-            "value": {"kind": "integer", "value": 4},
+            "value": value,
         }],
         "clear_parameters": ["old"],
         "comment": {
@@ -1896,6 +2226,68 @@ def test_policy_form_update_is_one_workspace_and_one_commit(monkeypatch):
     ]
     assert len(commits) == 1
     assert result["policy"]["policy_id"] == "policy-id"
+
+
+def test_policy_key_value_rpc_arrays_reach_real_binding(monkeypatch, tmp_path):
+    admix = pytest.importorskip("admix")
+    templates = tmp_path / "PolicyDefinitions"
+    locale = templates / "en-US"
+    locale.mkdir(parents=True)
+    (templates / "collections.admx").write_text(
+        '''<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitions revision="1.0" schemaVersion="1.0">
+  <policyNamespaces><target prefix="collections" namespace="Test.Collections"/></policyNamespaces>
+  <resources minRequiredRevision="1.0"/>
+  <policies><policy name="Devices" class="Machine" displayName="$(string.Devices)"
+      key="Software\\Test\\Devices" presentation="$(presentation.Devices)">
+    <elements><list id="Pairs" explicitValue="true" expandable="true"/></elements>
+  </policy></policies>
+</policyDefinitions>''', encoding="utf-8",
+    )
+    (locale / "collections.adml").write_text(
+        '''<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources revision="1.0" schemaVersion="1.0">
+  <displayName>Collections</displayName><description>Collection RPC fixture</description>
+  <resources><stringTable><string id="Devices">Devices</string></stringTable>
+  <presentationTable><presentation id="Devices"><listBox refId="Pairs">Devices</listBox>
+  </presentation></presentationTable></resources>
+</policyDefinitionResources>''', encoding="utf-8",
+    )
+    gpo_root = tmp_path / "gpo"
+    (gpo_root / "Machine").mkdir(parents=True)
+    (gpo_root / "User").mkdir()
+    (gpo_root / "GPT.INI").write_text("[General]\nVersion=0\n", encoding="utf-8")
+    workspace = admix.Workspace.open(
+        gpo_root, template_root=templates, locales=["en-US"],
+        load_preferences=False, state_directory=tmp_path / "state",
+        state_key="collection-rpc",
+    ).native
+    policy_id = "collections:Devices"
+    initial = workspace.get_policy("computer", policy_id, ["en-US"])
+    if not initial["capabilities"]["edit_parameters"]:
+        pytest.skip("installed binding predates explicit key-value lists; run with the freshly built wheel")
+    monkeypatch.setattr(GPO, "_open_workspace", lambda *a, **k: (workspace, runtime()))
+    monkeypatch.setattr(GPO, "_recover_before_mutation", lambda *a: None)
+    monkeypatch.setattr(GPO, "_editor_envelope", lambda *a: {})
+    commits = []
+    monkeypatch.setattr(GPO, "_commit_external_once", lambda *a: commits.append(a) or {"changed": True})
+    pairs = (
+        {"key": "OpenSC", "value": "C:\\modules\\one=two:device.dll"},
+        {"key": "Empty", "value": ""},
+    )
+    request = {"state": "enabled", "set_parameters": ({
+        "parameter_id": "Pairs", "value": {"kind": "key_value_list", "value": pairs},
+    },)}
+    result = GPO.gpo_editor_policy_update.execute(
+        CommandHarness(editor_context()), "Test GPO", "computer", policy_id,
+        request, locales=["en-US"],
+    )
+    assert result["policy"]["parameters"][0]["value"] == {
+        "kind": "key_value_list", "value": list(pairs),
+    }
+    assert len(commits) == 1
+    assert isinstance(request["set_parameters"], tuple)
+    assert isinstance(request["set_parameters"][0]["value"]["value"], tuple)
 
 
 @pytest.mark.parametrize("action", ["set", "clear"])
@@ -2194,6 +2586,9 @@ class PreferenceWorkspace:
     def remove_preference_filter(self, *args):
         self.edits.append(("remove-filter",) + args)
 
+    def move_preference_filter(self, *args):
+        self.edits.append(("move-filter",) + args)
+
     def remove_preference_item(self, *args):
         self.removals.append(args)
 
@@ -2250,6 +2645,34 @@ def test_preference_filter_none_is_an_explicit_noop():
     ) is None
     assert workspace.edits == []
     assert workspace.insertions == []
+
+
+def test_preference_filter_move_forwards_pre_move_paths_and_order():
+    workspace = PreferenceWorkspace()
+    identity = ["opaque", "item"]
+
+    GPO._apply_filter_operations(
+        workspace,
+        "computer",
+        "registry",
+        identity,
+        [
+            {"op": "remove", "path": [0, 1]},
+            {
+                "op": "move",
+                "source_path": [2, 0],
+                "collection_path": [3, 1],
+                "index": 2,
+            },
+            {"op": "edit", "path": [3, 1, 2], "fields": []},
+        ],
+    )
+
+    assert workspace.edits == [
+        ("remove-filter", "computer", "registry", identity, [0, 1]),
+        ("move-filter", "computer", "registry", identity, [2, 0], [3, 1], 2),
+        ("filter", "computer", "registry", identity, [3, 1, 2], []),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -2523,6 +2946,109 @@ def test_preference_update_and_delete_each_use_one_commit(monkeypatch):
     assert deleted["deleted_identity"] == identity
 
 
+def test_preference_update_applies_all_targeting_operations_before_one_commit(
+    monkeypatch,
+):
+    workspace = PreferenceWorkspace()
+    context = editor_context()
+    identity = ["files", "opaque-id"]
+    operation_log = []
+    monkeypatch.setattr(
+        GPO, "_open_workspace", lambda *args, **kwargs: (workspace, runtime())
+    )
+    monkeypatch.setattr(GPO, "_recover_before_mutation", lambda *args: None)
+    for action, method in (
+        ("insert", "insert_preference_filter"),
+        ("remove", "remove_preference_filter"),
+        ("move", "move_preference_filter"),
+        ("edit", "edit_preference_filter_fields"),
+    ):
+        monkeypatch.setattr(
+            workspace,
+            method,
+            lambda *args, action=action: operation_log.append((action, args)),
+        )
+    monkeypatch.setattr(
+        GPO,
+        "_commit_external_once",
+        lambda *args: operation_log.append(("commit", args))
+        or {"changed": True},
+    )
+    fields = [{
+        "id": "filter.name",
+        "value": {"kind": "text", "value": "admins"},
+    }]
+    operations = [
+        {"op": "insert", "collection_path": [], "index": 1,
+         "filter_kind": "collection", "fields": []},
+        {"op": "insert", "collection_path": [1], "index": 0,
+         "filter_kind": "group", "fields": fields},
+        {"op": "move", "source_path": [0, 1],
+         "collection_path": [1], "index": 1},
+        {"op": "remove", "path": [0, 0]},
+        {"op": "edit", "path": [1, 1], "fields": fields},
+    ]
+
+    result = GPO.gpo_editor_preference_update.execute(
+        CommandHarness(context),
+        "Test GPO",
+        "computer",
+        "files",
+        {"identity": identity, "filters": operations},
+    )
+
+    assert [action for action, _ in operation_log] == [
+        "insert", "insert", "move", "remove", "edit", "commit"
+    ]
+    assert operation_log[2][1] == (
+        "computer", "files", identity, [0, 1], [1], 1
+    )
+    assert result["publication"] == {"changed": True}
+
+
+def test_preference_failed_targeting_move_does_not_publish(monkeypatch):
+    workspace = PreferenceWorkspace()
+    context = editor_context()
+    monkeypatch.setattr(
+        GPO, "_open_workspace", lambda *args, **kwargs: (workspace, runtime())
+    )
+    monkeypatch.setattr(GPO, "_recover_before_mutation", lambda *args: None)
+    monkeypatch.setattr(
+        GPO,
+        "_commit_external_once",
+        lambda *args: pytest.fail("invalid targeting move was published"),
+    )
+
+    def reject_move(*args):
+        raise GPO.EditorFailure(
+            "validation", "Cannot move a collection into its descendant.",
+            field="filters",
+        )
+
+    monkeypatch.setattr(workspace, "move_preference_filter", reject_move)
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_preference_update.execute(
+            CommandHarness(context),
+            "Test GPO",
+            "computer",
+            "files",
+            {
+                "identity": ["files", "opaque-id"],
+                "filters": [
+                    {"op": "edit", "path": [1], "fields": []},
+                    {"op": "move", "source_path": [0],
+                     "collection_path": [0, 1], "index": 0},
+                ],
+            },
+        )
+
+    assert failure.value.category == "validation"
+    assert workspace.edits == [
+        ("filter", "computer", "files", ["files", "opaque-id"], [1], [])
+    ]
+
+
 def test_preference_mid_request_failure_discards_workspace_without_commit(
     monkeypatch,
 ):
@@ -2676,6 +3202,77 @@ def test_scripts_read_commands_do_not_recover_or_commit(monkeypatch):
     assert shown["scripts"]["event"] == "startup"
     assert listed["scripts"]["assets"][0]["name"] == "startup.cmd"
     assert recovered == []
+    assert commits == []
+
+
+def test_script_download_returns_exact_bytes_without_path_or_commit(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, recovered, commits = _script_command_environment(monkeypatch, workspace)
+
+    result = GPO.gpo_editor_script_asset_download.execute(
+        command, "Test GPO", "computer", "startup",
+        {"name": "startup.cmd", "revision": "asset-r1"},
+    )
+
+    assert result["asset"] == {
+        "name": "startup.cmd", "byte_size": 3, "revision": "asset-r1",
+        "content_base64": "QUJD",
+    }
+    assert "path" not in result["asset"]
+    assert ("download", "computer", "startup", "startup.cmd", "asset-r1") in workspace.operations
+    assert recovered == []
+    assert commits == []
+
+
+def test_script_download_rejects_bad_request_before_workspace(monkeypatch):
+    opened = []
+    monkeypatch.setattr(GPO, "_open_workspace", lambda *args, **kwargs: opened.append(args))
+    command = CommandHarness(editor_context())
+
+    for request in (
+        {"name": "../secret", "revision": "asset-r1"},
+        {"name": "startup.cmd", "revision": ""},
+        {"name": "startup.cmd", "revision": "asset-r1", "path": "/etc"},
+    ):
+        with pytest.raises(GPO.EditorFailure):
+            GPO.gpo_editor_script_asset_download.execute(
+                command, "Test GPO", "computer", "startup", request,
+            )
+    assert opened == []
+
+
+def test_script_download_rejects_oversized_binding_result(monkeypatch):
+    workspace = ScriptWorkspace()
+    workspace.read_script_asset = lambda *args: {
+        "name": "startup.cmd", "revision": "asset-r1", "content": b"ABCD",
+    }
+    command, _recovered, commits = _script_command_environment(monkeypatch, workspace)
+    monkeypatch.setattr(GPO, "GPO_SCRIPT_UPLOAD_MAX_BYTES", 3)
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_script_asset_download.execute(
+            command, "Test GPO", "computer", "startup",
+            {"name": "startup.cmd", "revision": "asset-r1"},
+        )
+
+    assert failure.value.category == "size_limit"
+    assert commits == []
+
+
+def test_script_download_rejects_mismatched_binding_metadata(monkeypatch):
+    workspace = ScriptWorkspace()
+    workspace.read_script_asset = lambda *args: {
+        "name": "/server/path", "revision": "asset-r1", "content": b"ABC",
+    }
+    command, _recovered, commits = _script_command_environment(monkeypatch, workspace)
+
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_script_asset_download.execute(
+            command, "Test GPO", "computer", "startup",
+            {"name": "startup.cmd", "revision": "asset-r1"},
+        )
+
+    assert failure.value.category == "operational"
     assert commits == []
 
 
@@ -2906,7 +3503,7 @@ def test_script_remove_rejects_missing_managed_asset_without_commit(
     assert commits == []
 
 
-def test_script_reorder_rejects_non_list_identities_before_workspace(
+def test_script_reorder_accepts_freeipa_json_tuple_identities(
     monkeypatch,
 ):
     workspace = ScriptWorkspace()
@@ -2915,16 +3512,36 @@ def test_script_reorder_rejects_non_list_identities_before_workspace(
         workspace,
     )
 
+    GPO.gpo_editor_script_entries_reorder.execute(
+        command,
+        "Test GPO",
+        "computer",
+        "startup",
+        {
+            "executable_group": "classic",
+            "snapshot": "classic-snapshot",
+            "identities": ("classic-startup-0",),
+        },
+    )
+
+    assert any(operation[0] == "reorder" and operation[-1] == ["classic-startup-0"]
+               for operation in workspace.operations)
+    assert len(recovered) == 1
+    assert len(commits) == 1
+
+
+def test_script_reorder_rejects_non_array_identities_before_workspace(monkeypatch):
+    workspace = ScriptWorkspace()
+    command, recovered, commits = _script_command_environment(
+        monkeypatch, workspace
+    )
+
     with pytest.raises(GPO.EditorFailure) as failure:
         GPO.gpo_editor_script_entries_reorder.execute(
-            command,
-            "Test GPO",
-            "computer",
-            "startup",
-            {
+            command, "Test GPO", "computer", "startup", {
                 "executable_group": "classic",
                 "snapshot": "classic-snapshot",
-                "identities": ("classic-startup-0",),
+                "identities": "classic-startup-0",
             },
         )
 
@@ -3100,6 +3717,7 @@ def test_editor_command_metadata_has_only_high_level_structured_contracts():
     expected = {
         "gpo_editor_open",
         "gpo_editor_children",
+        "gpo_editor_policy_index",
         "gpo_editor_policy_show",
         "gpo_editor_policy_update",
         "gpo_editor_reconcile",
@@ -3110,7 +3728,14 @@ def test_editor_command_metadata_has_only_high_level_structured_contracts():
         "gpo_editor_preference_update",
         "gpo_editor_preference_delete",
         "gpo_editor_scripts_show",
+        "gpo_editor_security_definitions_show",
+        "gpo_editor_security_definitions_update",
+        "gpo_editor_security_show",
+        "gpo_editor_security_update",
+        "gpo_editor_advanced_audit_show",
+        "gpo_editor_advanced_audit_update",
         "gpo_editor_script_files",
+        "gpo_editor_script_asset_download",
         "gpo_editor_script_entry_add",
         "gpo_editor_script_entry_update",
         "gpo_editor_script_entry_remove",
@@ -3137,3 +3762,571 @@ def test_editor_command_metadata_has_only_high_level_structured_contracts():
     assert {
         "gPCMachineExtensionNames", "gPCUserExtensionNames", "versionNumber"
     } <= modified
+
+
+@pytest.mark.parametrize("locale", ["en-US", "ru-RU"])
+def test_security_catalog_passes_packaged_sdmx_1_0_schemas_to_native(
+    locale, monkeypatch,
+):
+    calls = []
+
+    class Catalog:
+        def __init__(self, root, **options):
+            calls.append((root, options))
+
+        def generation(self):
+            return {"semantic_revision": "good", "locale": locale}
+
+        def diagnostics(self):
+            return []
+
+    monkeypatch.setattr(
+        GPO, "_security_definition_locales", lambda: ["en-US", "ru-RU"]
+    )
+    catalog, state, selected_locale = GPO._get_security_catalog(
+        [locale], SimpleNamespace(SecurityDefinitionCatalog=Catalog), now=10.0
+    )
+
+    assert isinstance(catalog, Catalog)
+    assert selected_locale == locale
+    assert state["generation"]["locale"] == locale
+    assert GPO.GPO_SDMX_SCHEMA_ROOT == Path("/usr/share/xml/sdmx/1.0")
+    assert calls == [("/usr/share/PolicyDefinitions", {
+        "locale": locale,
+        "sdmx_schema": "/usr/share/xml/sdmx/1.0/sdmx-1.0.xsd",
+        "sdml_schema": "/usr/share/xml/sdmx/1.0/sdml-1.0.xsd",
+    })]
+
+
+def test_security_catalog_locales_and_refresh_retain_healthy_generation(
+    tmp_path, monkeypatch,
+):
+    definitions = tmp_path / "definitions"
+    for locale in ("en-US", "ru-RU"):
+        directory = definitions / locale
+        directory.mkdir(parents=True)
+        (directory / "security.sdml").write_text("fixture")
+    schemas = tmp_path / "schemas"
+    schemas.mkdir()
+    monkeypatch.setattr(GPO, "GPO_SECURITY_DEFINITION_ROOT", definitions)
+    monkeypatch.setattr(GPO, "GPO_SDMX_SCHEMA_ROOT", schemas)
+    monkeypatch.setattr(GPO, "GPO_SDMX_SCHEMA", schemas / "sdmx-1.0.xsd")
+    monkeypatch.setattr(GPO, "GPO_SDML_SCHEMA", schemas / "sdml-1.0.xsd")
+
+    class Catalog:
+        def __init__(self, root, **options):
+            self.root = root
+            self.options = options
+            self.refreshes = 0
+
+        def generation(self):
+            return {"semantic_revision": "good", "locale": self.options["locale"]}
+
+        def diagnostics(self):
+            return []
+
+        def refresh_if_changed(self):
+            self.refreshes += 1
+            return {
+                "status": "failed",
+                "failure": {
+                    "message": str(schemas / "private.xsd"),
+                    "diagnostics": [{
+                        "message": str(schemas / "private.xsd"),
+                        "file": str(definitions / "private.sdmx"),
+                        "code": "xsd.invalid",
+                    }],
+                },
+            }
+
+    module = SimpleNamespace(SecurityDefinitionCatalog=Catalog)
+    first, first_state, locale = GPO._get_security_catalog(
+        ["ru"], module, now=10.0
+    )
+    second, second_state, _ = GPO._get_security_catalog(
+        ["ru-RU"], module, now=12.0
+    )
+    third, third_state, _ = GPO._get_security_catalog(
+        ["ru-RU"], module, now=20.0
+    )
+    english, _, english_locale = GPO._get_security_catalog(
+        ["en-US"], module, now=20.0
+    )
+
+    assert locale == "ru-RU"
+    assert english_locale == "en-US" and english is not first
+    assert first is second is third
+    assert first_state["generation"]["semantic_revision"] == "good"
+    assert second_state["refresh"] is None
+    assert first.refreshes == 1
+    assert third_state["generation"]["semantic_revision"] == "good"
+    assert third_state["refresh"]["failure"]["diagnostics"][0]["file"] == "private.sdmx"
+    assert str(tmp_path) not in str(third_state)
+
+
+def test_workspace_constructor_prefers_current_binding_and_keeps_legacy_fallback(
+    monkeypatch,
+):
+    context = editor_context()
+    calls = []
+
+    def current_workspace(root, **options):
+        calls.append((root, options))
+        return object()
+
+    def legacy_workspace(*args, **kwargs):
+        pytest.fail("legacy constructor selected over GroupPolicyWorkspace")
+
+    module = SimpleNamespace(
+        GroupPolicyWorkspace=current_workspace,
+        HighLevelApi=legacy_workspace,
+    )
+    monkeypatch.setattr(GPO, "_load_admix", lambda: module)
+    catalog = object()
+    monkeypatch.setattr(
+        GPO, "_get_security_catalog",
+        lambda *args: (catalog, {"generation": {"semantic_revision": "good"}}, "ru-RU"),
+    )
+
+    _, state = GPO._open_workspace(
+        context, ["ru"], with_catalog=False, with_security_catalog=True
+    )
+
+    assert calls[0][0] == str(context.gpo_root)
+    assert calls[0][1]["security_catalog"] is catalog
+    assert state["locales"] == ["ru-RU"]
+    assert state["security_catalog"]["generation"]["semantic_revision"] == "good"
+
+    del module.GroupPolicyWorkspace
+    module.HighLevelApi = lambda *args, **kwargs: "legacy"
+    workspace, _ = GPO._open_workspace(context, with_catalog=False)
+    assert workspace == "legacy"
+
+
+def test_security_definition_rpc_preserves_all_catalog_policies_and_commits_once(
+    monkeypatch,
+):
+    class Workspace:
+        def __init__(self):
+            self.updates = []
+            self.catalog = {
+                "semantic_revision": "sha256:good",
+                "policies": [
+                    {"namespace": "urn:test", "policy_id": "p-{}".format(i)}
+                    for i in range(185)
+                ],
+            }
+
+        def pending_external_publication(self):
+            return None
+
+        def diagnostics(self):
+            return []
+
+        def security_definition_catalog(self):
+            return self.catalog
+
+        def security_definition_snapshot(self):
+            return {"semantic_revision": "sha256:good", "diagnostics": []}
+
+        def update_security_definitions(self, request):
+            self.updates.append(request)
+
+    workspace = Workspace()
+    context = editor_context()
+    opened = []
+    monkeypatch.setattr(
+        GPO, "_open_workspace",
+        lambda *args, **kwargs: (
+            opened.append(kwargs) or workspace,
+            {"catalog": None, "security_catalog": None, "locales": ["en-US"]},
+        ),
+    )
+    monkeypatch.setattr(GPO, "_recover_before_mutation", lambda *args: None)
+    commits = []
+    monkeypatch.setattr(
+        GPO, "_commit_external_once",
+        lambda *args: commits.append(args) or {"changed": True},
+    )
+
+    shown = GPO.gpo_editor_security_definitions_show.execute(
+        CommandHarness(context), "Test GPO", locales=["en-US"]
+    )
+    request = {
+        "expected_semantic_revision": "sha256:good",
+        "policies": [{
+            "namespace": "urn:test", "policy_id": "p-0",
+            "transition": "define", "elements": [],
+        }],
+    }
+    wire_request = json_decode_binary(json.dumps({"request": request}))["request"]
+    assert isinstance(wire_request["policies"], tuple)
+    updated = GPO.gpo_editor_security_definitions_update.execute(
+        CommandHarness(context), "Test GPO", wire_request, locales=["en-US"]
+    )
+    alias = GPO.gpo_editor_security_show.execute(
+        CommandHarness(context), "Test GPO", locales=["en-US"]
+    )
+
+    assert all(call == {
+        "load_preferences": False, "with_catalog": False,
+        "with_security_catalog": True,
+    } for call in opened)
+    assert len(shown["security_catalog"]["policies"]) == 185
+    assert alias["security_catalog"] is shown["security_catalog"]
+    assert workspace.updates == [request]
+    assert len(commits) == 1
+    assert updated["publication"] == {"changed": True}
+
+
+def test_security_update_restores_nested_rpc_arrays_before_binding():
+    request = {
+        "expected_semantic_revision": "sha256:good",
+        "policies": [{
+            "namespace": "urn:test", "policy_id": "restricted-groups",
+            "elements": [{
+                "element_id": "groups", "action": "rows",
+                "rows": [{
+                    "action": "upsert",
+                    "key": {"kind": "string", "value": "Administrators"},
+                    "fields": {
+                        "members": {
+                            "state": "set",
+                            "value": {"kind": "list", "value": ["alice", "bob"]},
+                        },
+                    },
+                }],
+            }],
+        }],
+    }
+    wire_request = json_decode_binary(json.dumps({"request": request}))["request"]
+    assert isinstance(wire_request["policies"][0]["elements"][0]["rows"], tuple)
+    assert isinstance(
+        wire_request["policies"][0]["elements"][0]["rows"][0]
+        ["fields"]["members"]["value"]["value"], tuple,
+    )
+
+    assert GPO._validate_security_update(wire_request) == request
+    assert isinstance(wire_request["policies"], tuple)
+
+
+def test_security_rpc_array_restoration_reaches_real_binding(tmp_path):
+    admix = pytest.importorskip("admix")
+    sdmx_schema = GPO.GPO_SDMX_SCHEMA
+    sdml_schema = GPO.GPO_SDML_SCHEMA
+    if not sdmx_schema.exists() or not sdml_schema.exists():
+        pytest.skip("installed SDMX schemas are unavailable")
+
+    catalog = admix.SecurityDefinitionCatalog(
+        "/usr/share/PolicyDefinitions", locale="en-US",
+        sdmx_schema=str(sdmx_schema), sdml_schema=str(sdml_schema),
+    )
+    gpo_root = tmp_path / "gpo"
+    gpo_root.mkdir()
+    workspace = admix.GroupPolicyWorkspace(
+        str(gpo_root), security_catalog=catalog, load_preferences=False,
+        state_directory=str(tmp_path / "state"), state_key="rpc-array-test",
+    )
+    definition_catalog = workspace.security_definition_catalog()
+    policy = next(
+        policy for policy in definition_catalog["policies"]
+        if len(policy.get("elements") or []) == 1
+        and policy["elements"][0]["value_type"] == "integer"
+        and policy["elements"][0].get("initial") is not None
+    )
+    element = policy["elements"][0]
+    request = {
+        "expected_semantic_revision": definition_catalog["semantic_revision"],
+        "policies": [{
+            "namespace": policy["namespace"], "policy_id": policy["policy_id"],
+            "transition": "define", "elements": [{
+                "element_id": element["id"], "action": "set",
+                "value": element["initial"],
+            }],
+        }],
+    }
+    wire_request = json_decode_binary(json.dumps({"request": request}))["request"]
+    result = workspace.update_security_definitions(
+        GPO._validate_security_update(wire_request)
+    )
+
+    assert any(
+        row["policy_id"] == policy["policy_id"] and row["state"] == "defined"
+        for row in result["policies"]
+    )
+
+
+@pytest.mark.parametrize(("payload", "field"), [
+    (None, "request"),
+    ({"policies": []}, "request.expected_semantic_revision"),
+    ({"expected_semantic_revision": "r", "policies": [], "extra": True}, "request"),
+    ({"expected_semantic_revision": "r", "policies": [None]}, "request.policies[0]"),
+])
+def test_security_update_rejects_malformed_rpc_envelope(payload, field):
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._validate_security_update(payload)
+    assert failure.value.category == "validation"
+    assert failure.value.field == field
+
+
+@pytest.mark.parametrize(("policy", "field"), [
+    ({"namespace": "n", "policy_id": "p", "extra": True}, "request.policies[0]"),
+    ({"namespace": "", "policy_id": "p"}, "request.policies[0].namespace"),
+    ({"namespace": "n", "policy_id": "p", "transition": "replace"}, "request.policies[0].transition"),
+    ({"namespace": "n", "policy_id": "p", "elements": "wrong"}, "request.policies[0].elements"),
+    ({"namespace": "n", "policy_id": "p", "elements": [None]}, "request.policies[0].elements[0]"),
+    ({"namespace": "n", "policy_id": "p", "elements": [
+        {"element_id": "e", "action": "set", "value": {"kind": "boolean", "value": True}},
+        {"element_id": "e", "action": "unset"},
+    ]}, "request.policies[0].elements[1]"),
+])
+def test_security_update_rejects_malformed_policy_actions(policy, field):
+    request = {"expected_semantic_revision": "r", "policies": [policy]}
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._validate_security_update(request)
+    assert failure.value.category == "validation"
+    assert failure.value.field == field
+
+
+@pytest.mark.parametrize(("element", "suffix"), [
+    ({"action": "unset"}, ".element_id"),
+    ({"element_id": "e", "action": "replace"}, ""),
+    ({"element_id": "e", "action": "unset", "value": None}, ""),
+    ({"element_id": "e", "action": "set", "value": False}, ".value"),
+    ({"element_id": "e", "action": "set", "value": {"kind": "boolean", "value": True, "extra": 1}}, ".value"),
+    ({"element_id": "e", "action": "set", "value": {"kind": "", "value": True}}, ".value.kind"),
+    ({"element_id": "e", "action": "rows", "rows": "wrong"}, ".rows"),
+])
+def test_security_update_rejects_malformed_element_actions(element, suffix):
+    request = {"expected_semantic_revision": "r", "policies": [{
+        "namespace": "n", "policy_id": "p", "elements": [element],
+    }]}
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._validate_security_update(request)
+    assert failure.value.category == "validation"
+    assert failure.value.field == "request.policies[0].elements[0]" + suffix
+
+
+@pytest.mark.parametrize(("row", "suffix"), [
+    (None, ""),
+    ({"action": "replace", "key": {"kind": "string", "value": "x"}}, ""),
+    ({"action": "delete", "key": {"kind": "string", "value": "x"}, "fields": {}}, ""),
+    ({"action": "delete", "key": None}, ".key"),
+    ({"action": "upsert", "key": {"kind": "string", "value": "x"}, "fields": []}, ".fields"),
+    ({"action": "upsert", "key": {"kind": "string", "value": "x"}, "fields": {"": {"state": "unset"}}}, ".fields"),
+    ({"action": "upsert", "key": {"kind": "string", "value": "x"}, "fields": {"members": None}}, ".fields.members"),
+    ({"action": "upsert", "key": {"kind": "string", "value": "x"}, "fields": {"members": {"state": "replace"}}}, ".fields.members"),
+    ({"action": "upsert", "key": {"kind": "string", "value": "x"}, "fields": {"members": {"state": "unset", "value": None}}}, ".fields.members"),
+])
+def test_security_update_rejects_malformed_keyed_rows(row, suffix):
+    request = {"expected_semantic_revision": "r", "policies": [{
+        "namespace": "n", "policy_id": "p", "elements": [{
+            "element_id": "rows", "action": "rows", "rows": [row],
+        }],
+    }]}
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO._validate_security_update(request)
+    assert failure.value.category == "validation"
+    assert failure.value.field == "request.policies[0].elements[0].rows[0]" + suffix
+
+
+@pytest.mark.parametrize("payload", [
+    {"expected_semantic_revision": "r", "policies": "not a list"},
+    {"expected_semantic_revision": "r", "policies": [{
+        "namespace": "n", "policy_id": "p", "elements": [{
+            "element_id": "e", "action": "set", "value": {"kind": "integer"},
+        }],
+    }]},
+    {"expected_semantic_revision": "r", "policies": [{
+        "namespace": "n", "policy_id": "p", "transition": "undefine",
+        "elements": [{"element_id": "e", "action": "unset"}],
+    }]},
+    {"expected_semantic_revision": "r", "policies": [{
+        "namespace": "n", "policy_id": "p", "elements": [],
+    }, {
+        "namespace": "n", "policy_id": "p", "elements": [],
+    }]},
+])
+def test_security_update_rejects_invalid_requests_before_workspace(
+    monkeypatch, payload,
+):
+    monkeypatch.setattr(
+        GPO, "_open_workspace",
+        lambda *args, **kwargs: pytest.fail("invalid request opened workspace"),
+    )
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_security_definitions_update.execute(
+            CommandHarness(editor_context()), "Test GPO", payload
+        )
+    assert failure.value.category == "validation"
+
+
+def test_security_definition_rpc_rejects_secret_fields_from_binding(monkeypatch):
+    class Workspace:
+        def pending_external_publication(self):
+            return None
+
+        def diagnostics(self):
+            return []
+
+        def security_definition_catalog(self):
+            return {"policies": [{"secret_value": "never expose"}]}
+
+        def security_definition_snapshot(self):
+            return {"diagnostics": []}
+
+    monkeypatch.setattr(
+        GPO, "_open_workspace",
+        lambda *args, **kwargs: (
+            Workspace(), {"catalog": None, "locales": ["en-US"]}
+        ),
+    )
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_security_definitions_show.execute(
+            CommandHarness(editor_context()), "Test GPO"
+        )
+    assert failure.value.category == "operational"
+    assert "never expose" not in str(failure.value)
+
+
+def test_security_binding_validation_diagnostics_are_safe_and_never_published(
+    monkeypatch,
+):
+    class ConstraintFailure(RuntimeError):
+        code = "validation"
+        field = "security_definitions"
+        diagnostics = [{
+            "severity": "error", "stage": "validation",
+            "code": "constraint.failed",
+            "message": "Invalid " + str(GPO.GPO_SECURITY_DEFINITION_ROOT / "private.sdmx"),
+            "file": str(GPO.GPO_SECURITY_DEFINITION_ROOT / "private.sdmx"),
+            "policy_id": "test.policy", "element_id": "value",
+        }]
+
+    class Workspace:
+        def pending_external_publication(self):
+            return None
+
+        def update_security_definitions(self, request):
+            raise ConstraintFailure("private parser detail")
+
+    monkeypatch.setattr(
+        GPO, "_open_workspace", lambda *args, **kwargs: (
+            Workspace(), {"catalog": None, "locales": ["en-US"]}
+        ),
+    )
+    monkeypatch.setattr(GPO, "_recover_before_mutation", lambda *args: None)
+    monkeypatch.setattr(
+        GPO, "_commit_external_once",
+        lambda *args: pytest.fail("invalid draft was published"),
+    )
+    payload = {
+        "expected_semantic_revision": "sha256:good",
+        "policies": [{"namespace": "urn:test", "policy_id": "test.policy"}],
+    }
+
+    with pytest.raises(ConstraintFailure) as failure:
+        GPO.gpo_editor_security_definitions_update.execute(
+            CommandHarness(editor_context()), "Test GPO", payload
+        )
+    with pytest.raises(errors.ExecutionError) as translated:
+        GPO._translate_editor_exception(failure.value)
+
+    details = json.loads(translated.value.kw["details"])
+    assert translated.value.kw["error_category"] == "validation"
+    assert details["diagnostics"][0]["file"] == "private.sdmx"
+    assert details["diagnostics"][0]["code"] == "constraint.failed"
+    assert str(GPO.GPO_SECURITY_DEFINITION_ROOT) not in str(details)
+    assert "private parser detail" not in str(translated.value)
+
+
+def test_advanced_audit_rpc_uses_one_workspace_and_one_publication(monkeypatch):
+    class Workspace:
+        def __init__(self):
+            self.updates = []
+            self.audit = {
+                "rows": [{"kind": "option", "option": "crash_on_audit_fail"}],
+                "subcategory_catalog": [],
+            }
+
+        def pending_external_publication(self):
+            return None
+
+        def diagnostics(self):
+            return []
+
+        def get_advanced_audit(self):
+            return self.audit
+
+        def update_advanced_audit(self, request):
+            self.updates.append(request)
+            return self.audit
+
+    workspace = Workspace()
+    context = editor_context()
+    opened = []
+    monkeypatch.setattr(
+        GPO, "_open_workspace",
+        lambda *args, **kwargs: (
+            opened.append(kwargs) or workspace,
+            {"catalog": None, "locales": []},
+        ),
+    )
+    monkeypatch.setattr(GPO, "_recover_before_mutation", lambda *args: None)
+    commits = []
+    monkeypatch.setattr(
+        GPO, "_commit_external_once",
+        lambda *args: commits.append(args) or {"changed": True},
+    )
+
+    shown = GPO.gpo_editor_advanced_audit_show.execute(
+        CommandHarness(context), "Test GPO"
+    )
+    payload = {
+        "set_options": [{
+            "machine_name": "CrashOnAuditFail",
+            "option": "crash_on_audit_fail",
+            "enabled": False,
+        }],
+    }
+    wire_payload = json_decode_binary(json.dumps({"request": payload}))["request"]
+    assert isinstance(wire_payload["set_options"], tuple)
+    updated = GPO.gpo_editor_advanced_audit_update.execute(
+        CommandHarness(context), "Test GPO", wire_payload
+    )
+
+    assert shown["advanced_audit"] is workspace.audit
+    assert updated["advanced_audit"] is workspace.audit
+    assert workspace.updates[0]["set_options"] == payload["set_options"]
+    assert isinstance(workspace.updates[0]["set_options"], list)
+    assert workspace.updates[0]["clear_options"] == []
+    assert len(workspace.updates) == len(commits) == 1
+    assert updated["publication"] == {"changed": True}
+    assert opened == [
+        {"load_preferences": False, "with_catalog": False},
+        {"load_preferences": False, "with_catalog": False},
+    ]
+
+
+@pytest.mark.parametrize("payload", [
+    "invalid",
+    {"unknown": []},
+    {"set_options": "invalid"},
+    {"set_options": ["invalid"]},
+    {"clear_options": [{}]},
+    {"clear_subcategories": ["invalid"]},
+    {"set_global_sacls": ["invalid"]},
+    {"clear_global_sacls": [{}]},
+])
+def test_advanced_audit_update_rejects_invalid_shape_before_workspace(
+    monkeypatch, payload,
+):
+    monkeypatch.setattr(
+        GPO, "_open_workspace",
+        lambda *args, **kwargs: pytest.fail("invalid request opened workspace"),
+    )
+    with pytest.raises(GPO.EditorFailure) as failure:
+        GPO.gpo_editor_advanced_audit_update.execute(
+            CommandHarness(editor_context()), "Test GPO", payload
+        )
+    assert failure.value.category == "validation"
