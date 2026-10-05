@@ -1,33 +1,33 @@
 dn: cn=schema
 changetype: modify
 add: attributeTypes
-attributeTypes: ( 1.3.6.1.4.1.9999.1.1.11
-  NAME 'userGroup'
-  DESC 'DN of user group for policy chain'
+attributeTypes: ( 2.16.840.1.113730.3.8.30.8
+  NAME 'ipaGpoUserGroup'
+  DESC 'DN of the user group for a policy chain'
   EQUALITY distinguishedNameMatch
   SYNTAX 1.3.6.1.4.1.1466.115.121.1.12
   SINGLE-VALUE )
 -
 add: attributeTypes
-attributeTypes: ( 1.3.6.1.4.1.9999.1.1.12
-  NAME 'computerGroup'
-  DESC 'DN of computer group for policy chain'
+attributeTypes: ( 2.16.840.1.113730.3.8.30.9
+  NAME 'ipaGpoComputerGroup'
+  DESC 'DN of the computer group for a policy chain'
   EQUALITY distinguishedNameMatch
   SYNTAX 1.3.6.1.4.1.1466.115.121.1.12
   SINGLE-VALUE )
 -
 add: attributeTypes
-attributeTypes: ( 1.3.6.1.4.1.9999.1.1.13
-  NAME 'gpLink'
-  DESC 'Ordered list of group policy container DNs'
+attributeTypes: ( 2.16.840.1.113730.3.8.30.10
+  NAME 'ipaGpoLink'
+  DESC 'Ordered list of Group Policy container DNs'
   EQUALITY distinguishedNameMatch
   SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 )
 -
 add: objectClasses
-objectClasses: ( 1.3.6.1.4.1.9999.2.1.3
-  NAME 'groupPolicyChain'
+objectClasses: ( 2.16.840.1.113730.3.8.31.3
+  NAME 'ipaGpoChain'
   DESC 'Group Policy Chain linking policies to groups'
   SUP top
   STRUCTURAL
   MUST ( cn )
-  MAY ( userGroup $ computerGroup $ gpLink $ description ) )
+  MAY ( ipaGpoUserGroup $ ipaGpoComputerGroup $ ipaGpoLink $ description ) )

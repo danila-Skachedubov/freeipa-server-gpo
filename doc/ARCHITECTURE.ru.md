@@ -87,7 +87,7 @@ CLI-утилита (`/usr/bin/ipa-gpo-install`). Запускается на к�
   применимых политик для клиента (вызывается gpupdate)
 
 **gpmaster.py** (~500 строк) — синглтон конфигурации:
-- `gpmaster_show` — список активных цепочек (chainList)
+- `gpmaster_show` — список активных цепочек (ipaGpoChainList)
 - `gpmaster_mod` — add/remove/move цепочек
 - `gpmaster_show_pdc` — PDC-эмулятор
 
@@ -131,40 +131,41 @@ UI не получает путей файловой системы — толь
 
 ## 3. LDAP-схема
 
-Все OID под `1.3.6.1.4.1.9999` (требует замены на зарегистрированный
-PEN IANA).
+Все OID выделены в дереве OID FreeIPA
+`2.16.840.1.113730.3.8` — атрибуты под `.30`, объектные классы
+под `.31`.
 
 ### DIT-структура
 
 ```
 $SUFFIX (например dc=ipa,dc=test)
 ├── cn=etc
-│   └── cn=grouppolicymaster              (groupPolicyMaster — синглтон)
-│       ├── pdcEmulator: dc1.ipa.test
-│       └── chainList: cn=Prod,cn=Chains,...
+│   └── cn=grouppolicymaster              (ipaGpoMaster — синглтон)
+│       ├── ipaGpoPdcEmulator: dc1.ipa.test
+│       └── ipaGpoChainList: cn=Prod,cn=Chains,...
 │
 └── cn=System
     ├── cn=Policies                        (nsContainer)
-    │   └── cn={GUID}                     (groupPolicyContainer — GPO)
+    │   └── cn={GUID}                     (ipaGpoContainer — GPO)
     │       ├── displayName: KDE Settings
-    │       ├── gPCFileSysPath: \\...\SysVol\...\Policies\{GUID}
-    │       └── versionNumber: 3
+    │       ├── ipaGpoFileSysPath: \\...\SysVol\...\Policies\{GUID}
+    │       └── ipaGpoVersionNumber: 3
     │
     └── cn=Chains                          (nsContainer)
-        └── cn=Production                 (groupPolicyChain)
+        └── cn=Production                 (ipaGpoChain)
             ├── description: Production chain
-            ├── userGroup: cn=developers,...
-            ├── computerGroup: cn=workstations,...
-            └── gpLink: cn={GUID1},cn=Policies,...
+            ├── ipaGpoUserGroup: cn=developers,...
+            ├── ipaGpoComputerGroup: cn=workstations,...
+            └── ipaGpoLink: cn={GUID1},cn=Policies,...
 ```
 
 ### ObjectClasses
 
 | objectClass | OID | Назначение | MUST | MAY |
 |---|---|---|---|---|
-| `groupPolicyContainer` | ...2.1.1 | GPO-объект | `cn` | `displayName`, `flags`, `gPCFileSysPath`, `gPCMachineExtensionNames`, `gPCUserExtensionNames`, `versionNumber` |
-| `groupPolicyChain` | ...2.1.3 | Цепочка (GPO → группы) | `cn` | `userGroup`, `computerGroup`, `gpLink`, `description` |
-| `groupPolicyMaster` | ...2.1.2 | PDC + chainList | `cn`, `pdcEmulator` | `chainList` |
+| `ipaGpoContainer` | ...3.8.31.1 | GPO-объект | `cn` | `displayName`, `ipaGpoFlags`, `ipaGpoFileSysPath`, `ipaGpoMachineExtensionNames`, `ipaGpoUserExtensionNames`, `ipaGpoVersionNumber` |
+| `ipaGpoChain` | ...3.8.31.3 | Цепочка (GPO → группы) | `cn` | `ipaGpoUserGroup`, `ipaGpoComputerGroup`, `ipaGpoLink`, `description` |
+| `ipaGpoMaster` | ...3.8.31.2 | PDC + ipaGpoChainList | `cn`, `ipaGpoPdcEmulator` | `ipaGpoChainList` |
 
 ### Атрибуты цепочек
 
@@ -172,17 +173,17 @@ $SUFFIX (например dc=ipa,dc=test)
 |---------|-----|----------|
 | `cn`    | Str | Имя цепочки (primary_key) |
 | `description` | Str | Описание (опциональное) |
-| `userGroup` | DN | Группа пользователей |
-| `computerGroup` | DN | Группа компьютеров |
-| `gpLink` | DN (multi) | Упорядоченный список GPO |
+| `ipaGpoUserGroup` | DN | Группа пользователей |
+| `ipaGpoComputerGroup` | DN | Группа компьютеров |
+| `ipaGpoLink` | DN (multi) | Упорядоченный список GPO |
 
 Статус «активна/неактивна» **не хранится в LDAP** — вычисляется
-динамически по присутствию цепочки в `chainList` объекта
-`groupPolicyMaster`.
+динамически по присутствию цепочки в `ipaGpoChainList` объекта
+`ipaGpoMaster`.
 
 ### Referential Integrity
 
-Атрибуты `gpLink`, `userGroup`, `computerGroup`, `chainList`
+Атрибуты `ipaGpoLink`, `ipaGpoUserGroup`, `ipaGpoComputerGroup`, `ipaGpoChainList`
 зарегистрированы в плагине referential integrity 389-DS
 (`plugin/update/75-chain.update`, `75-gpmaster.update`). При
 удалении/переименовании объекта ссылки автоматически очищаются.
@@ -243,8 +244,8 @@ gpo_add(displayname="KDE Settings")
   │
   ├── LDAP: создаёт cn={GUID},cn=Policies,cn=System
   │         cn = случайный UUID
-  │         gpcfilesyspath = \\domain\SysVol\...\{GUID}
-  │         versionNumber = 0
+  │         ipaGpoFileSysPath = \\domain\SysVol\...\{GUID}
+  │         ipaGpoVersionNumber = 0
   │
   └── D-Bus → oddjob (root):
               mkdir Policies/{GUID}/
@@ -262,7 +263,7 @@ gpo_add(displayname="KDE Settings")
   ▼
 gpo_editor_policy_update(displayname, scope, policy_id, request)
   │
-  ├── Авторизация: ACI can_write на gPCFileSysPath
+  ├── Авторизация: ACI can_write на ipaGpoFileSysPath
   ├── Резолвинг: displayname → GUID → SYSVOL путь
   │
   ├── libadmix HighLevelApi:
@@ -271,7 +272,7 @@ gpo_editor_policy_update(displayname, scope, policy_id, request)
   │     └── атомарная запись в SYSVOL
   │
   ├── LDAP compare-and-modify:
-  │     versionNumber++ (только если LDAP-версия совпадает)
+  │     ipaGpoVersionNumber++ (только если LDAP-версия совпадает)
   │
   └── Ответ → Web UI
 ```
@@ -282,9 +283,9 @@ gpo_editor_policy_update(displayname, scope, policy_id, request)
 Клиент (gpupdate)
   │
   ├── LDAP: chain_resolve_for_host(hostname)
-  │         → GPMaster.chainList
-  │         → фильтр по computerGroup
-  │         → сбор gpLink (GPO в порядке)
+  │         → GPMaster.ipaGpoChainList
+  │         → фильтр по ipaGpoComputerGroup
+  │         → сбор ipaGpoLink (GPO в порядке)
   │         → [{name, file_sys_path, version}, ...]
   │
   ├── SMB: \\dc\SysVol\domain\Policies\{GUID}\Machine\Registry.pol
@@ -301,7 +302,7 @@ gpo_editor_policy_update(displayname, scope, policy_id, request)
 gpo_del(displayname)
   │
   ├── LDAP: удаляет cn={GUID},cn=Policies,cn=System
-  │         (referential integrity очищает gpLink в цепочках)
+  │         (referential integrity очищает ipaGpoLink в цепочках)
   │
   └── D-Bus → oddjob (root):
               rmtree Policies/{GUID}/
@@ -311,7 +312,7 @@ gpo_del(displayname)
 
 ### LDAP-репликация
 
-LDAP-данные (GPO, цепочки, chainList) реплицируются автоматически
+LDAP-данные (GPO, цепочки, ipaGpoChainList) реплицируются автоматически
 через 389-DS multi-master replication. Изменения на одном DC
 распространяются на все реплики.
 
@@ -324,7 +325,7 @@ LDAP-данные (GPO, цепочки, chainList) реплицируются а
 - Создание GPO на DC1 → файлы только на DC1
 - Клиент, получивший политику с DC2 → `Permission denied`
 
-**PDC-эмулятор.** В схеме есть `groupPolicyMaster.pdcEmulator`,
+**PDC-эмулятор.** В схеме есть `ipaGpoMaster.ipaGpoPdcEmulator`,
 но redirect записи на PDC **не реализован**. Администратор должен
 вручную открывать веб-интерфейс PDC-эмулятора.
 
@@ -342,7 +343,7 @@ LDAP-данные (GPO, цепочки, chainList) реплицируются а
 ### Авторизация редактора
 
 Перед каждым изменением через libadmix проверяется
-`can_write` на `gPCFileSysPath` и `versionNumber`.
+`can_write` на `ipaGpoFileSysPath` и `ipaGpoVersionNumber`.
 
 ### Защита файловой системы
 

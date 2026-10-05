@@ -75,7 +75,7 @@ def verify_gpo_schema(ldap, api):
                     name=_('Group Policy schema'),
                     reason=_(
                         'Group Policy schema is not installed. '
-                        'The required LDAP object class "groupPolicyContainer" is missing.'
+                        'The required LDAP object class "ipaGpoContainer" is missing.'
                         'Please run the ipa-gpo-install command to extend the schema.'
                     )
                 )
@@ -114,16 +114,16 @@ GPC_SNAPSHOT_ATTRIBUTES = (
     'cn',
     'displayname',
     'distinguishedname',
-    'gpcfilesyspath',
-    'versionnumber',
-    'gpcmachineextensionnames',
-    'gpcuserextensionnames',
+    'ipagpofilesyspath',
+    'ipagpoversionnumber',
+    'ipagpomachineextensionnames',
+    'ipagpouserextensionnames',
 )
 GPC_PUBLICATION_ATTRIBUTES = (
-    'gpcfilesyspath',
-    'versionnumber',
-    'gpcmachineextensionnames',
-    'gpcuserextensionnames',
+    'ipagpofilesyspath',
+    'ipagpoversionnumber',
+    'ipagpomachineextensionnames',
+    'ipagpouserextensionnames',
 )
 
 # 389-DS does not implement RFC 4528 Assertion Control.  A schema-valid
@@ -266,7 +266,7 @@ def _validate_unc(value, domain, guid):
         raise EditorFailure(
             'validation',
             'The Group Policy Object has an invalid file location.',
-            field='gpcfilesyspath',
+            field='ipagpofilesyspath',
         )
     server, share_domain, unc_guid = match.groups()
     try:
@@ -275,7 +275,7 @@ def _validate_unc(value, domain, guid):
         raise EditorFailure(
             'validation',
             'The Group Policy Object has an invalid file location.',
-            field='gpcfilesyspath',
+            field='ipagpofilesyspath',
         ) from exc
     if (
         server.casefold() != domain.casefold()
@@ -285,13 +285,13 @@ def _validate_unc(value, domain, guid):
         raise EditorFailure(
             'validation',
             'The Group Policy Object file location does not match its identity.',
-            field='gpcfilesyspath',
+            field='ipagpofilesyspath',
         )
     return _canonical_unc(domain, guid)
 
 
 def _authorize_editor(ldap_backend, dn, write=False):
-    attributes = GPC_PUBLICATION_ATTRIBUTES if write else ('versionnumber',)
+    attributes = GPC_PUBLICATION_ATTRIBUTES if write else ('ipagpoversionnumber',)
     try:
         authorized = all(
             ldap_backend.can_write(dn, attribute) for attribute in attributes
@@ -355,9 +355,9 @@ def _trusted_gpo_root(domain, guid):
 
 
 def _snapshot_from_entry(entry, guid, file_sys_path):
-    version_values = _entry_values(entry, 'versionnumber')
-    machine_values = _entry_values(entry, 'gpcmachineextensionnames')
-    user_values = _entry_values(entry, 'gpcuserextensionnames')
+    version_values = _entry_values(entry, 'ipagpoversionnumber')
+    machine_values = _entry_values(entry, 'ipagpomachineextensionnames')
+    user_values = _entry_values(entry, 'ipagpouserextensionnames')
     try:
         version = int(version_values[0]) if version_values else 0
     except (TypeError, ValueError) as exc:
@@ -404,7 +404,7 @@ def _resolve_editor_context(ldap_backend, api_instance, displayname, write=False
         entry = ldap_backend.find_entry_by_attr(
             'displayName',
             displayname,
-            'groupPolicyContainer',
+            'ipaGpoContainer',
             attrs_list=list(GPC_SNAPSHOT_ATTRIBUTES),
             base_dn=base_dn,
         )
@@ -417,7 +417,7 @@ def _resolve_editor_context(ldap_backend, api_instance, displayname, write=False
     guid = _canonical_guid(_entry_text(entry, 'cn'))
     domain = str(api_instance.env.domain).lower()
     file_sys_path = _validate_unc(
-        _entry_text(entry, 'gpcfilesyspath'), domain, guid
+        _entry_text(entry, 'ipagpofilesyspath'), domain, guid
     )
     dn = getattr(entry, 'dn', None)
     if dn is None:
@@ -444,7 +444,7 @@ def _read_gpc_snapshot(ldap_backend, context):
             details={'conflict_fields': ['identity']},
         )
     observed_path = _validate_unc(
-        _entry_text(entry, 'gpcfilesyspath'),
+        _entry_text(entry, 'ipagpofilesyspath'),
         context.file_sys_path.split('\\')[2].lower(),
         context.guid,
     )
@@ -1067,26 +1067,26 @@ def _apply_publication_plan(
     identity = expected_snapshot['identity']
     modifications = _compare_replace_modifications(
         ldap_backend,
-        'gPCFileSysPath',
+        'ipaGpoFileSysPath',
         identity['file_sys_path'],
         identity['file_sys_path'],
         True,
     )
     modifications.extend(_compare_replace_modifications(
         ldap_backend,
-        'versionNumber',
+        'ipaGpoVersionNumber',
         expected_snapshot['version_number'],
         int(plan['target_version']),
         expected_presence.get('version_number', True),
     ))
     for attribute, snapshot_key, plan_key in (
         (
-            'gPCMachineExtensionNames',
+            'ipaGpoMachineExtensionNames',
             'machine_extension_names',
             'machine_extension_names',
         ),
         (
-            'gPCUserExtensionNames',
+            'ipaGpoUserExtensionNames',
             'user_extension_names',
             'user_extension_names',
         ),
@@ -1863,15 +1863,15 @@ class gpo(LDAPObject):
     container_dn = None
     object_name = _('Group Policy Object')
     object_name_plural = _('Group Policy Objects')
-    object_class = ['groupPolicyContainer']
-    permission_filter_objectclasses = ['groupPolicyContainer']
+    object_class = ['ipaGpoContainer']
+    permission_filter_objectclasses = ['ipaGpoContainer']
     default_attributes = [
-        'cn', 'displayName', 'distinguishedName', 'flags',
-        'versionNumber', 'gPCMachineExtensionNames', 'gPCUserExtensionNames',
+        'cn', 'displayName', 'distinguishedName', 'ipaGpoFlags',
+        'ipaGpoVersionNumber', 'ipaGpoMachineExtensionNames', 'ipaGpoUserExtensionNames',
     ]
     search_display_attributes = [
-        'cn', 'displayName', 'flags', 'versionNumber',
-        'gPCMachineExtensionNames', 'gPCUserExtensionNames',
+        'cn', 'displayName', 'ipaGpoFlags', 'ipaGpoVersionNumber',
+        'ipaGpoMachineExtensionNames', 'ipaGpoUserExtensionNames',
     ]
     uuid_attribute = 'cn'
     allow_rename = True
@@ -1883,9 +1883,9 @@ class gpo(LDAPObject):
             'ipapermbindruletype': 'all',
             'ipapermright': {'read', 'search', 'compare'},
             'ipapermdefaultattr': {
-                'cn', 'displayName', 'distinguishedName', 'flags',
-                'objectclass', 'gPCFileSysPath', 'versionNumber',
-                'gPCMachineExtensionNames', 'gPCUserExtensionNames',
+                'cn', 'displayName', 'distinguishedName', 'ipaGpoFlags',
+                'objectclass', 'ipaGpoFileSysPath', 'ipaGpoVersionNumber',
+                'ipaGpoMachineExtensionNames', 'ipaGpoUserExtensionNames',
             },
         },
         'System: Read Group Policy Objects Content': {
@@ -1902,9 +1902,9 @@ class gpo(LDAPObject):
             'ipapermbindruletype': 'permission',
             'ipapermright': {'write'},
             'ipapermdefaultattr': {
-                'displayName', 'flags',
-                'gPCFileSysPath', 'versionNumber',
-                'gPCMachineExtensionNames', 'gPCUserExtensionNames',
+                'displayName', 'ipaGpoFlags',
+                'ipaGpoFileSysPath', 'ipaGpoVersionNumber',
+                'ipaGpoMachineExtensionNames', 'ipaGpoUserExtensionNames',
             },
             'default_privileges': {'Group Policy Administrators'},
         },
@@ -1931,26 +1931,26 @@ class gpo(LDAPObject):
             label=_('Distinguished Name'),
             doc=_('Distinguished name of the group policy object'),
         ),
-        Int('flags?',
+        Int('ipagpoflags?', cli_name='flags',
             label=_('Flags'),
             doc=_('Group Policy Object flags'),
             default=0,
         ),
-        Str('gpcfilesyspath?',
+        Str('ipagpofilesyspath?', cli_name='gpcfilesyspath',
             label=_('File system path'),
             doc=_('Path to policy files on the file system'),
         ),
-        Int('versionnumber?',
+        Int('ipagpoversionnumber?', cli_name='versionnumber',
             label=_('Version number'),
             doc=_('Version number of the policy'),
             default=0,
             minvalue=0,
         ),
-        Str('gpcmachineextensionnames?',
+        Str('ipagpomachineextensionnames?', cli_name='gpcmachineextensionnames',
             label=_('Machine extension names'),
             doc=_('Canonical machine-side Group Policy extension pairs'),
         ),
-        Str('gpcuserextensionnames?',
+        Str('ipagpouserextensionnames?', cli_name='gpcuserextensionnames',
             label=_('User extension names'),
             doc=_('Canonical user-side Group Policy extension pairs'),
         ),
@@ -1961,7 +1961,7 @@ class gpo(LDAPObject):
         try:
             return super(gpo, self).__json__()
         except KeyError as e:
-            if 'groupPolicyContainer' in str(e):
+            if 'ipaGpoContainer' in str(e):
                 result = {
                     'name': self.name,
                     'doc': self.doc,
@@ -1991,7 +1991,7 @@ class gpo(LDAPObject):
             entry = ldap.find_entry_by_attr(
                 'displayName',
                 displayname,
-                'groupPolicyContainer',
+                'ipaGpoContainer',
                 base_dn=DN(self.env.container_grouppolicy, self.env.basedn)
             )
             return entry
@@ -2113,12 +2113,12 @@ class gpo_add(LDAPCreate):
         )
         entry_attrs['cn'] = guid
         entry_attrs['distinguishedname'] = str(dn)
-        entry_attrs['gpcfilesyspath'] = (
+        entry_attrs['ipagpofilesyspath'] = (
             f"\\\\{self.api.env.domain}\\SysVol\\{self.api.env.domain}"
             f"\\Policies\\{guid}"
         )
-        entry_attrs['flags'] = 0
-        entry_attrs['versionnumber'] = 0
+        entry_attrs['ipagpoflags'] = 0
+        entry_attrs['ipagpoversionnumber'] = 0
 
         return dn
 

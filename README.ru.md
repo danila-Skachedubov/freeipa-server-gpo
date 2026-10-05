@@ -22,18 +22,18 @@
 
 1. **Обработка цепочек** — система просматривает цепочки в том порядке, в котором они указаны в мастере групповых политик
 2. **Фильтрация по принадлежности** — для каждой цепочки проверяется, подходит ли она текущему пользователю и компьютеру
-3. **Приоритетность политик внутри цепочки** — если цепочка подходит, политики из неё вычисляются в порядке их следования в атрибуте `gpLink`
+3. **Приоритетность политик внутри цепочки** — если цепочка подходит, политики из неё вычисляются в порядке их следования в атрибуте `ipaGpoLink`
 
 #### Управление приоритетами
 
 Приоритеты настраиваются на двух уровнях:
 
 **Уровень цепочек в мастере:**
-- Порядок цепочек определяется их позицией в атрибуте `chainList` мастера
+- Порядок цепочек определяется их позицией в атрибуте `ipaGpoChainList` мастера
 - Цепочки, находящиеся выше в списке, имеют более высокий приоритет
 
 **Уровень политик внутри цепочки:**
-- Порядок политик определяется их позицией в атрибуте `gpLink` цепочки
+- Порядок политик определяется их позицией в атрибуте `ipaGpoLink` цепочки
 - Политики, находящиеся выше в списке, имеют более высокий приоритет
 - При конфликте настроек действует политика с более высоким приоритетом
 
@@ -74,13 +74,13 @@ graph TD
     classDef resultClass fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
 
     subgraph MasterLayer ["🏛️ MASTER LAYER"]
-        Master["Group Policy Master<br/>chainList:<br/>1. dev-chain<br/>2. office-chain"]
+        Master["Group Policy Master<br/>ipaGpoChainList:<br/>1. dev-chain<br/>2. office-chain"]
     end
 
     subgraph ChainLayer ["🔗 CHAIN LAYER"]
         direction LR
-        ChainDev["dev-chain<br/>userGroup: developers<br/>computerGroup: dev-workstations<br/>gpLink:<br/>1. policy-1<br/>2. policy-2"]
-        ChainOffice["office-chain<br/>userGroup: office-users<br/>computerGroup: office-computers<br/>gpLink:<br/>1. policy-3<br/>2. policy-4"]
+        ChainDev["dev-chain<br/>ipaGpoUserGroup: developers<br/>ipaGpoComputerGroup: dev-workstations<br/>ipaGpoLink:<br/>1. policy-1<br/>2. policy-2"]
+        ChainOffice["office-chain<br/>ipaGpoUserGroup: office-users<br/>ipaGpoComputerGroup: office-computers<br/>ipaGpoLink:<br/>1. policy-3<br/>2. policy-4"]
     end
 
     subgraph GPCLayer ["📋 GPC LAYER"]
@@ -127,31 +127,31 @@ graph TD
 Поскольку пользователь и компьютер входят в группы из **обеих** цепочек, система определяет две подходящие цепочки:
 
 1. **dev-chain** - подходит, так как:
-   - john ∈ developers (userGroup)
-   - ws001 ∈ dev-workstations (computerGroup)
+   - john ∈ developers (ipaGpoUserGroup)
+   - ws001 ∈ dev-workstations (ipaGpoComputerGroup)
 
 2. **office-chain** - подходит, так как:
-   - john ∈ office-users (userGroup)
-   - ws001 ∈ office-computers (computerGroup)
+   - john ∈ office-users (ipaGpoUserGroup)
+   - ws001 ∈ office-computers (ipaGpoComputerGroup)
 
 #### Последовательность политик
 
 **Шаг 1: Порядок цепочек**
-Group Policy Master определяет порядок обработки через атрибут `chainList`:
+Group Policy Master определяет порядок обработки через атрибут `ipaGpoChainList`:
 ```
 1. dev-chain (первая в списке)
 2. office-chain (вторая в списке)
 ```
 
 **Шаг 2: Политики из dev-chain**
-Находятся в порядке атрибута `gpLink`:
+Находятся в порядке атрибута `ipaGpoLink`:
 ```
 1. policy-1 (приоритет 1)
 2. policy-2 (приоритет 2)
 ```
 
 **Шаг 3: Политики из office-chain**
-Находятся в порядке атрибута `gpLink`:
+Находятся в порядке атрибута `ipaGpoLink`:
 ```
 3. policy-3 (приоритет 1)
 4. policy-4 (приоритет 2)
@@ -167,9 +167,9 @@ policy-1 → policy-2 → policy-3 → policy-4
 
 #### Объяснение последовательности
 
-1. **Сначала все политики из dev-chain** - потому что эта цепочка идет первой в `chainList` мастера
-2. **Затем все политики из office-chain** - потому что эта цепочка идет второй в `chainList` мастера
-3. **Внутри каждой цепочки** политики находятся в порядке их следования в `gpLink`
+1. **Сначала все политики из dev-chain** - потому что эта цепочка идет первой в `ipaGpoChainList` мастера
+2. **Затем все политики из office-chain** - потому что эта цепочка идет второй в `ipaGpoChainList` мастера
+3. **Внутри каждой цепочки** политики находятся в порядке их следования в `ipaGpoLink`
 4. **При конфликте настроек** приоритетнее последняя политика (в данном случае из policy-1)
 
 Такой подход обеспечивает предсказуемое и контролируемое наследование политик с возможностью гибкого управления приоритетами на двух уровнях: уровне цепочек и уровне политик внутри цепочки.
@@ -216,15 +216,15 @@ ipa-gpo-install [OPTIONS]
 ## Техническая реализация
 
 ### Схема LDAP
-**groupPolicyContainer (GPC)**
+**ipaGpoContainer (GPC)**
 - `cn` — GUID политики
 - `displayName` — отображаемое имя политики
 - `distinguishedName` — DN объекта
-- `flags` — флаги политики
-- `gPCFileSysPath` — путь к файлам политики в SYSVOL
-- `versionNumber` — номер версии политики
-- `gPCMachineExtensionNames` — опубликованные расширения машинной части политики
-- `gPCUserExtensionNames` — опубликованные расширения пользовательской части политики
+- `ipaGpoFlags` — флаги политики
+- `ipaGpoFileSysPath` — путь к файлам политики в SYSVOL
+- `ipaGpoVersionNumber` — номер версии политики
+- `ipaGpoMachineExtensionNames` — опубликованные расширения машинной части политики
+- `ipaGpoUserExtensionNames` — опубликованные расширения пользовательской части политики
 
 ### Архитектура веб-редактора
 
@@ -234,17 +234,17 @@ ipa-gpo-install [OPTIONS]
 файлов, после чего плагин условно публикует packed version и атрибуты расширений
 в LDAP и подтверждает публикацию.
 
-**groupPolicyChain**
+**ipaGpoChain**
 - `cn` — имя цепочки
 - `displayName` — отображаемое имя цепочки
-- `userGroup` — DN группы пользователей
-- `computerGroup` — DN группы компьютеров
-- `gpLink` — упорядоченный список DN политик
+- `ipaGpoUserGroup` — DN группы пользователей
+- `ipaGpoComputerGroup` — DN группы компьютеров
+- `ipaGpoLink` — упорядоченный список DN политик
 
-**groupPolicyMaster**
+**ipaGpoMaster**
 - `cn` — имя мастер-объекта
-- `pdcEmulator` — DN PDC эмулятора
-- `chainList` — упорядоченный список цепочек политик
+- `ipaGpoPdcEmulator` — DN PDC эмулятора
+- `ipaGpoChainList` — упорядоченный список цепочек политик
 
 ## Команды управления
 

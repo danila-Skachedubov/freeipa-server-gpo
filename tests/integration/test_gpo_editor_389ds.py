@@ -761,7 +761,7 @@ def test_installed_ipa_cli_crud_and_deleted_gpo_unlinks_from_chain(
 
         chain_dn = live_server.api.Object.chain.get_dn(renamed_chain)
         chain_entry = live_server.ldap.get_entry(
-            chain_dn, attrs_list=["cn", "description", "gplink"]
+            chain_dn, attrs_list=["cn", "description", "ipagpolink"]
         )
         assert str(_single(chain_entry["cn"])) == renamed_chain
         assert str(_single(chain_entry["description"])) == (
@@ -774,9 +774,9 @@ def test_installed_ipa_cli_crud_and_deleted_gpo_unlinks_from_chain(
             "--gpos={}".format(renamed_gpo),
         )
         chain_entry = live_server.ldap.get_entry(
-            chain_dn, attrs_list=["gplink"]
+            chain_dn, attrs_list=["ipagpolink"]
         )
-        assert gpo_dn in [DN(str(value)) for value in chain_entry["gplink"]]
+        assert gpo_dn in [DN(str(value)) for value in chain_entry["ipagpolink"]]
 
         _run_ipa(
             "chain-remove-gpo",
@@ -784,14 +784,14 @@ def test_installed_ipa_cli_crud_and_deleted_gpo_unlinks_from_chain(
             "--gpos={}".format(renamed_gpo),
         )
         chain_entry = live_server.ldap.get_entry(
-            chain_dn, attrs_list=["gplink"]
+            chain_dn, attrs_list=["ipagpolink"]
         )
         assert gpo_dn not in [
-            DN(str(value)) for value in chain_entry.get("gplink", [])
+            DN(str(value)) for value in chain_entry.get("ipagpolink", [])
         ]
 
         # Link it once more, then delete the policy itself.  389-DS must
-        # remove the dangling gpLink value through referential integrity.
+        # remove the dangling ipaGpoLink value through referential integrity.
         _run_ipa(
             "chain-add-gpo",
             renamed_chain,
@@ -804,10 +804,10 @@ def test_installed_ipa_cli_crud_and_deleted_gpo_unlinks_from_chain(
                 live_server.ldap, renamed_gpo
             )
         chain_entry = live_server.ldap.get_entry(
-            chain_dn, attrs_list=["gplink"]
+            chain_dn, attrs_list=["ipagpolink"]
         )
         assert gpo_dn not in [
-            DN(str(value)) for value in chain_entry.get("gplink", [])
+            DN(str(value)) for value in chain_entry.get("ipagpolink", [])
         ]
         assert not gpo_root.exists()
 
@@ -874,7 +874,7 @@ def test_atomic_cas_success_conflict_and_absent_attributes(live_server):
         str(context.dn),
         [(
             plugin._ldap.MOD_REPLACE,
-            "versionNumber",
+            "ipaGpoVersionNumber",
             plugin._ldap_value(ldap_backend, competing_version),
         )],
     )
@@ -1539,7 +1539,7 @@ def test_installed_high_level_command_flow_is_path_free(
         "Registry.pol",
         "GPT.INI",
         "Machine/Preferences",
-        "gPCFileSysPath",
+        "ipaGpoFileSysPath",
         "file_sys_path",
     ):
         assert private_fragment not in public_payload

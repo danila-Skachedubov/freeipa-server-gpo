@@ -87,11 +87,11 @@ define([
                             label: t('gpo.fields.guid')
                         },
                         {
-                            name: 'versionnumber',
+                            name: 'ipagpoversionnumber',
                             label: t('gpo.fields.version')
                         },
                         {
-                            name: 'flags',
+                            name: 'ipagpoflags',
                             label: t('gpo.fields.flags')
                         }
                     ],
@@ -142,12 +142,12 @@ define([
                                     read_only: true
                                 },
                                 {
-                                    name: 'versionnumber',
+                                    name: 'ipagpoversionnumber',
                                     label: t('gpo.fields.versionNumber'),
                                     read_only: true
                                 },
                                 {
-                                    name: 'flags',
+                                    name: 'ipagpoflags',
                                     label: t('gpo.fields.flags')
                                 }
                             ]

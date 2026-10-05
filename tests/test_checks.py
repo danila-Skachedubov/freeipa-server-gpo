@@ -389,7 +389,7 @@ class TestCheckSchemaComplete:
 
         with patch.object(checker.api.Backend.ldap2, 'conn', mock_conn):
             with patch('ipa_gpo_install.checks.ldap.schema.SubSchema', return_value=mock_subschema):
-                result = checker.check_schema_complete(['groupPolicyContainer'])
+                result = checker.check_schema_complete(['ipaGpoContainer'])
         assert result is True
 
     def test_missing_class(self):
@@ -415,5 +415,5 @@ class TestCheckSchemaComplete:
         mock_conn.search_s.side_effect = Exception('LDAP error')
 
         with patch.object(checker.api.Backend.ldap2, 'conn', mock_conn):
-            result = checker.check_schema_complete(['groupPolicyContainer'])
+            result = checker.check_schema_complete(['ipaGpoContainer'])
         assert result is False

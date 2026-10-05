@@ -52,8 +52,8 @@ def entry(**overrides):
         "cn": [GUID],
         "displayname": ["Test GPO"],
         "distinguishedname": [str(DN_VALUE)],
-        "gpcfilesyspath": [UNC],
-        "versionnumber": [0],
+        "ipagpofilesyspath": [UNC],
+        "ipagpoversionnumber": [0],
     }
     attributes.update(overrides)
     return FakeEntry(**attributes)
@@ -227,7 +227,7 @@ def test_context_resolves_canonical_identity_and_complete_absent_snapshot(
         "user_extension_names": False,
     }
     assert [call[2] for call in backend.calls if call[0] == "can_write"] == [
-        "versionnumber"
+        "ipagpoversionnumber"
     ]
 
 
@@ -235,10 +235,10 @@ def test_write_context_requires_every_publication_attribute(
     tmp_path, monkeypatch
 ):
     rights = {
-        "gpcfilesyspath": True,
-        "versionnumber": True,
-        "gpcmachineextensionnames": True,
-        "gpcuserextensionnames": False,
+        "ipagpofilesyspath": True,
+        "ipagpoversionnumber": True,
+        "ipagpomachineextensionnames": True,
+        "ipagpouserextensionnames": False,
     }
     backend = FakeLdap(rights=rights)
     make_gpo_tree(tmp_path, monkeypatch)
@@ -248,10 +248,10 @@ def test_write_context_requires_every_publication_attribute(
             backend, fake_api(), "Test GPO", write=True
         )
     assert [call[2] for call in backend.calls if call[0] == "can_write"] == [
-        "gpcfilesyspath",
-        "versionnumber",
-        "gpcmachineextensionnames",
-        "gpcuserextensionnames",
+        "ipagpofilesyspath",
+        "ipagpoversionnumber",
+        "ipagpomachineextensionnames",
+        "ipagpouserextensionnames",
     ]
 
 
@@ -284,7 +284,7 @@ def test_unauthorized_request_fails_before_filesystem_or_binding_reads(
 def test_context_rejects_unsafe_or_mismatched_unc_before_sysvol(
     monkeypatch, unsafe_path
 ):
-    backend = FakeLdap(entry(gpcfilesyspath=[unsafe_path]))
+    backend = FakeLdap(entry(ipagpofilesyspath=[unsafe_path]))
     monkeypatch.setattr(
         GPO,
         "_trusted_gpo_root",
@@ -430,7 +430,7 @@ def test_compare_replace_distinguishes_present_empty_and_absent():
 
     present_empty = GPO._compare_replace_modifications(
         backend,
-        "gPCMachineExtensionNames",
+        "ipaGpoMachineExtensionNames",
         "",
         None,
         True,
@@ -438,7 +438,7 @@ def test_compare_replace_distinguishes_present_empty_and_absent():
     )
     absent_empty = GPO._compare_replace_modifications(
         backend,
-        "gPCUserExtensionNames",
+        "ipaGpoUserExtensionNames",
         "",
         None,
         False,
@@ -446,12 +446,12 @@ def test_compare_replace_distinguishes_present_empty_and_absent():
     )
 
     assert present_empty == [
-        (ldap.MOD_DELETE, "gPCMachineExtensionNames", [b""])
+        (ldap.MOD_DELETE, "ipaGpoMachineExtensionNames", [b""])
     ]
     probe = GPO.GPC_ABSENT_EXTENSION_PROBE.encode()
     assert absent_empty == [
-        (ldap.MOD_ADD, "gPCUserExtensionNames", [probe]),
-        (ldap.MOD_DELETE, "gPCUserExtensionNames", [probe]),
+        (ldap.MOD_ADD, "ipaGpoUserExtensionNames", [probe]),
+        (ldap.MOD_DELETE, "ipaGpoUserExtensionNames", [probe]),
     ]
 
 
@@ -485,9 +485,9 @@ def editor_context(current=None):
 
 def test_read_gpc_snapshot_reads_exact_attributes_and_presence():
     ldap_entry = entry(
-        versionnumber=[5],
-        gpcmachineextensionnames=[""],
-        gpcuserextensionnames=["[(USER)]"],
+        ipagpoversionnumber=[5],
+        ipagpomachineextensionnames=[""],
+        ipagpouserextensionnames=["[(USER)]"],
     )
     backend = FakeLdap(ldap_entry)
     context = editor_context()
@@ -528,18 +528,18 @@ def test_read_gpc_snapshot_rejects_changed_identity():
     ],
 )
 def test_read_gpc_snapshot_rejects_invalid_or_changed_unc(invalid_path):
-    backend = FakeLdap(entry(gpcfilesyspath=[invalid_path]))
+    backend = FakeLdap(entry(ipagpofilesyspath=[invalid_path]))
 
     with pytest.raises(GPO.EditorFailure) as failure:
         GPO._read_gpc_snapshot(backend, editor_context())
 
     assert failure.value.category == "validation"
-    assert failure.value.field == "gpcfilesyspath"
+    assert failure.value.field == "ipagpofilesyspath"
 
 
 @pytest.mark.parametrize("invalid_version", ["not-an-int", -1, 0x100000000])
 def test_read_gpc_snapshot_rejects_invalid_version(invalid_version):
-    backend = FakeLdap(entry(versionnumber=[invalid_version]))
+    backend = FakeLdap(entry(ipagpoversionnumber=[invalid_version]))
 
     with pytest.raises(GPO.EditorFailure) as failure:
         GPO._read_gpc_snapshot(backend, editor_context())
@@ -563,17 +563,17 @@ def test_publication_helper_uses_one_atomic_compare_modify_with_exact_values():
     assert controls is None
     probe = GPO.GPC_ABSENT_EXTENSION_PROBE.encode()
     assert modifications == [
-        (ldap.MOD_DELETE, "gPCFileSysPath", [UNC.encode()]),
-        (ldap.MOD_ADD, "gPCFileSysPath", [UNC.encode()]),
-        (ldap.MOD_DELETE, "versionNumber", [b"0"]),
-        (ldap.MOD_ADD, "versionNumber", [b"1"]),
+        (ldap.MOD_DELETE, "ipaGpoFileSysPath", [UNC.encode()]),
+        (ldap.MOD_ADD, "ipaGpoFileSysPath", [UNC.encode()]),
+        (ldap.MOD_DELETE, "ipaGpoVersionNumber", [b"0"]),
+        (ldap.MOD_ADD, "ipaGpoVersionNumber", [b"1"]),
         (
             ldap.MOD_ADD,
-            "gPCMachineExtensionNames",
+            "ipaGpoMachineExtensionNames",
             [b"[(EXACT-MACHINE)]"],
         ),
-        (ldap.MOD_ADD, "gPCUserExtensionNames", [probe]),
-        (ldap.MOD_DELETE, "gPCUserExtensionNames", [probe]),
+        (ldap.MOD_ADD, "ipaGpoUserExtensionNames", [probe]),
+        (ldap.MOD_DELETE, "ipaGpoUserExtensionNames", [probe]),
     ]
     assert backend.removed == [DN_VALUE]
 
@@ -3753,14 +3753,14 @@ def test_editor_command_metadata_has_only_high_level_structured_contracts():
     assert commands == expected
 
     assert {
-        "gPCMachineExtensionNames", "gPCUserExtensionNames", "versionNumber"
+        "ipaGpoMachineExtensionNames", "ipaGpoUserExtensionNames", "ipaGpoVersionNumber"
     } <= set(GPO.gpo.default_attributes)
-    assert "gPCFileSysPath" not in GPO.gpo.default_attributes
+    assert "ipaGpoFileSysPath" not in GPO.gpo.default_attributes
     modified = GPO.gpo.managed_permissions[
         "System: Modify Group Policy Objects"
     ]["ipapermdefaultattr"]
     assert {
-        "gPCMachineExtensionNames", "gPCUserExtensionNames", "versionNumber"
+        "ipaGpoMachineExtensionNames", "ipaGpoUserExtensionNames", "ipaGpoVersionNumber"
     } <= modified
 
 

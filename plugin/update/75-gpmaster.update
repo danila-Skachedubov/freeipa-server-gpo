@@ -2,10 +2,10 @@
 # Create Group Policy Master object
 ###############################################################################
 dn: cn=grouppolicymaster,cn=etc,$SUFFIX
-default: objectClass: groupPolicyMaster
+default: objectClass: ipaGpoMaster
 default: objectClass: top
 default: cn: grouppolicymaster
-default: pdcEmulator: $HOST
+default: ipaGpoPdcEmulator: $HOST
 
 dn: cn=referential integrity postoperation,cn=plugins,cn=config
-add: referint-membership-attr: chainList
+add: referint-membership-attr: ipaGpoChainList
