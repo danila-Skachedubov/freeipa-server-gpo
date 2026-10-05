@@ -2094,7 +2094,7 @@ def test_policy_index_unauthorized_fails_before_filesystem_or_binding(monkeypatc
         GPO.gpo_editor_policy_index.execute(command, "Test GPO", "user")
 
     assert [call[2] for call in backend.calls if call[0] == "can_write"] == [
-        "versionnumber",
+        "ipagpoversionnumber",
     ]
     trusted_root.assert_not_called()
     opened.assert_not_called()

@@ -77,7 +77,7 @@ def search(monkeypatch):
         convert_attribute_members=MagicMock(),
     )
     commands = SimpleNamespace(
-        gpmaster_show=MagicMock(return_value={"result": {"chainlist": []}})
+        gpmaster_show=MagicMock(return_value={"result": {"ipagpochainlist": []}})
     )
     api = SimpleNamespace(
         env=SimpleNamespace(basedn=BASEDN),
@@ -208,7 +208,7 @@ def test_existing_entries_keep_master_order_and_active_state(search):
         False,
     )
     commands.gpmaster_show.return_value = {
-        "result": {"chainlist": ["second", "first"]}
+        "result": {"ipagpochainlist": ["second", "first"]}
     }
 
     result = subject.execute("")

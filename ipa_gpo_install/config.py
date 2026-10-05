@@ -32,7 +32,7 @@ REQUIRED_GROUP_POLICY_ENTRIES = (
     ('System', 'cn=System', 'nsContainer'),
     ('Policies', 'cn=Policies,cn=System', 'nsContainer'),
     ('Chains', 'cn=Chains,cn=System', 'nsContainer'),
-    ('Group Policy Master', 'cn=grouppolicymaster,cn=etc', 'groupPolicyMaster'),
+    ('Group Policy Master', 'cn=grouppolicymaster,cn=etc', 'ipaGpoMaster'),
 )
 
 GUID_PATTERN = re.compile(

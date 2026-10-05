@@ -1,5 +1,7 @@
 """Installer data migrations are checked independently of schema existence."""
 
+import re
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -56,6 +58,24 @@ def test_infrastructure_checks_all_entries_and_is_read_only():
     backend.add_entry.assert_not_called()
     backend.update_entry.assert_not_called()
     backend.delete_entry.assert_not_called()
+
+
+def test_master_health_check_matches_packaged_data_update():
+    checker, _backend, entries = infrastructure_checker()
+    update_path = (
+        Path(__file__).resolve().parents[1]
+        / "plugin/update/75-gpmaster.update"
+    )
+    object_classes = re.findall(
+        r"^default: objectClass:\s*(\S+)$",
+        update_path.read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
+    assert object_classes
+    master_dn = DN(("cn", "grouppolicymaster"), ("cn", "etc"), BASEDN)
+    entries[master_dn] = {"objectclass": object_classes}
+
+    assert checker.check_group_policy_infrastructure() is True
 
 
 @pytest.mark.parametrize("missing", range(len(REQUIRED_GROUP_POLICY_ENTRIES)))
