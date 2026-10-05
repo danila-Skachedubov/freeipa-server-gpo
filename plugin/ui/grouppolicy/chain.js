@@ -906,7 +906,7 @@ define(
                 },
                 {
                     $type: 'entity_select',
-                    name: 'usergroup',
+                    name: 'ipagpousergroup',
                     label: t('chain.fields.usergroup'),
                     other_entity: 'group',
                     other_field: 'cn',
@@ -914,7 +914,7 @@ define(
                 },
                 {
                     $type: 'entity_select',
-                    name: 'computergroup',
+                    name: 'ipagpocomputergroup',
                     label: t('chain.fields.computergroup'),
                     other_entity: 'hostgroup',
                     other_field: 'cn'
@@ -962,12 +962,12 @@ define(
                                 sortable: false
                             },
                             {
-                                name: 'usergroup',
+                                name: 'ipagpousergroup',
                                 label: t('chain.fields.usergroup'),
                                 sortable: false
                             },
                             {
-                                name: 'computergroup',
+                                name: 'ipagpocomputergroup',
                                 label: t('chain.fields.computergroup'),
                                 sortable: false
                             },
@@ -1018,7 +1018,7 @@ define(
                     {
                         $type: 'association',
                         name: 'gpo',
-                        attribute_member: 'gplink',
+                        attribute_member: 'ipagpolink',
                         facet_group: 'member',
                         sort_enabled: false,
                         server_sort: true,
@@ -1042,7 +1042,7 @@ define(
                                 sortable: false
                             },
                             {
-                                name: 'versionnumber',
+                                name: 'ipagpoversionnumber',
                                 label: t('gpo.fields.version'),
                                 sortable: false
                             }
@@ -1095,7 +1095,7 @@ define(
                         },
                         {
                             $type: 'entity_select',
-                            name: 'usergroup',
+                            name: 'ipagpousergroup',
                             label: t('chain.fields.usergroup'),
                             doc: t('chain.fields.userGroupDoc'),
                             other_entity: 'group',
@@ -1109,7 +1109,7 @@ define(
                         },
                         {
                             $type: 'entity_select',
-                            name: 'computergroup',
+                            name: 'ipagpocomputergroup',
                             label: t('chain.fields.computergroup'),
                             doc: t('chain.fields.computerGroupDoc'),
                             other_entity: 'hostgroup',
@@ -1122,7 +1122,7 @@ define(
                         },
                         {
                             $type: 'multivalued',
-                            name: 'gplink',
+                            name: 'ipagpolink',
                             label: t('chain.fields.gplink'),
                             doc: t('chain.fields.gplinkDoc'),
                             child_spec: {

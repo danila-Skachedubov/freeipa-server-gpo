@@ -1,52 +1,52 @@
 dn: cn=schema
 changetype: modify
 add: attributeTypes
-attributeTypes: ( 1.3.6.1.4.1.9999.1.1.4
-  NAME 'flags'
-  DESC 'Custom flags attribute for GPO'
+attributeTypes: ( 2.16.840.1.113730.3.8.30.1
+  NAME 'ipaGpoFlags'
+  DESC 'Group Policy Object flags'
   EQUALITY integerMatch
   SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
   SINGLE-VALUE )
 -
 add: attributeTypes
-attributeTypes: ( 1.3.6.1.4.1.9999.1.1.5
-  NAME 'gPCFileSysPath'
-  DESC 'File system path for GPO'
+attributeTypes: ( 2.16.840.1.113730.3.8.30.2
+  NAME 'ipaGpoFileSysPath'
+  DESC 'File system path for a Group Policy Object'
   EQUALITY caseIgnoreMatch
   SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
   SINGLE-VALUE )
 -
 add: attributeTypes
-attributeTypes: ( 1.3.6.1.4.1.9999.1.1.6
-  NAME 'gPCMachineExtensionNames'
+attributeTypes: ( 2.16.840.1.113730.3.8.30.3
+  NAME 'ipaGpoMachineExtensionNames'
   DESC 'List of CSE GUIDs for machine policy settings'
   EQUALITY caseIgnoreMatch
   SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
   SINGLE-VALUE )
 -
 add: attributeTypes
-attributeTypes: ( 1.3.6.1.4.1.9999.1.1.7
-  NAME 'gPCUserExtensionNames'
+attributeTypes: ( 2.16.840.1.113730.3.8.30.4
+  NAME 'ipaGpoUserExtensionNames'
   DESC 'List of CSE GUIDs for user policy settings'
   EQUALITY caseIgnoreMatch
   SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
   SINGLE-VALUE )
 -
 add: attributeTypes
-attributeTypes: ( 1.3.6.1.4.1.9999.1.1.8
-  NAME 'versionNumber'
-  DESC 'Version number of the group policy'
+attributeTypes: ( 2.16.840.1.113730.3.8.30.5
+  NAME 'ipaGpoVersionNumber'
+  DESC 'Version number of the Group Policy'
   EQUALITY integerMatch
   SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
   SINGLE-VALUE )
 -
 add: objectClasses
-objectClasses: ( 1.3.6.1.4.1.9999.2.1.1
-  NAME 'groupPolicyContainer'
-  DESC 'Object containing group policy information'
+objectClasses: ( 2.16.840.1.113730.3.8.31.1
+  NAME 'ipaGpoContainer'
+  DESC 'Object containing Group Policy information'
   SUP top
   STRUCTURAL
   MUST ( cn )
-  MAY ( displayName $ distinguishedName $ flags $
-        gPCFileSysPath $ gPCMachineExtensionNames $
-        gPCUserExtensionNames $ versionNumber ) )
+  MAY ( displayName $ distinguishedName $ ipaGpoFlags $
+        ipaGpoFileSysPath $ ipaGpoMachineExtensionNames $
+        ipaGpoUserExtensionNames $ ipaGpoVersionNumber ) )

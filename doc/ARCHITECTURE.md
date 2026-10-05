@@ -87,7 +87,7 @@ Run inside the Apache/WSGI process as user `ipaapi`.
   applicable policies for a client (called by gpupdate)
 
 **gpmaster.py** (~500 lines) — configuration singleton:
-- `gpmaster_show` — list of active chains (chainList)
+- `gpmaster_show` — list of active chains (ipaGpoChainList)
 - `gpmaster_mod` — add/remove/move chains
 - `gpmaster_show_pdc` — PDC emulator
 
@@ -132,40 +132,41 @@ from the server.
 
 ## 3. LDAP Schema
 
-All OIDs are under `1.3.6.1.4.1.9999` (needs replacement with a
-registered IANA PEN).
+All OIDs are allocated under the FreeIPA OID arc
+`2.16.840.1.113730.3.8` — attributes under `.30` and object classes
+under `.31`.
 
 ### DIT Structure
 
 ```
 $SUFFIX (e.g. dc=ipa,dc=test)
 ├── cn=etc
-│   └── cn=grouppolicymaster              (groupPolicyMaster — singleton)
-│       ├── pdcEmulator: dc1.ipa.test
-│       └── chainList: cn=Prod,cn=Chains,...
+│   └── cn=grouppolicymaster              (ipaGpoMaster — singleton)
+│       ├── ipaGpoPdcEmulator: dc1.ipa.test
+│       └── ipaGpoChainList: cn=Prod,cn=Chains,...
 │
 └── cn=System
     ├── cn=Policies                        (nsContainer)
-    │   └── cn={GUID}                     (groupPolicyContainer — GPO)
+    │   └── cn={GUID}                     (ipaGpoContainer — GPO)
     │       ├── displayName: KDE Settings
-    │       ├── gPCFileSysPath: \\...\SysVol\...\Policies\{GUID}
-    │       └── versionNumber: 3
+    │       ├── ipaGpoFileSysPath: \\...\SysVol\...\Policies\{GUID}
+    │       └── ipaGpoVersionNumber: 3
     │
     └── cn=Chains                          (nsContainer)
-        └── cn=Production                 (groupPolicyChain)
+        └── cn=Production                 (ipaGpoChain)
             ├── description: Production chain
-            ├── userGroup: cn=developers,...
-            ├── computerGroup: cn=workstations,...
-            └── gpLink: cn={GUID1},cn=Policies,...
+            ├── ipaGpoUserGroup: cn=developers,...
+            ├── ipaGpoComputerGroup: cn=workstations,...
+            └── ipaGpoLink: cn={GUID1},cn=Policies,...
 ```
 
 ### ObjectClasses
 
 | objectClass | OID | Purpose | MUST | MAY |
 |---|---|---|---|---|
-| `groupPolicyContainer` | ...2.1.1 | GPO object | `cn` | `displayName`, `flags`, `gPCFileSysPath`, `gPCMachineExtensionNames`, `gPCUserExtensionNames`, `versionNumber` |
-| `groupPolicyChain` | ...2.1.3 | Chain (GPO → groups) | `cn` | `userGroup`, `computerGroup`, `gpLink`, `description` |
-| `groupPolicyMaster` | ...2.1.2 | PDC + chainList | `cn`, `pdcEmulator` | `chainList` |
+| `ipaGpoContainer` | ...3.8.31.1 | GPO object | `cn` | `displayName`, `ipaGpoFlags`, `ipaGpoFileSysPath`, `ipaGpoMachineExtensionNames`, `ipaGpoUserExtensionNames`, `ipaGpoVersionNumber` |
+| `ipaGpoChain` | ...3.8.31.3 | Chain (GPO → groups) | `cn` | `ipaGpoUserGroup`, `ipaGpoComputerGroup`, `ipaGpoLink`, `description` |
+| `ipaGpoMaster` | ...3.8.31.2 | PDC + ipaGpoChainList | `cn`, `ipaGpoPdcEmulator` | `ipaGpoChainList` |
 
 ### Chain Attributes
 
@@ -173,17 +174,17 @@ $SUFFIX (e.g. dc=ipa,dc=test)
 |---|---|---|
 | `cn` | Str | Chain name (primary_key) |
 | `description` | Str | Description (optional) |
-| `userGroup` | DN | User group |
-| `computerGroup` | DN | Computer group |
-| `gpLink` | DN (multi) | Ordered list of GPOs |
+| `ipaGpoUserGroup` | DN | User group |
+| `ipaGpoComputerGroup` | DN | Computer group |
+| `ipaGpoLink` | DN (multi) | Ordered list of GPOs |
 
 The "active/inactive" status is **not stored in LDAP** — it is
 computed dynamically based on whether the chain appears in the
-`chainList` attribute of the `groupPolicyMaster` object.
+`ipaGpoChainList` attribute of the `ipaGpoMaster` object.
 
 ### Referential Integrity
 
-The `gpLink`, `userGroup`, `computerGroup`, and `chainList`
+The `ipaGpoLink`, `ipaGpoUserGroup`, `ipaGpoComputerGroup`, and `ipaGpoChainList`
 attributes are registered with the 389-DS referential integrity
 plugin (`plugin/update/75-chain.update`, `75-gpmaster.update`).
 When an object is deleted or renamed, references are automatically
@@ -245,8 +246,8 @@ gpo_add(displayname="KDE Settings")
   │
   ├── LDAP: creates cn={GUID},cn=Policies,cn=System
   │         cn = random UUID
-  │         gpcfilesyspath = \\domain\SysVol\...\{GUID}
-  │         versionNumber = 0
+  │         ipaGpoFileSysPath = \\domain\SysVol\...\{GUID}
+  │         ipaGpoVersionNumber = 0
   │
   └── D-Bus → oddjob (root):
               mkdir Policies/{GUID}/
@@ -264,7 +265,7 @@ Admin (Web UI)
   ▼
 gpo_editor_policy_update(displayname, scope, policy_id, request)
   │
-  ├── Authorization: ACI can_write on gPCFileSysPath
+  ├── Authorization: ACI can_write on ipaGpoFileSysPath
   ├── Resolution: displayname → GUID → SYSVOL path
   │
   ├── libadmix HighLevelApi:
@@ -273,7 +274,7 @@ gpo_editor_policy_update(displayname, scope, policy_id, request)
   │     └── atomic write to SYSVOL
   │
   ├── LDAP compare-and-modify:
-  │     versionNumber++ (only if LDAP version matches)
+  │     ipaGpoVersionNumber++ (only if LDAP version matches)
   │
   └── Response → Web UI
 ```
@@ -284,9 +285,9 @@ gpo_editor_policy_update(displayname, scope, policy_id, request)
 Client (gpupdate)
   │
   ├── LDAP: chain_resolve_for_host(hostname)
-  │         → GPMaster.chainList
-  │         → filter by computerGroup
-  │         → collect gpLink (GPOs in order)
+  │         → GPMaster.ipaGpoChainList
+  │         → filter by ipaGpoComputerGroup
+  │         → collect ipaGpoLink (GPOs in order)
   │         → [{name, file_sys_path, version}, ...]
   │
   ├── SMB: \\dc\SysVol\domain\Policies\{GUID}\Machine\Registry.pol
@@ -303,7 +304,7 @@ Admin (Web/CLI)
 gpo_del(displayname)
   │
   ├── LDAP: removes cn={GUID},cn=Policies,cn=System
-  │         (referential integrity cleans gpLink in chains)
+  │         (referential integrity cleans ipaGpoLink in chains)
   │
   └── D-Bus → oddjob (root):
               rmtree Policies/{GUID}/
@@ -313,7 +314,7 @@ gpo_del(displayname)
 
 ### LDAP Replication
 
-LDAP data (GPOs, chains, chainList) replicates automatically via
+LDAP data (GPOs, chains, ipaGpoChainList) replicates automatically via
 389-DS multi-master replication. Changes on one DC propagate to
 all replicas.
 
@@ -328,7 +329,7 @@ Risks:
 - Client receiving policy from DC2 → `Permission denied`
 
 **PDC Emulator.** The schema includes
-`groupPolicyMaster.pdcEmulator`, but write redirect to PDC
+`ipaGpoMaster.ipaGpoPdcEmulator`, but write redirect to PDC
 **is not implemented**. The administrator must manually open
 the PDC emulator's web UI.
 
@@ -347,7 +348,7 @@ objectClasses.
 ### Editor Authorization
 
 Before each modification via libadmix, `can_write` is checked
-on `gPCFileSysPath` and `versionNumber`.
+on `ipaGpoFileSysPath` and `ipaGpoVersionNumber`.
 
 ### Filesystem Protection
 

@@ -31,10 +31,10 @@ class gpmaster(LDAPObject):
     container_dn = None
     object_name = _('Group Policy Master')
     object_name_plural = _('Group Policy Masters')
-    object_class = ['groupPolicyMaster']
-    permission_filter_objectclasses = ['groupPolicyMaster']
+    object_class = ['ipaGpoMaster']
+    permission_filter_objectclasses = ['ipaGpoMaster']
     default_attributes = [
-        'cn', 'chainList', 'pdcEmulator'
+        'cn', 'ipaGpoChainList', 'ipaGpoPdcEmulator'
     ]
     allow_rename = False
 
@@ -47,13 +47,13 @@ class gpmaster(LDAPObject):
             'ipapermbindruletype': 'all',
             'ipapermright': {'read', 'search', 'compare'},
             'ipapermdefaultattr': {
-                'cn', 'objectclass', 'chainlist', 'pdcemulator'
+                'cn', 'objectclass', 'ipagpochainlist', 'ipagpopdcemulator'
             },
         },
         'System: Modify Group Policy Master': {
             'ipapermright': {'write'},
             'ipapermdefaultattr': {
-                'chainlist', 'pdcemulator'
+                'ipagpochainlist', 'ipagpopdcemulator'
             },
             'default_privileges': {'Group Policy Administrators'},
         },
@@ -68,12 +68,12 @@ class gpmaster(LDAPObject):
             autofill=False,
             default='grouppolicymaster',
         ),
-        Str('chainlist*',
+        Str('ipagpochainlist*',
             cli_name='chain_list',
             label=_('Chain list'),
             doc=_('Ordered list of Group Policy Chain DNs'),
         ),
-        Str('pdcemulator?',
+        Str('ipagpopdcemulator?',
             cli_name='pdc_emulator',
             label=_('PDC Emulator'),
             doc=_('PDC Emulator server name'),
@@ -85,7 +85,7 @@ class gpmaster(LDAPObject):
         try:
             return super(gpmaster, self).__json__()
         except KeyError as e:
-            if 'groupPolicyMaster' in str(e):
+            if 'ipaGpoMaster' in str(e):
                 result = {
                     'name': self.name,
                     'doc': self.doc,
@@ -119,7 +119,7 @@ class gpmaster(LDAPObject):
                 entry = self.api.Backend.ldap2.get_entry(
                     chain_dn, attrs_list=['cn', 'objectclass']
                 )
-                if not _has_object_class(entry, 'groupPolicyChain'):
+                if not _has_object_class(entry, 'ipaGpoChain'):
                     raise errors.ValidationError(
                         name='chain',
                         error=_("Object '{}' is not a Group Policy Chain").format(
@@ -149,7 +149,7 @@ class gpmaster(LDAPObject):
                 entry = ldap.get_entry(
                     chain_dn, attrs_list=['cn', 'objectclass']
                 )
-                if not _has_object_class(entry, 'groupPolicyChain'):
+                if not _has_object_class(entry, 'ipaGpoChain'):
                     raise errors.ValidationError(
                         name='chain',
                         error=_("Object '{}' is not a Group Policy Chain").format(
@@ -282,7 +282,7 @@ class gpmaster_mod(LDAPUpdate):
                 )
             conflicting = [
                 name for name in (
-                    'pdcemulator', 'add_chain', 'remove_chain', 'chainlist',
+                    'ipagpopdcemulator', 'add_chain', 'remove_chain', 'ipagpochainlist',
                     'setattr', 'addattr', 'delattr',
                 )
                 if options.get(name)
@@ -303,17 +303,17 @@ class gpmaster_mod(LDAPUpdate):
 
             entry_attrs = ldap.get_entry(dn, self.obj.default_attributes)
             if not options.get('raw', False):
-                if 'chainlist' in entry_attrs:
+                if 'ipagpochainlist' in entry_attrs:
                     chain_names = self.obj.convert_chain_dns_to_names(
-                        ldap, entry_attrs['chainlist']
+                        ldap, entry_attrs['ipagpochainlist']
                     )
-                    entry_attrs['chainlist'] = chain_names
+                    entry_attrs['ipagpochainlist'] = chain_names
 
             result_dict = {}
             for attr_name in entry_attrs:
                 attr_value = entry_attrs[attr_name]
                 if (isinstance(attr_value, list) and len(attr_value) == 1 and
-                        attr_name not in ['chainlist']):
+                        attr_name not in ['ipagpochainlist']):
                     result_dict[attr_name] = attr_value[0]
                 else:
                     result_dict[attr_name] = attr_value
@@ -330,8 +330,8 @@ class gpmaster_mod(LDAPUpdate):
         """Move chain operation with validation."""
         self._validate_move_operations(ldap, dn, options)
 
-        entry = ldap.get_entry(dn, attrs_list=['chainlist'])
-        current_chains = [str(chain_dn) for chain_dn in entry.get('chainlist', [])]
+        entry = ldap.get_entry(dn, attrs_list=['ipagpochainlist'])
+        current_chains = [str(chain_dn) for chain_dn in entry.get('ipagpochainlist', [])]
         original_chains = list(current_chains)
 
         if len(current_chains) < 2:
@@ -380,10 +380,10 @@ class gpmaster_mod(LDAPUpdate):
             ldap.modify_s(
                 dn,
                 [
-                    (ldap_module.MOD_DELETE, 'chainList', None),
+                    (ldap_module.MOD_DELETE, 'ipaGpoChainList', None),
                     (
                         ldap_module.MOD_ADD,
-                        'chainList',
+                        'ipaGpoChainList',
                         [ldap.encode(value) for value in current_chains],
                     ),
                 ],
@@ -399,8 +399,8 @@ class gpmaster_mod(LDAPUpdate):
                 )
             )
 
-        entry = ldap.get_entry(dn, attrs_list=['chainlist'])
-        current_chains = [str(chain_dn) for chain_dn in entry.get('chainlist', [])]
+        entry = ldap.get_entry(dn, attrs_list=['ipagpochainlist'])
+        current_chains = [str(chain_dn) for chain_dn in entry.get('ipagpochainlist', [])]
 
         if 'moveup_chain' in options and options['moveup_chain']:
             chain_names = options['moveup_chain']
@@ -461,12 +461,12 @@ class gpmaster_mod(LDAPUpdate):
     def pre_callback(self, ldap, dn, entry_attrs, attrs_list, *keys, **options):
         """Handle add/remove operations."""
 
-        current_entry = ldap.get_entry(dn, attrs_list=['chainlist'])
+        current_entry = ldap.get_entry(dn, attrs_list=['ipagpochainlist'])
 
         self._handle_add_operations(entry_attrs, options)
-        if 'chainlist' in entry_attrs:
+        if 'ipagpochainlist' in entry_attrs:
             current_entry = dict(current_entry)
-            current_entry['chainlist'] = list(entry_attrs['chainlist'])
+            current_entry['ipagpochainlist'] = list(entry_attrs['ipagpochainlist'])
         self._handle_remove_operations(ldap, current_entry, entry_attrs, options)
         self._handle_standard_modifications(entry_attrs, options)
 
@@ -477,8 +477,8 @@ class gpmaster_mod(LDAPUpdate):
         if 'add_chain' in options and options['add_chain']:
             ldap = self.api.Backend.ldap2
             gpmaster_dn = self.obj.get_gpmaster_dn()
-            current_entry = ldap.get_entry(gpmaster_dn, attrs_list=['chainlist'])
-            current_chains = [str(dn) for dn in current_entry.get('chainlist', [])]
+            current_entry = ldap.get_entry(gpmaster_dn, attrs_list=['ipagpochainlist'])
+            current_chains = [str(dn) for dn in current_entry.get('ipagpochainlist', [])]
 
             chain_names = _normalize_to_list(options['add_chain'])
 
@@ -493,13 +493,13 @@ class gpmaster_mod(LDAPUpdate):
                     )
 
             if current_chains:
-                entry_attrs['chainlist'] = current_chains
+                entry_attrs['ipagpochainlist'] = current_chains
 
     def _handle_remove_operations(self, ldap, current_entry, entry_attrs, options):
         """Handle remove chain operations."""
         if 'remove_chain' in options and options['remove_chain']:
             chain_names = _normalize_to_list(options['remove_chain'])
-            current_chains = [str(dn) for dn in current_entry.get('chainlist', [])]
+            current_chains = [str(dn) for dn in current_entry.get('ipagpochainlist', [])]
 
             if not current_chains:
                 raise errors.ValidationError(
@@ -538,18 +538,18 @@ class gpmaster_mod(LDAPUpdate):
                         reason=_("Chain '{}' not found in GPMaster").format(chain_name)
                     )
 
-            entry_attrs['chainlist'] = current_chains if current_chains else []
+            entry_attrs['ipagpochainlist'] = current_chains if current_chains else []
 
     def _handle_standard_modifications(self, entry_attrs, options):
         """Handle standard modification operations."""
-        if 'pdcemulator' in options and options['pdcemulator']:
-            entry_attrs['pdcemulator'] = options['pdcemulator']
+        if 'ipagpopdcemulator' in options and options['ipagpopdcemulator']:
+            entry_attrs['ipagpopdcemulator'] = options['ipagpopdcemulator']
 
-        if 'chainlist' in options and options['chainlist']:
+        if 'ipagpochainlist' in options and options['ipagpochainlist']:
             converted_chains = self.obj.convert_chain_names_to_dns(
-                options['chainlist'], strict=True
+                options['ipagpochainlist'], strict=True
             )
-            entry_attrs['chainlist'] = converted_chains
+            entry_attrs['ipagpochainlist'] = converted_chains
 
 @register()
 class gpmaster_show(LDAPRetrieve):
@@ -566,17 +566,17 @@ class gpmaster_show(LDAPRetrieve):
             entry_attrs = ldap.get_entry(gpmaster_dn, self.obj.default_attributes)
 
             if not options.get('raw', False):
-                if 'chainlist' in entry_attrs:
+                if 'ipagpochainlist' in entry_attrs:
                     chain_names = self.obj.convert_chain_dns_to_names(
-                        ldap, entry_attrs['chainlist']
+                        ldap, entry_attrs['ipagpochainlist']
                     )
-                    entry_attrs['chainlist'] = chain_names
+                    entry_attrs['ipagpochainlist'] = chain_names
 
             result_dict = {}
             for attr_name in entry_attrs:
                 attr_value = entry_attrs[attr_name]
                 if (isinstance(attr_value, list) and len(attr_value) == 1
-                    and attr_name not in ['chainlist']):
+                    and attr_name not in ['ipagpochainlist']):
                     result_dict[attr_name] = attr_value[0]
                 else:
                     result_dict[attr_name] = attr_value
@@ -609,9 +609,9 @@ class gpmaster_show_pdc(LDAPRetrieve):
 
         try:
             ldap = self.api.Backend.ldap2
-            entry_attrs = ldap.get_entry(gpmaster_dn, ['pdcemulator'])
+            entry_attrs = ldap.get_entry(gpmaster_dn, ['ipagpopdcemulator'])
 
-            pdc_emulator = entry_attrs.get('pdcemulator', [None])
+            pdc_emulator = entry_attrs.get('ipagpopdcemulator', [None])
             pdc_value = pdc_emulator[0] if pdc_emulator and pdc_emulator[0] else "Not configured"
 
             return {

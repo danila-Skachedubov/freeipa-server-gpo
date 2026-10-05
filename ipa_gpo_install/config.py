@@ -22,9 +22,9 @@ TARGET_DBUS_CONFIG_DIR = "/etc/oddjobd.conf.d"
 TARGET_DBUS_HANDLERS_DIR = "/usr/libexec/ipa/oddjob"
 
 REQUIRED_SCHEMA_CLASSES = [
-    'groupPolicyContainer',
-    'groupPolicyChain',
-    'groupPolicyMaster'
+    'ipaGpoContainer',
+    'ipaGpoChain',
+    'ipaGpoMaster'
 ]
 
 GUID_PATTERN = re.compile(
