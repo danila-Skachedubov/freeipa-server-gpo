@@ -402,6 +402,20 @@ class IPAActions:
             self.logger.error(_("Error running ipa-server-upgrade: {}").format(e))
             return False
 
+    def reconnect_ldap(self):
+        """Replace the LDAP connection and entry cache after an external upgrade."""
+        try:
+            self.logger.info(_("Reconnecting to LDAP server after upgrade"))
+            backend = self.api.Backend.ldap2
+            if backend.isconnected():
+                backend.disconnect()
+            backend.connect()
+            self.logger.info(_("LDAP connection refreshed successfully"))
+            return True
+        except Exception as e:
+            self.logger.error(_("Error reconnecting to LDAP server: {}").format(e))
+            return False
+
     def restart_oddjob(self):
         """
         Restart the oddjob service to load new D-Bus handlers.

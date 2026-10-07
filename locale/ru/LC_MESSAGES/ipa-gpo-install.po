@@ -623,6 +623,26 @@ msgstr "Не удалось проверить инфраструктуру гр
 msgid "Required Group Policy update asset '{}' is missing or unreadable. Reinstall the freeipa-server-gpo package."
 msgstr "Необходимый файл обновления групповых политик «{}» отсутствует или недоступен для чтения. Переустановите пакет freeipa-server-gpo."
 
+#: ipa_gpo_install/actions.py
+msgid "Reconnecting to LDAP server after upgrade"
+msgstr "Повторное подключение к серверу LDAP после обновления"
+
+#: ipa_gpo_install/actions.py
+msgid "LDAP connection refreshed successfully"
+msgstr "Соединение с LDAP успешно обновлено"
+
+#: ipa_gpo_install/actions.py
+msgid "Error reconnecting to LDAP server: {}"
+msgstr "Ошибка повторного подключения к серверу LDAP: {}"
+
+#: ipa_gpo_install/cli.py
+msgid "Reconnect to LDAP server"
+msgstr "Повторно подключиться к серверу LDAP"
+
+#: ipa_gpo_install/cli.py
+msgid "Group Policy updates were applied, but verification could not run: unable to reconnect to LDAP. Inspect /var/log/freeipa/ipa-gpo-install.log and run ipa-gpo-install --check-only after restoring LDAP access."
+msgstr "Обновления групповых политик применены, но проверка не выполнена: не удалось повторно подключиться к LDAP. Проверьте /var/log/freeipa/ipa-gpo-install.log и запустите ipa-gpo-install --check-only после восстановления доступа к LDAP."
+
 #~ msgid "Initiating oddjob service restart"
 #~ msgstr "Инициирование перезапуска службы oddjob"
 

@@ -197,6 +197,17 @@ def execute_required_actions(
         logger.warning(_("About to perform irreversible schema update"))
         if not run_task(_("Run ipa-server-upgrade"), actions.run_ipa_server_upgrade):
             return False
+        # The external upgrade can restart Directory Server. Discard both the
+        # broken connection and cached pre-upgrade NotFound results before
+        # reading the updated schema and data through the same API instance.
+        if not run_task(_("Reconnect to LDAP server"), actions.reconnect_ldap):
+            logger.error(_(
+                "Group Policy updates were applied, but verification could not "
+                "run: unable to reconnect to LDAP. Inspect "
+                "/var/log/freeipa/ipa-gpo-install.log and run "
+                "ipa-gpo-install --check-only after restoring LDAP access."
+            ))
+            return False
 
     # Installed object classes can predate later data migrations. Verify the
     # actual entries even when a schema-only check said the server was ready.

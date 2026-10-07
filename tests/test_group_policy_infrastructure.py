@@ -157,7 +157,7 @@ def installer_scenario(**initial):
     for method in (
             "check_group_policy_update_assets", "configure_editor_filesystem",
             "are_plugins_activated", "restart_oddjob", "run_ipa_server_upgrade",
-            "restart_httpd"):
+            "reconnect_ldap", "restart_httpd"):
         getattr(actions, method).return_value = True
     checker = MagicMock(spec=IPAChecker)
     checker.check_editor_filesystem.return_value = True
@@ -178,6 +178,7 @@ def test_complete_schema_does_not_skip_missing_container_migration():
     actions, checker, checks = installer_scenario(ldap_infrastructure=False)
     ordered = MagicMock()
     ordered.attach_mock(actions.run_ipa_server_upgrade, "upgrade")
+    ordered.attach_mock(actions.reconnect_ldap, "reconnect")
     ordered.attach_mock(checker.check_schema_complete, "schema")
     ordered.attach_mock(checker.check_group_policy_infrastructure, "infrastructure")
     ordered.attach_mock(actions.restart_httpd, "httpd")
@@ -185,8 +186,63 @@ def test_complete_schema_does_not_skip_missing_container_migration():
     assert cli.execute_required_actions(actions, checks, checker) is True
 
     assert [call[0] for call in ordered.mock_calls] == [
-        "upgrade", "schema", "infrastructure", "httpd"
+        "upgrade", "reconnect", "schema", "infrastructure", "httpd"
     ]
+
+
+def test_upgrade_invalidated_connection_is_replaced_before_verification():
+    actions, checker, checks = installer_scenario(schema_complete=False)
+    backend = MagicMock()
+    backend.isconnected.return_value = True
+    actions.api = SimpleNamespace(Backend=SimpleNamespace(ldap2=backend))
+    state = {"connection_valid": True}
+
+    def upgrade():
+        state["connection_valid"] = False
+        return True
+
+    def connect():
+        state["connection_valid"] = True
+
+    def check_schema(_classes):
+        if not state["connection_valid"]:
+            raise RuntimeError("Can't contact LDAP server: Broken pipe")
+        return True
+
+    actions.run_ipa_server_upgrade.side_effect = upgrade
+    backend.connect.side_effect = connect
+    actions.reconnect_ldap.side_effect = IPAActions(
+        api_instance=actions.api).reconnect_ldap
+    checker.check_schema_complete.side_effect = check_schema
+
+    assert cli.execute_required_actions(actions, checks, checker) is True
+    backend.disconnect.assert_called_once_with()
+    backend.connect.assert_called_once_with()
+    actions.restart_httpd.assert_called_once_with()
+
+
+def test_reconnect_failure_stops_before_health_checks_and_httpd(caplog):
+    actions, checker, checks = installer_scenario(schema_complete=False)
+    actions.reconnect_ldap.return_value = False
+
+    assert cli.execute_required_actions(actions, checks, checker) is False
+    checker.check_schema_complete.assert_not_called()
+    checker.check_group_policy_infrastructure.assert_not_called()
+    actions.restart_httpd.assert_not_called()
+    assert "updates were applied" in caplog.text
+    assert "unable to reconnect to LDAP" in caplog.text
+    assert "infrastructure is incomplete" not in caplog.text
+
+
+def test_failed_upgrade_does_not_reconnect_or_verify():
+    actions, checker, checks = installer_scenario(schema_complete=False)
+    actions.run_ipa_server_upgrade.return_value = False
+
+    assert cli.execute_required_actions(actions, checks, checker) is False
+    actions.reconnect_ldap.assert_not_called()
+    checker.check_schema_complete.assert_not_called()
+    checker.check_group_policy_infrastructure.assert_not_called()
+    actions.restart_httpd.assert_not_called()
 
 
 @pytest.mark.parametrize("method", ["check_schema_complete", "check_group_policy_infrastructure"])
@@ -219,3 +275,4 @@ def test_healthy_installation_still_rechecks_schema_and_data_entries():
     actions.run_ipa_server_upgrade.assert_not_called()
     checker.check_schema_complete.assert_called_once()
     checker.check_group_policy_infrastructure.assert_called_once_with()
+    actions.reconnect_ldap.assert_not_called()
