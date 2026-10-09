@@ -245,6 +245,47 @@ class TestRunIpaServerUpgrade:
         assert actions.run_ipa_server_upgrade() is False
 
 
+class TestReconnectLdap:
+    def test_connected_backend_disconnects_before_connecting(self):
+        actions = _make_actions()
+        backend = actions.api.Backend.ldap2
+        backend.isconnected.return_value = True
+
+        assert actions.reconnect_ldap() is True
+        assert backend.mock_calls == [
+            call.isconnected(), call.disconnect(), call.connect(),
+        ]
+
+    def test_disconnected_backend_connects_without_disconnect(self):
+        actions = _make_actions()
+        backend = actions.api.Backend.ldap2
+        backend.isconnected.return_value = False
+
+        assert actions.reconnect_ldap() is True
+        backend.disconnect.assert_not_called()
+        backend.connect.assert_called_once_with()
+
+    def test_connect_failure_is_logged_and_returns_false(self, caplog):
+        actions = _make_actions()
+        backend = actions.api.Backend.ldap2
+        backend.isconnected.return_value = True
+        backend.connect.side_effect = RuntimeError("LDAP unavailable")
+
+        assert actions.reconnect_ldap() is False
+        backend.disconnect.assert_called_once_with()
+        assert "Error reconnecting to LDAP server: LDAP unavailable" in caplog.text
+
+    def test_disconnect_failure_does_not_attempt_connect(self, caplog):
+        actions = _make_actions()
+        backend = actions.api.Backend.ldap2
+        backend.isconnected.return_value = True
+        backend.disconnect.side_effect = RuntimeError("disconnect failed")
+
+        assert actions.reconnect_ldap() is False
+        backend.connect.assert_not_called()
+        assert "Error reconnecting to LDAP server: disconnect failed" in caplog.text
+
+
 class TestRestartOddjob:
     """
     restart_oddjob() -> bool

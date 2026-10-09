@@ -5,10 +5,12 @@ define([
     'freeipa/reg',
     'freeipa/navigation',
     'freeipa/rpc',
-    './js/locales/translations'
-], function(require, IPA, phases, reg, navigation, rpc, translationsModule) {
+    './js/locales/translations',
+    './js/components/editor-dialog'
+], function(require, IPA, phases, reg, navigation, rpc, translationsModule, editorDialog) {
 
     var exp = IPA.gpo = {};
+    var nextDialogId = 0;
 
     translationsModule.setLanguage((navigator.language || 'en').slice(0, 2).toLowerCase());
     var t = translationsModule.t;
@@ -85,11 +87,11 @@ define([
                             label: t('gpo.fields.guid')
                         },
                         {
-                            name: 'versionnumber',
+                            name: 'ipagpoversionnumber',
                             label: t('gpo.fields.version')
                         },
                         {
-                            name: 'flags',
+                            name: 'ipagpoflags',
                             label: t('gpo.fields.flags')
                         }
                     ],
@@ -140,12 +142,12 @@ define([
                                     read_only: true
                                 },
                                 {
-                                    name: 'versionnumber',
+                                    name: 'ipagpoversionnumber',
                                     label: t('gpo.fields.versionNumber'),
                                     read_only: true
                                 },
                                 {
-                                    name: 'flags',
+                                    name: 'ipagpoflags',
                                     label: t('gpo.fields.flags')
                                 }
                             ]
@@ -300,9 +302,12 @@ define([
                 return;
             }
 
+            var previousFocus = document.activeElement;
+            var closing = false;
+            var titleId = 'gpo-shell-title-' + (++nextDialogId);
             var backdrop = $('<div class="modal-backdrop fade modal-gpui-backdrop"></div>');
             var modal = $(
-                '<div class="modal fade modal-gpui" style="display:block;" tabindex="-1" role="dialog">' +
+                '<div class="modal fade modal-gpui" style="display:block;" tabindex="-1" role="dialog" aria-modal="true">' +
                     '<div class="modal-dialog" role="document">' +
                         '<div class="modal-content">' +
                             '<div class="modal-header">' +
@@ -318,14 +323,24 @@ define([
                     '</div>' +
                 '</div>'
             );
+            modal.attr('aria-labelledby', titleId);
+            modal.find('.modal-title').attr('id', titleId);
+            modal.find('.modal-header .close').attr('aria-label', t('collections.close'));
+            modal.on('keydown.gpui', function(event) { editorDialog.trapTab(event, modal[0]); });
 
             var close_modal = function() {
+                if (closing) return;
+                closing = true;
                 modal.removeClass('in');
                 backdrop.removeClass('in');
                 setTimeout(function() {
+                    modal.off('keydown.gpui');
                     modal.remove();
                     backdrop.remove();
                     facet.refresh();
+                    if (previousFocus && previousFocus.isConnected && previousFocus.focus) {
+                        previousFocus.focus({ preventScroll: true });
+                    }
                 }, 500);
             };
 
@@ -339,8 +354,10 @@ define([
             void modal[0].offsetHeight;
             modal.addClass('in');
             backdrop.addClass('in');
+            modal[0].focus({ preventScroll: true });
 
             require(['./js/app'], function(app) {
+                if (closing || !modal[0].isConnected) return;
                 if (app && typeof app.init === 'function') {
                     app.init({
                         containerId: 'gp__container',
@@ -352,6 +369,7 @@ define([
 
                 IPA.notify(t('gpo.gpuiInitializeFailed'), 'error');
             }, function(err) {
+                if (closing || !modal[0].isConnected) return;
                 IPA.notify(t('gpo.gpuiLoadFailed'), 'error');
                 if (window.console && console.error) {
                     console.error('[gpui] Failed to load app module.', err);

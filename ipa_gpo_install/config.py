@@ -22,10 +22,18 @@ TARGET_DBUS_CONFIG_DIR = "/etc/oddjobd.conf.d"
 TARGET_DBUS_HANDLERS_DIR = "/usr/libexec/ipa/oddjob"
 
 REQUIRED_SCHEMA_CLASSES = [
-    'groupPolicyContainer',
-    'groupPolicyChain',
-    'groupPolicyMaster'
+    'ipaGpoContainer',
+    'ipaGpoChain',
+    'ipaGpoMaster'
 ]
+
+# Object classes alone do not prove that data updates have been applied.
+REQUIRED_GROUP_POLICY_ENTRIES = (
+    ('System', 'cn=System', 'nsContainer'),
+    ('Policies', 'cn=Policies,cn=System', 'nsContainer'),
+    ('Chains', 'cn=Chains,cn=System', 'nsContainer'),
+    ('Group Policy Master', 'cn=grouppolicymaster,cn=etc', 'ipaGpoMaster'),
+)
 
 GUID_PATTERN = re.compile(
     r'^\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}'

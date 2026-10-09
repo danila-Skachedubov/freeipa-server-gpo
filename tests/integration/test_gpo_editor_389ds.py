@@ -761,7 +761,7 @@ def test_installed_ipa_cli_crud_and_deleted_gpo_unlinks_from_chain(
 
         chain_dn = live_server.api.Object.chain.get_dn(renamed_chain)
         chain_entry = live_server.ldap.get_entry(
-            chain_dn, attrs_list=["cn", "description", "gplink"]
+            chain_dn, attrs_list=["cn", "description", "ipagpolink"]
         )
         assert str(_single(chain_entry["cn"])) == renamed_chain
         assert str(_single(chain_entry["description"])) == (
@@ -774,9 +774,9 @@ def test_installed_ipa_cli_crud_and_deleted_gpo_unlinks_from_chain(
             "--gpos={}".format(renamed_gpo),
         )
         chain_entry = live_server.ldap.get_entry(
-            chain_dn, attrs_list=["gplink"]
+            chain_dn, attrs_list=["ipagpolink"]
         )
-        assert gpo_dn in [DN(str(value)) for value in chain_entry["gplink"]]
+        assert gpo_dn in [DN(str(value)) for value in chain_entry["ipagpolink"]]
 
         _run_ipa(
             "chain-remove-gpo",
@@ -784,14 +784,14 @@ def test_installed_ipa_cli_crud_and_deleted_gpo_unlinks_from_chain(
             "--gpos={}".format(renamed_gpo),
         )
         chain_entry = live_server.ldap.get_entry(
-            chain_dn, attrs_list=["gplink"]
+            chain_dn, attrs_list=["ipagpolink"]
         )
         assert gpo_dn not in [
-            DN(str(value)) for value in chain_entry.get("gplink", [])
+            DN(str(value)) for value in chain_entry.get("ipagpolink", [])
         ]
 
         # Link it once more, then delete the policy itself.  389-DS must
-        # remove the dangling gpLink value through referential integrity.
+        # remove the dangling ipaGpoLink value through referential integrity.
         _run_ipa(
             "chain-add-gpo",
             renamed_chain,
@@ -804,10 +804,10 @@ def test_installed_ipa_cli_crud_and_deleted_gpo_unlinks_from_chain(
                 live_server.ldap, renamed_gpo
             )
         chain_entry = live_server.ldap.get_entry(
-            chain_dn, attrs_list=["gplink"]
+            chain_dn, attrs_list=["ipagpolink"]
         )
         assert gpo_dn not in [
-            DN(str(value)) for value in chain_entry.get("gplink", [])
+            DN(str(value)) for value in chain_entry.get("ipagpolink", [])
         ]
         assert not gpo_root.exists()
 
@@ -874,7 +874,7 @@ def test_atomic_cas_success_conflict_and_absent_attributes(live_server):
         str(context.dn),
         [(
             plugin._ldap.MOD_REPLACE,
-            "versionNumber",
+            "ipaGpoVersionNumber",
             plugin._ldap_value(ldap_backend, competing_version),
         )],
     )
@@ -1539,7 +1539,7 @@ def test_installed_high_level_command_flow_is_path_free(
         "Registry.pol",
         "GPT.INI",
         "Machine/Preferences",
-        "gPCFileSysPath",
+        "ipaGpoFileSysPath",
         "file_sys_path",
     ):
         assert private_fragment not in public_payload
@@ -1580,6 +1580,9 @@ def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
     )["result"]
     assert computer_classic["publication"]["changed"] is True
     assert (context.gpo_root / "Machine/Scripts/Startup/computer.cmd").is_file()
+    assert "computer.cmd" in (context.gpo_root / "Machine/Scripts/scripts.ini").read_text(
+        encoding="utf-16"
+    )
 
     computer = computer_classic["scripts"]
     computer_powershell = api.Command.gpo_editor_script_entry_add(
@@ -1595,6 +1598,9 @@ def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
         },
     )["result"]
     assert computer_powershell["publication"]["changed"] is True
+    assert "computer.ps1" in (context.gpo_root / "Machine/Scripts/psscripts.ini").read_text(
+        encoding="utf-16"
+    )
 
     user = show("user", "logon")
     user_classic = api.Command.gpo_editor_script_entry_add(
@@ -1610,6 +1616,9 @@ def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
         },
     )["result"]
     assert user_classic["publication"]["changed"] is True
+    assert "user-logon.cmd" in (context.gpo_root / "User/Scripts/scripts.ini").read_text(
+        encoding="utf-16"
+    )
 
     user = user_classic["scripts"]
     user_powershell = api.Command.gpo_editor_script_upload_and_add(
@@ -1626,6 +1635,28 @@ def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
     )["result"]
     assert user_powershell["publication"]["changed"] is True
     assert (context.gpo_root / "User/Scripts/Logon/user.ps1").is_file()
+    assert "user.ps1" in (context.gpo_root / "User/Scripts/psscripts.ini").read_text(
+        encoding="utf-16"
+    )
+    assert any(
+        item["command_line"] == "computer.cmd"
+        for item in show("computer", "startup")["classic"]["entries"]
+    )
+    assert any(
+        item["command_line"] == "user.ps1"
+        for item in show("user", "logon")["powershell"]["entries"]
+    )
+
+    asset = next(
+        item for item in show("computer", "startup")["assets"]
+        if item["name"] == "computer.cmd"
+    )
+    download = api.Command.gpo_editor_script_asset_download(
+        displayname, "computer", "startup",
+        request={"name": asset["name"], "revision": asset["revision"]},
+    )["result"]["asset"]
+    assert base64.b64decode(download["content_base64"]) == b"echo computer\r\n"
+    assert download["byte_size"] == len(b"echo computer\r\n")
 
     # Leave one successful LDAP update unacknowledged, then use a new public
     # mutation to prove that recovery acknowledges the old plan before it
@@ -1677,6 +1708,11 @@ def test_scripts_api_publishes_both_scopes_and_recovers_pending_acknowledgement(
     )
     assert "{42B5FAAE-6536-11D2-AE5A-0000F87571E3}" in (
         published["user_extension_names"]
+    )
+    assert published["version_number"] == _gpt_version(context.gpo_root / "GPT.INI")
+    assert any(
+        item["command_line"] == "computer.cmd"
+        for item in show("computer", "startup")["classic"]["entries"]
     )
     public_payload = json.dumps(recovered, sort_keys=True)
     for private_fragment in (

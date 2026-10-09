@@ -3,11 +3,15 @@ define([
     './components/main/main',
     './components/footer/footer',
     './util/resizable',
+    './components/category-path',
     './components/templates/default-template',
     './components/templates/admx-template',
     './components/templates/folder-template',
     './components/templates/script-template',
     './components/templates/preference/preferences-view-template',
+    './components/templates/security-template',
+    './components/templates/advanced-audit-template',
+    './components/templates/all-policies-template',
     './components/tree-view/tree-view-list',
     './util/element-creator',
     './components/editor-status',
@@ -18,11 +22,15 @@ define([
     mainModule,
     footerModule,
     resizableModule,
+    categoryPathModule,
     defaultTemplateModule,
     admxTemplateModule,
     folderTemplateModule,
     scriptsTemplateModule,
     preferencesTemplateModule,
+    securityTemplateModule,
+    advancedAuditTemplateModule,
+    allPoliciesTemplateModule,
     treeViewListModule,
     elementCreatorModule,
     editorStatusModule,
@@ -39,6 +47,9 @@ define([
     var renderHelpBlock = folderTemplateModule.renderHelpBlock;
     var renderScriptsTemplate = scriptsTemplateModule.renderScriptsTemplate;
     var renderPreferencesTemplate = preferencesTemplateModule.renderPreferencesTemplate;
+    var renderSecurityTemplate = securityTemplateModule.renderSecurityTemplate;
+    var renderAdvancedAuditTemplate = advancedAuditTemplateModule.renderAdvancedAuditTemplate;
+    var renderAllPoliciesTemplate = allPoliciesTemplateModule.renderAllPoliciesTemplate;
     var setTreeItemActive = treeViewListModule.setTreeItemActive;
     var setFolderOpenedState = treeViewListModule.setFolderOpenedState;
     var ensureLazyChildren = treeViewListModule.ensureLazyChildren;
@@ -62,9 +73,39 @@ define([
             currentView: null,
             pendingNavigation: null,
             policyChangedModal: null,
+            searchReturnButton: null,
 
             setWorkspace: function(workspace) {
                 this.workspace = workspace;
+                var node = workspace && workspace.getElement();
+                if (!node) return;
+                node.setAttribute('role', 'region');
+                node.setAttribute('aria-label', t('navigation.catalog'));
+                var container = node.closest('.gp__container');
+                if (!container) return;
+                if (container._gpoPaneNavigation) container.removeEventListener('keydown', container._gpoPaneNavigation);
+                var state = this;
+                container._gpoPaneNavigation = function(event) {
+                    if (event.key !== 'F6' || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+                    var target = event.target;
+                    if (target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+                    var ownerDialog = target.closest('[role="dialog"], [role="alertdialog"]');
+                    if (ownerDialog && !ownerDialog.matches('.modal-gpui')) return;
+                    if (Array.from(container.querySelectorAll('[role="dialog"], [role="alertdialog"], .policy-changed__modal')).some(function(modal) {
+                        return modal.classList.contains('active') || modal.getClientRects().length
+                            && modal.getBoundingClientRect().width > 0 && getComputedStyle(modal).opacity !== '0'
+                            && getComputedStyle(modal).visibility !== 'hidden';
+                    })) return;
+                    var fromTree = Boolean(target.closest('.tree-view'));
+                    var destination = fromTree
+                        ? node.querySelector('[data-list-navigation] [tabindex="0"], [data-list-navigation][tabindex="0"]')
+                            || node.querySelector('[data-policy-filter]') || node.querySelector('.gpo-category-path__segment[tabindex="0"]')
+                        : container.querySelector('.tree-view .tree-item[tabindex="0"]');
+                    if (destination && state.workspace === workspace) {
+                        event.preventDefault(); destination.focus({ preventScroll: true });
+                    }
+                };
+                container.addEventListener('keydown', container._gpoPaneNavigation);
             },
 
             setTreeData: function(treeData) {
@@ -132,6 +173,51 @@ define([
                 return path;
             },
 
+            getCategoryHeading: function(item) {
+                if (item && Array.isArray(item.categoryPath)) return item.categoryPath.join(' / ');
+                var path = this.getPathToItem(item);
+                return path.map(function(node) { return node.title || ''; }).filter(Boolean).join(' / ');
+            },
+
+            renderCategoryPath: function(item) {
+                var path = this.getPathToItem(item);
+                return categoryPathModule.render(path.map(function(node) {
+                    return { title: node.title || '', item: node };
+                }), function(node) {
+                    this.navigateToNode(node, { openPath: true });
+                }.bind(this));
+            },
+
+            updateCachedSecurityModels: function(model) {
+                var updated = new Set();
+                function visit(nodes) {
+                    (nodes || []).forEach(function(node) {
+                        var cached = node.securityModel;
+                        if (cached && cached !== model && !updated.has(cached)) {
+                            Object.keys(model).forEach(function(key) { cached[key] = model[key]; });
+                            updated.add(cached);
+                        }
+                        if (node.children) visit(node.children);
+                    });
+                }
+                visit(this.treeData);
+            },
+
+            updateCachedPolicySource: function(name, response) {
+                function visit(nodes) {
+                    (nodes || []).forEach(function(node) {
+                        if (node.template === 'all_policies' && node.scope === 'computer') {
+                            allPoliciesTemplateModule.updateCachedSource(node, name, response);
+                        }
+                        if (name === 'audit' && node.advancedAuditResponse) {
+                            node.advancedAuditResponse = response;
+                        }
+                        if (node.children) visit(node.children);
+                    });
+                }
+                visit(this.treeData);
+            },
+
             setFolderOpened: function(item, opened) {
                 if (!item || item.type !== 'folder') {
                     return Boolean(item && item.opened);
@@ -142,11 +228,17 @@ define([
             },
 
             toggleFolder: function(item) {
-                if (!item || item.type !== 'folder' || !Array.isArray(item.children) || item.children.length === 0) {
+                if (!item || item.type !== 'folder' || !treeViewListModule.hasVisibleChildren(item)) {
                     return Boolean(item && item.opened);
                 }
-
-                return this.setFolderOpened(item, !item.opened);
+                var opened = this.setFolderOpened(item, !item.opened);
+                if (opened && item.lazy && !item.loaded) {
+                    var element = this.treeListItemElements.get(item);
+                    if (element) return ensureLazyChildren(item, element, this).then(function() {
+                        return item.opened;
+                    }).catch(function() { return item.opened; });
+                }
+                return opened;
             },
 
             openPathToItem: function(item) {
@@ -164,6 +256,15 @@ define([
             activateTreeItem: function(item, treeItemElement) {
                 var nextTreeItemElement = treeItemElement || this.treeItemElements.get(item) || null;
 
+                if (!nextTreeItemElement && item && item.showInTree === false
+                        && (item.template === 'admx' || item.searchReturnTo)) {
+                    var parentItem = this.parentItems.get(item) || null;
+                    while (parentItem && !nextTreeItemElement) {
+                        nextTreeItemElement = this.treeItemElements.get(parentItem) || null;
+                        parentItem = this.parentItems.get(parentItem) || null;
+                    }
+                }
+
                 if (!nextTreeItemElement) {
                     return null;
                 }
@@ -175,6 +276,11 @@ define([
             cleanupCurrentView: function() {
                 if (typeof this.currentViewCleanup === 'function') {
                     this.currentViewCleanup();
+                }
+
+                if (this.searchReturnButton) {
+                    this.searchReturnButton.remove();
+                    this.searchReturnButton = null;
                 }
 
                 this.currentViewCleanup = null;
@@ -311,18 +417,63 @@ define([
                 this.setCurrentView(null);
                 this.selectedPath = this.getPathToItem(item);
                 this.selectedItem = { item: item, element: element };
+                var categoryPath = this.getCategoryHeading(item);
+                if (this.workspace) this.workspace.append(this.renderCategoryPath(item));
 
                 var templateResult = null;
                 var renderedWorkspaceView = null;
 
-                if (item && item.type === 'folder') {
+                if (item && item.template === 'all_policies') {
+                    if (editorActions) editorActions.style.display = 'flex';
+                    if (admxActions) admxActions.style.display = 'none';
+                    if (helpSeparator) helpSeparator.style.display = 'none';
+                    templateResult = renderAllPoliciesTemplate({
+                        item: item,
+                        header: this.header,
+                        hideHeading: true,
+                        onSecuritySaved: function(model, response) {
+                            this.updateCachedSecurityModels(model);
+                            this.updateCachedPolicySource('security', response);
+                        }.bind(this),
+                        onAuditSaved: this.updateCachedPolicySource.bind(this, 'audit'),
+                        onNavigate: function(target) {
+                            target.searchReturnTo = item;
+                            this.registerTreeNode(target, { parentItem: item });
+                            this.navigateToNode(target, { openPath: true });
+                        }.bind(this),
+                        isCurrent: function() {
+                            return renderRequestId === this.renderRequestId
+                                && this.selectedItem && this.selectedItem.item === item;
+                        }.bind(this)
+                    });
+                    renderedWorkspaceView = templateResult;
+                } else if (item && (item.template === 'security' || item.template === 'advanced_audit')) {
+                    if (admxActions) admxActions.style.display = 'none';
+                    if (helpSeparator) helpSeparator.style.display = 'none';
+                    templateResult = await (item.template === 'security' ? renderSecurityTemplate : renderAdvancedAuditTemplate)({
+                        item: item,
+                        categoryPath: categoryPath,
+                        header: this.header,
+                        hideHeading: true,
+                        onSaved: function(response) {
+                            if (item.template === 'security') this.updateCachedSecurityModels(item.securityModel);
+                            this.updateCachedPolicySource(item.template === 'security' ? 'security' : 'audit', response);
+                        }.bind(this),
+                        onNavigate: function(child) { this.navigateToNode(child, { openPath: true, openCurrentFolder: true }); }.bind(this),
+                        isCurrent: function() { return renderRequestId === this.renderRequestId && this.selectedItem && this.selectedItem.item === item; }.bind(this)
+                    });
+                    renderedWorkspaceView = templateResult;
+                } else if (item && item.type === 'folder') {
                     if (editorActions) editorActions.style.display = 'flex';
                     if (admxActions) admxActions.style.display = 'none';
                     if (helpSeparator) helpSeparator.style.display = 'none';
                     templateResult = renderFolderTemplate({
+                        categoryPath: categoryPath,
+                        hideHeading: true,
                         children: item.children || [],
                         help: item.help,
                         isHelpOpen: this.isHelpOpen,
+                        listState: item.listState || (item.listState = {}),
                         onItemClick: function(childItem) {
                             this.navigateToNode(childItem, {
                                 openPath: true,
@@ -333,19 +484,52 @@ define([
                     renderedWorkspaceView = templateResult;
                 } else if (item && item.type === 'file') {
                     if (item.template === 'admx') {
-                        templateResult = await renderAdmxTemplate({
+                        if (admxActions) admxActions.style.display = 'none';
+                        if (helpSeparator) helpSeparator.style.display = 'none';
+                        var parentCategory = this.parentItems.get(item);
+                        var state = this;
+                        var policyDialog = null, policyEditor = null;
+                        templateResult = renderFolderTemplate({
+                            hideHeading: true,
+                            children: parentCategory && parentCategory.children || [item],
+                            help: parentCategory && parentCategory.help,
                             isHelpOpen: this.isHelpOpen,
-                            header: this.header,
-                            item: item,
-                            isCurrent: function() {
-                                return renderRequestId === this.renderRequestId
-                                    && this.selectedItem
-                                    && this.selectedItem.item === item;
-                            }.bind(this)
+                            listState: parentCategory && (parentCategory.listState || (parentCategory.listState = {})),
+                            onItemClick: function(child) { state.navigateToNode(child, { openPath: true }); }
                         });
+                        var catalog = templateResult;
+                        var cleanupCatalog = catalog.cleanup;
+                        var mountCatalog = catalog.onMounted;
+                        catalog.onMounted = function() {
+                            if (mountCatalog) mountCatalog();
+                            var opened = admxTemplateModule.openAdmxDialog(catalog, {
+                                item: item,
+                                isCurrent: function() { return renderRequestId === state.renderRequestId; },
+                                restoreFocus: function() { return catalog.getElement().querySelector('.workspace-list-item.active, .workspace-list-item'); },
+                                onClose: function() { policyDialog = null; policyEditor = null; }
+                            });
+                            if (opened) { policyDialog = opened.dialog; policyEditor = opened.editor; }
+                        };
+                        catalog.hasUnsavedChanges = function() {
+                            return Boolean(policyEditor && policyEditor.hasUnsavedChanges());
+                        };
+                        catalog.applyChanges = async function() {
+                            if (!policyEditor) return true;
+                            var saved = await policyEditor.applyChanges();
+                            if (saved && policyDialog) policyDialog.close();
+                            return saved;
+                        };
+                        catalog.cancelChanges = function() { if (policyDialog) policyDialog.close(); return true; };
+                        catalog.cleanup = function() {
+                            if (policyEditor) policyEditor.cleanup();
+                            if (policyDialog) policyDialog.close();
+                            if (cleanupCatalog) cleanupCatalog();
+                        };
                     } else if (item.template === 'preferences') {
                         templateResult = await renderPreferencesTemplate({
+                            categoryPath: categoryPath,
                             header: this.header,
+                            hideHeading: true,
                             item: item,
                             isHelpOpen: this.isHelpOpen,
                             isCurrent: function() {
@@ -357,7 +541,17 @@ define([
                     } else if (item.template === 'scripts') {
                         if (admxActions) admxActions.style.display = 'none';
                         if (helpSeparator) helpSeparator.style.display = 'none';
-                        templateResult = renderScriptsTemplate({ item: item });
+                        templateResult = renderScriptsTemplate({
+                            categoryPath: categoryPath,
+                            item: item,
+                            header: this.header,
+                            hideHeading: true,
+                            isCurrent: function() {
+                                return renderRequestId === this.renderRequestId
+                                    && this.selectedItem
+                                    && this.selectedItem.item === item;
+                            }.bind(this)
+                        });
                     } else {
                         templateResult = renderDefaultTemplate();
                     }
@@ -374,7 +568,28 @@ define([
 
                 if (this.workspace && renderedWorkspaceView) {
                     this.workspace.append(renderedWorkspaceView);
+                    categoryPathModule.attachFilter(this.workspace.getElement().querySelector('.gpo-category-path'),
+                        renderedWorkspaceView.getElement());
                     this.setCurrentView(templateResult);
+                    if (typeof templateResult.onMounted === 'function') {
+                        templateResult.onMounted();
+                    }
+                }
+
+                if (item && item.searchReturnTo && editorActions) {
+                    var back = createElement('button', {
+                        className: ['button', 'active', 'gpo-policy-search__back'],
+                        attrs: { type: 'button', 'data-policy-search-back': '' },
+                        text: t('policySearch.back'),
+                        events: { click: function() {
+                            this.navigateToNode(item.searchReturnTo, {
+                                openPath: true, openCurrentFolder: true
+                            });
+                        }.bind(this) }
+                    });
+                    editorActions.prepend(back.getElement());
+                    editorActions.style.display = 'flex';
+                    this.searchReturnButton = back.getElement();
                 }
 
                 this.syncHelpButtonState();
@@ -426,15 +641,15 @@ define([
                     if (!listItemElement) {
                         return Promise.resolve(false);
                     }
+                    if (openCurrentFolder !== undefined) this.setFolderOpened(item, openCurrentFolder);
 
                     return ensureLazyChildren(item, listItemElement, this).then(function() {
                         if (config.navigationRequestId !== this.navigationRequestId) {
                             return false;
                         }
                         var nextConfig = Object.assign({}, config, { lazyLoadComplete: true });
-                        if (nextConfig.openCurrentFolder === undefined) {
-                            nextConfig.openCurrentFolder = true;
-                        }
+                        // Expansion may have changed while the request was pending.
+                        delete nextConfig.openCurrentFolder;
                         return this.guardNavigation(item, nextConfig);
                     }.bind(this)).catch(function() {
                         return false;

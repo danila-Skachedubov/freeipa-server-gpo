@@ -23,8 +23,10 @@ Requires: freeipa-server-core
 Requires: freeipa-server-trust-ad
 Requires: samba-common-tools
 Requires: admx-basealt
-Requires: python3-module-admix >= 0.1.0
-Requires: python3-module-admix < 0.2.0
+Requires: sdmx-basealt >= 1.0.0
+Requires: sdmx-schemas >= 1.0.0
+Requires: python3-module-admix >= 0.3.0
+Requires: python3-module-admix < 0.4.0
 Requires: acl
 Requires: coreutils
 Requires: libgio
@@ -100,7 +102,7 @@ make install PREFIX=%_prefix DESTDIR=%buildroot PYTHON_SITELIBDIR=%python3_sitel
   is open , the information merges (thx vladimirovicp)
 - feat: list of children, added scrolling for large lists (thx vladimirovicp)
   text than a block (thx vladimirovicp)
-  is now at a9afdf0 fix:admx window height 100% (thx vladimirovicp)
+  is now at a9afdf0 fix:admx window height 100%% (thx vladimirovicp)
 - fix:indents in the tree structure (thx vladimirovicp)
 - feat(ui): show chain description in web interface
 - refactor: replace displayName with description for chain entity

@@ -10,8 +10,9 @@ from pathlib import Path
 
 import ldap
 
-from ipalib import api
+from ipalib import api, errors
 from ipalib import krb_utils
+from ipapython.dn import DN
 from ipapython import ipautil
 from .config import (
     FREEIPA_SYSVOL_PATH,
@@ -19,6 +20,7 @@ from .config import (
     GPO_EDITOR_GROUP,
     GPO_EDITOR_USER,
     LOCALE_DIR,
+    REQUIRED_GROUP_POLICY_ENTRIES,
     get_domain_sysvol_path,
     get_policies_path,
 )
@@ -185,6 +187,34 @@ class IPAChecker:
 
         except Exception as e:
             self.logger.error(_("Error checking schema object classes: {}").format(e))
+            return False
+
+    def check_group_policy_infrastructure(self):
+        """Verify data-update prerequisites independently of schema classes."""
+        try:
+            ldap_backend = self.api.Backend.ldap2
+            for name, relative_dn, expected_class in REQUIRED_GROUP_POLICY_ENTRIES:
+                dn = DN(DN(relative_dn), self.api.env.basedn)
+                try:
+                    entry = ldap_backend.get_entry(dn, attrs_list=['objectclass'])
+                except errors.NotFound:
+                    self.logger.warning(
+                        _("Required Group Policy LDAP entry '{}' is missing.").format(name)
+                    )
+                    return False
+                object_classes = entry.get('objectclass') or []
+                if not any(
+                        str(value).casefold() == expected_class.casefold()
+                        for value in object_classes):
+                    self.logger.error(
+                        _("Required Group Policy LDAP entry '{}' has an unexpected object class.").format(name)
+                    )
+                    return False
+            return True
+        except Exception as exc:
+            self.logger.error(
+                _("Unable to verify Group Policy LDAP infrastructure: {}").format(exc)
+            )
             return False
 
     def check_adtrust_installed(self):

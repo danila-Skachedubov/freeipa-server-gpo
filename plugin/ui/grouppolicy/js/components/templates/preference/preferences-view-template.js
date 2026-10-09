@@ -3,9 +3,13 @@ define([
     '../../../util/API',
     '../../../util/editor-dto',
     '../../editor-status',
+    '../../confirmation-dialog',
+    '../../editor-dialog',
+    '../../list-navigation',
     '../../../locales/translations',
-    './layouts/index'
-], function(elementCreator, API, dto, editorStatus, translations, preferenceLayouts) {
+    './layouts/index',
+    './targeting-editor'
+], function(elementCreator, API, dto, editorStatus, confirmationDialog, editorDialog, listNavigation, translations, preferenceLayouts, targetingEditor) {
     "use strict";
 
     var createElement = elementCreator.createElement;
@@ -22,6 +26,10 @@ define([
         if (code === 'required') return pt('validationRequired');
         if (code === 'invalid_number') return pt('validationInvalidNumber');
         if (code === 'unsigned_byte_range') return pt('validationUnsignedByteRange');
+        var targetingCodes = { invalid_date: 'validationDate', invalid_time: 'validationTime',
+            invalid_ip: 'validationIp', invalid_ipv6: 'validationIpv6', invalid_mac: 'validationMac', invalid_version: 'validationVersion', invalid_guid: 'validationGuid',
+            invalid_range: 'validationRange', invalid_value: 'validationValue' };
+        if (targetingCodes[code]) return pt(targetingCodes[code]);
         return pt('validationFixErrors');
     }
 
@@ -808,39 +816,8 @@ define([
         return result;
     }
 
+
     function filterKey(path) { return JSON.stringify(path || []); }
-
-    function filterFieldInventory(showResult) {
-        var inventory = new Map();
-        var raw = showResult.filter_fields || [];
-        if (Array.isArray(raw)) {
-            raw.forEach(function(entry) {
-                if (entry && Array.isArray(entry.path)) inventory.set(filterKey(entry.path), {
-                    fields: entry.fields || [],
-                    available: entry.available !== false,
-                    error_category: entry.error_category || null
-                });
-            });
-        } else if (raw && typeof raw === 'object') {
-            Object.keys(raw).forEach(function(key) {
-                inventory.set(key, { fields: raw[key] || [], available: true, error_category: null });
-            });
-        }
-        return inventory;
-    }
-
-    function newFilterFields(showResult, kind) {
-        var raw = showResult.new_filter_fields || {};
-        if (Array.isArray(raw)) {
-            var entry = raw.find(function(candidate) { return candidate.kind === kind; });
-            return entry ? entry.fields || [] : [];
-        }
-        if (raw[kind]) return raw[kind];
-        var descriptor = (showResult.filter_kinds || []).find(function(candidate) {
-            return candidate.kind === kind;
-        });
-        return descriptor ? descriptor.fields || [] : [];
-    }
 
     async function renderPreferencesTemplate(options) {
         var config = options || {};
@@ -872,6 +849,9 @@ define([
         var itemFieldsCache = new Map();
         var fieldsRequestId = 0;
         var tableRefreshScheduled = false;
+        var deleting = false;
+        var disposed = false;
+        var tableNavigation;
 
         if (headerControls) {
             headerControls.setAttribute('data-preference-owner', headerOwner);
@@ -890,9 +870,10 @@ define([
         }
 
         function setHeaderState() {
+            if (typeof config.onFormStateChange === 'function') config.onFormStateChange(Boolean(modalState));
             if (!ownsHeader()) return;
             var editable = Boolean(documentDto.editable);
-            var available = editable && !modalState && !opening;
+            var available = editable && !modalState && !opening && !deleting;
             if (createButton) createButton.classList.toggle('active', available);
             if (editButton) editButton.classList.toggle('active', available && selectedIdentity !== null);
             if (deleteButton) deleteButton.classList.toggle('active', available && selectedIdentity !== null);
@@ -952,11 +933,13 @@ define([
         function renderTable() {
             var tableSlot = rootElement.querySelector('.gpo-editor-preferences__table');
             if (!tableSlot) return;
+            var heldFocus = tableSlot.contains(document.activeElement);
             tableSlot.innerHTML = '';
             if (!items.length) {
                 tableSlot.appendChild(createElement('div', {
                     className: 'gpo-editor-empty', text: pt('emptyItems')
                 }).getElement());
+                if (tableNavigation) { tableNavigation.sync(); if (heldFocus) tableNavigation.focusSelected(); }
                 return;
             }
             var columns = tableColumns(item.preferenceKind);
@@ -1006,9 +989,7 @@ define([
                         text: documentDto.editable ? t('header.edit') : pt('viewTitle'),
                         events: { click: function(event) {
                             event.stopPropagation();
-                            selectedIdentity = dto.clone(preferenceItem.identity);
-                            renderTable();
-                            setHeaderState();
+                            selectItem(preferenceItem.identity);
                             void openForm(selectedIdentity);
                         } }
                     })]
@@ -1019,41 +1000,54 @@ define([
                 var selected = selectedIdentity !== null && dto.equal(selectedIdentity, preferenceItem.identity);
                 var cells = buildDataCells(preferenceItem, index);
                 if (!useTemplate) cells.push(buildActionsCell(preferenceItem));
-                return createElement('tr', {
+                var row = createElement('tr', {
                     className: selected ? 'active' : null,
-                    attrs: { tabindex: '0' },
+                    attrs: { tabindex: '-1', 'data-preference-identity': cacheKey(preferenceItem.identity),
+                        'aria-selected': selected ? 'true' : 'false' },
                     children: cells,
                     events: {
                         click: function() {
-                            selectedIdentity = dto.clone(preferenceItem.identity);
-                            renderTable();
-                            setHeaderState();
-                            void requestInfoPanel(selectedIdentity);
+                            selectItem(preferenceItem.identity);
+                            if (tableNavigation) tableNavigation.focusSelected();
                         },
                         dblclick: function() {
-                            selectedIdentity = dto.clone(preferenceItem.identity);
-                            void openForm(selectedIdentity);
-                        },
-                        keydown: function(event) {
-                            if (event.key !== 'Enter' && event.key !== ' ') return;
-                            event.preventDefault();
-                            selectedIdentity = dto.clone(preferenceItem.identity);
-                            renderTable();
-                            setHeaderState();
+                            if (modalState || opening || deleting) return;
+                            selectItem(preferenceItem.identity);
                             void openForm(selectedIdentity);
                         }
                     }
                 });
+                row.getElement().__preferenceIdentity = preferenceItem.identity;
+                return row;
             });
 
             var table = createElement('table', {
-                className: 'preference__table',
+                className: ['preference__table', 'gpo-catalog-table'],
                 children: [
                     createElement('thead', { children: [createElement('tr', { children: headerCells })] }),
                     createElement('tbody', { children: bodyRows })
                 ]
             });
             tableSlot.appendChild(table.getElement());
+            if (tableNavigation) { tableNavigation.sync(); if (heldFocus) tableNavigation.focusSelected(); }
+        }
+
+        function selectItem(identity) {
+            selectedIdentity = dto.clone(identity);
+            Array.prototype.forEach.call(rootElement.querySelectorAll('[data-preference-identity]'), function(row) {
+                var selected = dto.equal(row.__preferenceIdentity, selectedIdentity);
+                row.classList.toggle('active', selected);
+                row.setAttribute('aria-selected', selected ? 'true' : 'false');
+            });
+            if (tableNavigation) tableNavigation.sync();
+            setHeaderState();
+            void requestInfoPanel(selectedIdentity);
+        }
+
+        function focusTable() {
+            if (!disposed && (typeof config.isCurrent !== 'function' || config.isCurrent()) && tableNavigation) {
+                tableNavigation.focusSelected();
+            }
         }
 
         function cacheKey(identity) {
@@ -1252,7 +1246,8 @@ define([
             dataTable.append(createElement('div', {
                 className: 'gpo-editor-preferences__header',
                 children: [
-                    createElement('h2', { text: documentDto.label || item.preferenceKind }),
+                    config.hideHeading ? null : createElement('h2', { text: config.categoryPath || documentDto.label || item.preferenceKind,
+                        attrs: { 'data-category-path': '' } }),
                     createElement('div', {
                         className: ['gpo-editor-document-state', documentDto.editable ? null : 'gpo-editor-document-state--readonly'],
                         text: documentDto.editable ? pt('documentEditable') : pt('documentReadOnly')
@@ -1261,363 +1256,23 @@ define([
             }));
             dataTable.append(createElement('div', { className: 'gpo-editor-preferences__error' }));
             dataTable.append(createElement('div', { className: 'gpo-editor-preferences__table' }));
-            dataTable.append(createElement('div', { className: 'gpo-editor-preferences__modal-host' }));
+            if (!config.modalHost) dataTable.append(createElement('div', { className: 'gpo-editor-preferences__modal-host' }));
             rootElement.appendChild(dataTable.getElement());
             rootElement.appendChild(buildInfoPanel().getElement());
             resetInfoPanel();
         }
 
         function buildFilterEditor(showResult, formState, readonly) {
-            var container = createElement('div', { className: 'gpo-editor-filters' });
-            var inventory = filterFieldInventory(showResult);
-            var kinds = showResult.filter_kinds || [];
-            var sourceFilters = dto.clone(showResult.filters || []);
-            var filters = dto.clone(sourceFilters);
-            var selectedFilter = null;
-            var selectedControls = [];
-            var filterDrafts = new Map();
-            var originalDrafts = new Map();
-            var filterAvailability = new Map();
-            var structuralOperation = null;
-            var structuralTemporaryId = null;
-            var nextTemporaryId = 1;
-
-            sourceFilters.forEach(function(filter) {
-                var descriptor = inventory.get(filterKey(filter.path)) || {
-                    fields: filter.fields || [], available: true
-                };
-                var fields = dto.clone(descriptor.fields || []);
-                filterDrafts.set(filterKey(filter.path), fields);
-                originalDrafts.set(filterKey(filter.path), dto.clone(fields));
-                filterAvailability.set(filterKey(filter.path), descriptor.available !== false);
+            return targetingEditor.render({
+                showResult: showResult,
+                formState: formState,
+                readonly: readonly,
+                scope: item.scope,
+                language: translations.getLanguage(),
+                pt: pt,
+                fieldControl: fieldControl,
+                validationMessage: validationMessage
             });
-
-            function keyFor(filter) {
-                return filter && filter._temporaryId || filterKey(filter && filter.path);
-            }
-
-            function setNotice(message, kind) {
-                var slot = container.getElement().querySelector('.gpo-editor-filters__notice');
-                if (!slot) return;
-                slot.innerHTML = '';
-                if (!message) return;
-                slot.appendChild(createElement('div', {
-                    className: ['gpo-editor-preference-notice', 'gpo-editor-preference-notice--' + (kind || 'info')],
-                    text: message
-                }).getElement());
-            }
-
-            function captureSelected() {
-                if (!selectedFilter) return;
-                var key = keyFor(selectedFilter);
-                var controls = new Map(selectedControls.map(function(control) {
-                    return [control.id, control];
-                }));
-                var fields = filterDrafts.get(key) || [];
-                filterDrafts.set(key, fields.map(function(field) {
-                    var control = controls.get(field.id);
-                    return Object.assign({}, field, {
-                        value: control ? control.read() : dto.clone(field.value)
-                    });
-                }));
-            }
-
-            function structuralTargets(filter) {
-                if (!structuralOperation) return true;
-                if (filter && filter._temporaryId) {
-                    return structuralOperation.op === 'insert'
-                        && structuralTemporaryId === filter._temporaryId;
-                }
-                return Boolean(filter && structuralOperation.path
-                    && dto.equal(structuralOperation.path, filter.path));
-            }
-
-            function renderFilterFields() {
-                var slot = container.getElement().querySelector('.gpo-editor-filters__fields');
-                if (!slot) return;
-                slot.innerHTML = '';
-                selectedControls = [];
-                if (!selectedFilter) {
-                    slot.textContent = pt('selectFilter');
-                    return;
-                }
-                var key = keyFor(selectedFilter);
-                if (filterAvailability.get(key) === false) {
-                    slot.appendChild(createElement('div', {
-                        className: ['gpo-editor-preference-notice', 'gpo-editor-preference-notice--warning'],
-                        text: pt('unsupportedFilterFields')
-                    }).getElement());
-                    return;
-                }
-                (filterDrafts.get(key) || []).forEach(function(field) {
-                    var control = fieldControl(
-                        field,
-                        readonly || formState.busy,
-                        Boolean(selectedFilter && selectedFilter._temporaryId),
-                        { wrapSelect: true, wrapCheckbox: true, wrapText: true }
-                    );
-                    selectedControls.push(control);
-                    slot.appendChild(control.element.getElement());
-                });
-            }
-
-            function syncToolbar() {
-                var selectedUsable = selectedFilter && structuralTargets(selectedFilter);
-                kindSelect.getElement().disabled = Boolean(
-                    readonly || formState.busy || !kinds.length
-                );
-                addButton.getElement().disabled = Boolean(
-                    readonly || formState.busy || !kinds.length || structuralOperation
-                );
-                replaceButton.getElement().disabled = Boolean(
-                    readonly || formState.busy || !kinds.length || !selectedUsable
-                );
-                removeButton.getElement().disabled = Boolean(
-                    readonly || formState.busy || !selectedUsable
-                );
-            }
-
-            function selectFilter(filter) {
-                if (formState.busy) return;
-                captureSelected();
-                selectedFilter = filter;
-                if (filter && filter.kind && kinds.some(function(info) { return info.kind === filter.kind; })) {
-                    kindSelect.getElement().value = filter.kind;
-                }
-                renderFilterList();
-                renderFilterFields();
-                syncToolbar();
-            }
-
-            function renderFilterList() {
-                var slot = container.getElement().querySelector('.gpo-editor-filters__tree');
-                if (!slot) return;
-                slot.innerHTML = '';
-                filters.forEach(function(filter) {
-                    slot.appendChild(createElement('button', {
-                        className: ['gpo-editor-filter-node', selectedFilter === filter ? 'active' : null],
-                        attrs: {
-                            type: 'button',
-                            disabled: formState.busy ? 'disabled' : null
-                        },
-                        style: { marginLeft: String((filter.depth || 0) * 16) + 'px' },
-                        text: filter.label || filter.kind || filter.element_name || pt('unsupportedFilterFields'),
-                        events: { click: function() { selectFilter(filter); } }
-                    }).getElement());
-                });
-            }
-
-            var kindSelect = createElement('select', {
-                attrs: { 'aria-label': pt('filterType') },
-                children: kinds.map(function(info) {
-                    return createElement('option', { attrs: { value: info.kind }, text: info.label || info.kind });
-                })
-            });
-            var addButton = createElement('button', {
-                className: ['button', 'gpo-editor-filter-add'],
-                attrs: { type: 'button' },
-                text: pt('addFilter'),
-                events: { click: function() {
-                    if (formState.busy) return;
-                    captureSelected();
-                    if (structuralOperation) {
-                        setNotice(pt('oneStructuralChangeLimit'), 'warning');
-                        return;
-                    }
-                    if (selectedFilter && selectedFilter._temporaryId && selectedFilter.supports_children) {
-                        setNotice(pt('saveNewCollectionFirst'), 'warning');
-                        return;
-                    }
-                    var kind = kindSelect.getElement().value;
-                    var info = kinds.find(function(candidate) { return candidate.kind === kind; }) || {};
-                    var parentFilter = selectedFilter && selectedFilter.supports_children
-                        ? selectedFilter : null;
-                    var collectionPath = parentFilter ? dto.clone(parentFilter.path) : [];
-                    var insertionIndex = parentFilter
-                        ? Number(parentFilter.child_count || 0)
-                        : filters.filter(function(filter) { return Number(filter.depth || 0) === 0; }).length;
-                    var temporaryId = 'new-' + nextTemporaryId++;
-                    var filter = {
-                        _temporaryId: temporaryId,
-                        _parentFilter: parentFilter,
-                        kind: kind,
-                        label: info.label || kind,
-                        depth: parentFilter ? Number(parentFilter.depth || 0) + 1 : 0,
-                        child_count: 0,
-                        supports_children: Boolean(info.supports_children)
-                    };
-                    var insertAt = filters.length;
-                    if (parentFilter) {
-                        insertAt = filters.indexOf(parentFilter) + 1;
-                        while (insertAt < filters.length
-                                && Number(filters[insertAt].depth || 0) > Number(parentFilter.depth || 0)) {
-                            insertAt += 1;
-                        }
-                        parentFilter.child_count = insertionIndex + 1;
-                    }
-                    filters.splice(insertAt, 0, filter);
-                    filterDrafts.set(temporaryId, dto.clone(newFilterFields(showResult, kind)));
-                    filterAvailability.set(temporaryId, true);
-                    structuralOperation = dto.insertFilterOperation(
-                        collectionPath, insertionIndex, kind, []
-                    );
-                    structuralTemporaryId = temporaryId;
-                    formState.dirty = true;
-                    setNotice(pt('oneStructuralChangeLimit'), 'info');
-                    selectFilter(filter);
-                } }
-            });
-            var replaceButton = createElement('button', {
-                className: ['button', 'gpo-editor-filter-replace'],
-                attrs: { type: 'button' },
-                text: pt('replaceFilter'),
-                events: { click: function() {
-                    if (formState.busy) return;
-                    if (!selectedFilter) return;
-                    captureSelected();
-                    if (!structuralTargets(selectedFilter)) {
-                        setNotice(pt('oneStructuralChangeLimit'), 'warning');
-                        return;
-                    }
-                    var kind = kindSelect.getElement().value;
-                    var info = kinds.find(function(candidate) { return candidate.kind === kind; }) || {};
-                    var key = keyFor(selectedFilter);
-                    if (selectedFilter._temporaryId) {
-                        structuralOperation.filter_kind = kind;
-                    } else {
-                        structuralOperation = dto.replaceFilterOperation(selectedFilter.path, kind, []);
-                        structuralTemporaryId = null;
-                    }
-                    selectedFilter.kind = kind;
-                    selectedFilter.label = info.label || kind;
-                    selectedFilter.supports_children = Boolean(info.supports_children);
-                    var replacedPath = dto.clone(selectedFilter.path || []);
-                    filters = filters.filter(function(filter) {
-                        return filter === selectedFilter || !filter.path
-                            || !dto.pathWithin(filter.path, replacedPath)
-                            || dto.equal(filter.path, replacedPath);
-                    });
-                    selectedFilter.child_count = 0;
-                    filterDrafts.set(key, dto.clone(newFilterFields(showResult, kind)));
-                    filterAvailability.set(key, true);
-                    formState.dirty = true;
-                    setNotice(pt('oneStructuralChangeLimit'), 'info');
-                    renderFilterList();
-                    renderFilterFields();
-                    syncToolbar();
-                } }
-            });
-            var removeButton = createElement('button', {
-                className: ['button', 'gpo-editor-filter-remove'],
-                attrs: { type: 'button' },
-                text: pt('removeFilter'),
-                events: { click: function() {
-                    if (formState.busy) return;
-                    if (!selectedFilter) return;
-                    captureSelected();
-                    if (!structuralTargets(selectedFilter)) {
-                        setNotice(pt('oneStructuralChangeLimit'), 'warning');
-                        return;
-                    }
-                    var removing = selectedFilter;
-                    if (removing._temporaryId) {
-                        if (removing._parentFilter) {
-                            removing._parentFilter.child_count = Math.max(
-                                0, Number(removing._parentFilter.child_count || 0) - 1
-                            );
-                        }
-                        structuralOperation = null;
-                        structuralTemporaryId = null;
-                    } else {
-                        structuralOperation = dto.removeFilterOperation(removing.path);
-                        structuralTemporaryId = null;
-                    }
-                    filters = filters.filter(function(filter) {
-                        if (filter === removing) return false;
-                        if (!removing.path || !filter.path) return true;
-                        return !dto.pathWithin(filter.path, removing.path);
-                    });
-                    selectedFilter = null;
-                    formState.dirty = true;
-                    setNotice(structuralOperation ? pt('oneStructuralChangeLimit') : '', 'info');
-                    renderFilterList();
-                    renderFilterFields();
-                    syncToolbar();
-                } }
-            });
-
-            container.append(createElement('div', {
-                className: ['gpo-editor-filters__toolbar', readonly ? 'gpo-editor-filters__toolbar--disabled' : null],
-                children: [
-                    createElement('span', { text: pt('filterType') }),
-                    kindSelect, addButton, replaceButton, removeButton
-                ]
-            }));
-            container.append(createElement('div', { className: 'gpo-editor-filters__notice' }));
-            container.append(createElement('div', {
-                className: 'gpo-editor-filters__layout',
-                children: [
-                    createElement('div', { className: 'gpo-editor-filters__tree' }),
-                    createElement('div', { className: 'gpo-editor-filters__fields' })
-                ]
-            }));
-            renderFilterList();
-            renderFilterFields();
-            syncToolbar();
-
-            formState.readFilterResult = function() {
-                captureSelected();
-                var validationErrors = [];
-                var fieldEdits = sourceFilters.map(function(filter) {
-                    var key = filterKey(filter.path);
-                    var original = originalDrafts.get(key) || [];
-                    var current = filterDrafts.get(key) || original;
-                    var discardedByStructure = structuralOperation
-                        && (structuralOperation.op === 'remove' || structuralOperation.op === 'replace')
-                        && dto.pathWithin(filter.path, structuralOperation.path);
-                    if (!discardedByStructure && filterAvailability.get(key) !== false) {
-                        current.forEach(function(field) {
-                            if (!field.editable) return;
-                            var code = dto.validatePreferenceField(field, field.value);
-                            if (code) validationErrors.push({ path: filter.path, id: field.id, code: code });
-                        });
-                    }
-                    return {
-                        path: filter.path,
-                        fields: dto.preferenceFieldEdits(original, current.map(function(field) {
-                            return { id: field.id, value: field.value };
-                        }), true)
-                    };
-                });
-                var structural = structuralOperation ? dto.clone(structuralOperation) : null;
-                if (structural && (structural.op === 'insert' || structural.op === 'replace')) {
-                    var key = structural.op === 'insert'
-                        ? structuralTemporaryId : filterKey(structural.path);
-                    var fields = filterDrafts.get(key) || [];
-                    fields.forEach(function(field) {
-                        if (!field.editable) return;
-                        var code = dto.validatePreferenceField(field, field.value);
-                        if (code) validationErrors.push({ path: structural.path || [], id: field.id, code: code });
-                    });
-                    structural.fields = dto.preferenceFieldEdits(fields, fields.map(function(field) {
-                        return { id: field.id, value: field.value };
-                    }), false);
-                }
-                selectedControls.forEach(function(control) { control.setError(''); });
-                if (selectedFilter) {
-                    validationErrors.filter(function(error) {
-                        return dto.equal(error.path, selectedFilter.path || []);
-                    }).forEach(function(error) {
-                        selectedControls.filter(function(control) { return control.id === error.id; })
-                            .forEach(function(control) { control.setError(validationMessage(error.code)); });
-                    });
-                }
-                return {
-                    operations: dto.buildPreferenceFilterOperations(fieldEdits, structural),
-                    errors: validationErrors
-                };
-            };
-            return container;
         }
 
         async function openForm(identity) {
@@ -1625,7 +1280,7 @@ define([
             if (creating && !documentDto.editable) return;
             if (opening) return false;
             if (modalState && !closeForm(false, 'close')) return;
-            var host = rootElement.querySelector('.gpo-editor-preferences__modal-host');
+            var host = config.modalHost || rootElement.querySelector('.gpo-editor-preferences__modal-host');
             if (!host) return;
             var requestId = ++formRequestId;
             setOpening(true);
@@ -1736,12 +1391,18 @@ define([
                 var closeAction = function() { closeForm(false, 'close'); };
                 var cancelAction = function() { closeForm(false, 'cancel'); };
                 var filterSection = createElement('div', { className: 'preference__modal-filters' });
-                filterSection.append(createElement('h3', { text: pt('filtersHeading') }));
                 filterSection.append(buildFilterEditor(response, formState, readonly));
                 var targettingModalElement = null;
-                var closeTargettingModal = function() {
-                    if (targettingModalElement) targettingModalElement.classList.remove('active');
+                var closeTargettingModal = function(accept) {
+                    if (accept && !readonly && !formState.acceptFilterDraft()) return;
+                    if (!accept) formState.cancelFilterDraft();
+                    if (targettingModalElement) {
+                        targettingModalElement.classList.remove('active');
+                        targettingModalElement.inert = true;
+                    }
                     form.getElement().classList.remove('dimmed');
+                    form.getElement().inert = false;
+                    if (targettingButton) targettingButton.getElement().focus();
                 };
                 var buildTargettingModal = function() {
                     if (targettingModalElement) return targettingModalElement;
@@ -1750,6 +1411,7 @@ define([
                             'targetting__modal', 'preference__modal',
                             readonly ? 'preference__modal--readonly' : null
                         ],
+                        attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': pt('targettingTitle'), tabindex: '-1' },
                         children: [createElement('div', {
                             className: 'preference__modal-wrapper',
                             children: [
@@ -1763,7 +1425,7 @@ define([
                                         createElement('button', {
                                             className: 'close',
                                             attrs: { type: 'button', 'aria-label': pt('close') },
-                                            events: { click: closeTargettingModal }
+                                            events: { click: function() { closeTargettingModal(false); } }
                                         })
                                     ]
                                 }),
@@ -1773,26 +1435,39 @@ define([
                                 }),
                                 createElement('div', {
                                     className: 'preference__modal-footer',
-                                    children: [
+                                    children: readonly ? [
                                         createElement('button', {
                                             className: ['button', 'btn-cancel'],
                                             attrs: { type: 'button' },
                                             text: pt('close'),
-                                            events: { click: closeTargettingModal }
+                                            events: { click: function() { closeTargettingModal(false); } }
+                                        })
+                                    ] : [
+                                        createElement('button', {
+                                            className: ['button', 'btn-cancel'],
+                                            attrs: { type: 'button' },
+                                            text: pt('cancel'),
+                                            events: { click: function() { closeTargettingModal(false); } }
+                                        }),
+                                        createElement('button', {
+                                            className: ['button', 'btn-ok'],
+                                            attrs: { type: 'button' },
+                                            text: pt('targetingOk'),
+                                            events: { click: function() { closeTargettingModal(true); } }
                                         })
                                     ]
                                 })
                             ]
                         })]
                     }).getElement();
-                    if (!readonly) {
-                        targettingModalElement.addEventListener('input', function() {
-                            if (!formState.busy) formState.dirty = true;
-                        });
-                        targettingModalElement.addEventListener('change', function() {
-                            if (!formState.busy) formState.dirty = true;
-                        });
-                    }
+                    targettingModalElement.addEventListener('keydown', function(event) {
+                        if (event.defaultPrevented || event.target.closest('[role="dialog"], [role="alertdialog"]') !== targettingModalElement) return;
+                        if (event.key === 'Escape' && !event.defaultPrevented) {
+                            event.preventDefault(); closeTargettingModal(false);
+                        }
+                        editorDialog.trapTab(event, targettingModalElement);
+                    });
+                    targettingModalElement.inert = true;
                     return targettingModalElement;
                 };
                 var buildModalContent = function() {
@@ -1808,6 +1483,15 @@ define([
                         'preference__modal', 'gpo-editor-preference-form',
                         readonly ? 'preference__modal--readonly' : null
                     ],
+                    attrs: { role: 'dialog', 'aria-modal': 'true', tabindex: '-1',
+                        'aria-label': creating ? pt('createTitle') : (readonly ? pt('viewTitle') : pt('editTitle')) },
+                    events: { keydown: function(event) {
+                        if (event.defaultPrevented || event.target.closest('[role="dialog"], [role="alertdialog"]') !== form.getElement()) return;
+                        if (event.key === 'Escape') {
+                            event.preventDefault(); event.stopPropagation(); closeAction();
+                        }
+                        editorDialog.trapTab(event, form.getElement());
+                    } },
                     children: [createElement('div', {
                         className: 'preference__modal-wrapper',
                         children: [
@@ -1870,11 +1554,18 @@ define([
                     text: pt('targettingButton'),
                     events: {
                         click: function() {
+                            if (formState.busy) return;
+                            formState.beginFilterDraft();
                             var modal = buildTargettingModal();
                             if (!modal.parentNode) host.appendChild(modal);
                             void modal.offsetHeight;
+                            modal.inert = false;
                             modal.classList.add('active');
                             form.getElement().classList.add('dimmed');
+                            form.getElement().inert = true;
+                            var first = modal.querySelector('.gpo-editor-filter-add:not(:disabled), [role="treeitem"], .btn-cancel');
+                            if (first) first.focus();
+                            else modal.focus();
                         }
                     }
                 });
@@ -1963,54 +1654,9 @@ define([
             }
         }
 
-        function buildDiscardModal() {
-            if (discardModal) return discardModal;
-            var content = createElement('div', { className: 'policy-changed__modal-content' });
-            var modal = createElement('div', {
-                className: ['policy-changed__modal', 'policy-changed__modal--discard'],
-                children: [
-                    createElement('div', {
-                        className: 'policy-changed__modal-wrapper',
-                        children: [
-                            createElement('div', {
-                                className: 'policy-changed__modal-header',
-                                children: [
-                                    createElement('div', {
-                                        className: 'title',
-                                        text: t('confirmModal.title')
-                                    })
-                                ]
-                            }),
-                            content,
-                            createElement('div', {
-                                className: 'policy-changed__modal-footer',
-                                children: [
-                                    createElement('div', {
-                                        className: ['btn', 'btn-no'],
-                                        text: t('policyChangedModal.no'),
-                                        events: { click: function() { handleDiscardModalChoice(false); } }
-                                    }),
-                                    createElement('div', {
-                                        className: ['btn', 'btn-yes'],
-                                        text: t('policyChangedModal.yes'),
-                                        events: { click: function() { handleDiscardModalChoice(true); } }
-                                    })
-                                ]
-                            })
-                        ]
-                    })
-                ]
-            });
-            rootElement.appendChild(modal.getElement());
-            discardModal = { element: modal.getElement(), content: content.getElement() };
-            return discardModal;
-        }
-
         function showDiscardModal(action) {
-            var modal = buildDiscardModal();
+            if (discardModal) return;
             pendingDiscard = { action: action };
-            modal.content.textContent = pt(action === 'cancel'
-                ? 'confirmCancelDiscard' : 'confirmCloseDiscard');
             if (modalState && modalState.formElement) {
                 modalState.formElement.classList.add('gpo-editor-preference-form--confirming');
                 if (modalState.formElement.parentNode) {
@@ -2021,13 +1667,20 @@ define([
                     }
                 }
             }
-            void modal.element.offsetHeight;
-            modal.element.classList.add('active');
+            discardModal = confirmationDialog.open(config.modalHost || rootElement, {
+                message: pt(action === 'cancel'
+                    ? 'confirmCancelDiscard' : 'confirmCloseDiscard'),
+                onCancel: function() { handleDiscardModalChoice(false); },
+                onConfirm: function() { handleDiscardModalChoice(true); }
+            });
         }
 
         function hideDiscardModal() {
-            if (discardModal) discardModal.element.classList.remove('active');
-            var confirmingForms = rootElement.querySelectorAll(
+            if (discardModal) {
+                discardModal.close();
+                discardModal = null;
+            }
+            var confirmingForms = (config.modalHost || rootElement).querySelectorAll(
                 '.gpo-editor-preference-form--confirming');
             Array.prototype.forEach.call(confirmingForms, function(formElement) {
                 formElement.classList.remove('gpo-editor-preference-form--confirming');
@@ -2069,10 +1722,11 @@ define([
             pendingDiscard = null;
             hideDiscardModal();
             formRequestId += 1;
-            var host = rootElement.querySelector('.gpo-editor-preferences__modal-host');
+            var host = config.modalHost || rootElement.querySelector('.gpo-editor-preferences__modal-host');
             if (host) closeHostModals(host);
             modalState = null;
             setHeaderState();
+            if (action !== 'cleanup' && action !== 'navigation') focusTable();
             return true;
         }
 
@@ -2292,6 +1946,7 @@ define([
                 if (!state.creating) invalidateCachedFields(state.identity);
                 closeForm(true, 'saved');
                 await loadItems();
+                if (typeof config.onSaved === 'function') config.onSaved(response);
                 return true;
             } catch (error) {
                 renderFormError(state, error);
@@ -2306,23 +1961,43 @@ define([
         }
 
         async function deleteSelected() {
-            if (!documentDto.editable || selectedIdentity === null || modalState || opening) return;
+            if (!documentDto.editable || selectedIdentity === null || modalState || opening || deleting || disposed) return;
             if (!window.confirm(pt('confirmDelete'))) return;
             var identity = dto.clone(selectedIdentity);
+            var before = items.map(function(entry) { return cacheKey(entry.identity); });
+            var removed = false;
+            deleting = true; setHeaderState();
             if (deleteButton) deleteButton.disabled = true;
             try {
-                await API.preferenceDelete(item.scope, item.preferenceKind, identity);
+                var response = await API.preferenceDelete(item.scope, item.preferenceKind, identity);
                 invalidateCachedFields(identity);
-                if (dto.equal(selectedIdentity, identity)) selectedIdentity = null;
                 await loadItems();
+                if (disposed || typeof config.isCurrent === 'function' && !config.isCurrent()) return;
+                var next = listNavigation.neighbor(before, [cacheKey(identity)], items.map(function(entry) { return cacheKey(entry.identity); }));
+                var survivor = items.find(function(entry) { return cacheKey(entry.identity) === next; });
+                selectedIdentity = survivor ? dto.clone(survivor.identity) : null;
+                renderTable(); setHeaderState(); removed = true;
+                if (typeof config.onSaved === 'function') config.onSaved(response);
             } catch (error) {
                 showPageError(error);
             } finally {
+                deleting = false; setHeaderState();
                 if (deleteButton && ownsHeader()) deleteButton.disabled = false;
+                if (removed && !disposed && (typeof config.isCurrent !== 'function' || config.isCurrent())) focusTable();
             }
         }
 
         renderShell();
+        var tableSlot = rootElement.querySelector('.gpo-editor-preferences__table');
+        tableNavigation = listNavigation.bind(tableSlot, {
+            rows: function() { return Array.from(tableSlot.querySelectorAll('[data-preference-identity]')); },
+            selected: function() { return tableSlot.querySelector('tr.active'); },
+            select: function(row) { selectItem(row.__preferenceIdentity); },
+            activate: function(row) { void openForm(dto.clone(row.__preferenceIdentity)); },
+            remove: function() { void deleteSelected(); },
+            canRemove: function() { return Boolean(documentDto.editable); },
+            busy: function() { return disposed || opening || deleting || Boolean(modalState); }
+        });
         setHeaderState();
         addListener(createButton, 'click', function() {
             if (createButton.classList.contains('active')) void openForm(null);
@@ -2340,8 +2015,11 @@ define([
                 || modalState.reconciling || modalState.requiresRefresh));
         };
         root.applyChanges = saveForm;
+        root.isBusy = function() { return Boolean(modalState && (modalState.saving || modalState.reconciling)); };
         root.cancelChanges = function() { return closeForm(true, 'navigation'); };
         root.cleanup = function() {
+            disposed = true;
+            tableNavigation.cleanup();
             itemsRequestId += 1;
             formRequestId += 1;
             cleanups.splice(0).forEach(function(cleanup) { cleanup(); });
@@ -2364,8 +2042,62 @@ define([
         return root;
     }
 
+    async function openPreferencesDialog(host, options) {
+        var config = options || {};
+        var item = config.item || {};
+        var closed = false;
+        var editor = null;
+        var nestedHost = createElement('div', {
+            className: ['gp__preference', 'gpo-editor-preferences__modal-host']
+        });
+        var controls = createElement('div', { className: ['gp__control', 'gpo-security-workbench__toolbar'], children: [
+            createElement('button', { className: ['button', 'preferences__btn-create'], attrs: { type: 'button' }, text: t('header.create') }),
+            createElement('button', { className: ['button', 'preferences__btn-edit'], attrs: { type: 'button' }, text: t('header.edit') }),
+            createElement('button', { className: ['button', 'preferences__btn-delete'], attrs: { type: 'button' }, text: t('header.delete') })
+        ] });
+        var content = createElement('div', { className: 'gpo-preferences-family-dialog__content', children: [
+            controls, createElement('div', { className: 'gpo-editor-empty', text: t('policySearch.loading') })
+        ] });
+        // The existing controller can own a local toolbar without touching the
+        // All Policies header. Keep its controls in the visible dialog content.
+        var dialog = editorDialog.open(host, {
+            title: item.title || item.document && item.document.label || item.preferenceKind,
+            className: ['gpo-preferences-family-dialog'], content: content,
+            readOnly: true, cancelLabel: pt('close'),
+            canClose: function() { return !editor || !editor.isBusy(); },
+            isDirty: function() { return Boolean(editor && editor.hasUnsavedChanges()); },
+            onClose: function() {
+                closed = true;
+                if (editor) editor.cleanup();
+                nestedHost.getElement().remove();
+                if (config.onClose) config.onClose();
+            },
+            restoreFocus: config.restoreFocus
+        });
+        // Place item dialogs beside the family modal within its backdrop:
+        // transformed modal bounds must not clip their existing fixed layout.
+        dialog.root.getElement().parentElement.appendChild(nestedHost.getElement());
+        var localDocument = Object.assign({}, item.document || {});
+        if (item.readOnly) localDocument.editable = false;
+        editor = await renderPreferencesTemplate({
+            item: Object.assign({}, item, { document: localDocument }),
+            hideHeading: true,
+            header: { getElement: function() { return content.getElement(); } },
+            modalHost: nestedHost.getElement(),
+            onFormStateChange: function(opened) { dialog.root.getElement().inert = opened; },
+            onSaved: config.onSaved,
+            isCurrent: function() { return !closed && (typeof config.isCurrent !== 'function' || config.isCurrent()); }
+        });
+        if (closed || typeof config.isCurrent === 'function' && !config.isCurrent()) {
+            editor.cleanup(); dialog.close(); return null;
+        }
+        content.getElement().replaceChildren(controls.getElement(), editor.getElement());
+        return { editor: editor, dialog: dialog };
+    }
+
     return {
         renderPreferencesTemplate: renderPreferencesTemplate,
+        openPreferencesDialog: openPreferencesDialog,
         _test: {
             fieldControl: fieldControl,
             mockupFieldControl: mockupFieldControl,

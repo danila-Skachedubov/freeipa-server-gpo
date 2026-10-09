@@ -66,9 +66,10 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
         var responseError = response && response.error ? response.error : response;
         var thrownData = thrown && (thrown.data || thrown.details || thrown.error);
         var details = firstObject([
+            thrownData && thrownData.error && thrownData.error.data,
             thrownData && thrownData.data,
-            thrownData,
             responseError && responseError.data,
+            thrownData,
             responseError,
             thrown
         ]);
@@ -133,6 +134,10 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
             rpc.command({
                 entity: "gpo",
                 method: method,
+                // Security errors are rendered by the editor in the selected UI
+                // language.  FreeIPA's retry dialog would expose the raw server
+                // message first and require a second dismissal to reach it.
+                retry: !/^editor_(security|advanced_audit|script|policy_index)/.test(method),
                 args: [displayName].concat(clone(args || [])),
                 options: commandOptions,
                 on_success: function(data) {
@@ -188,6 +193,10 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
         var options = {};
         if (categoryId !== null && categoryId !== undefined) options.category_id = categoryId;
         return execute("editor_children", [scope], withLocales(options));
+    }
+
+    function policyIndex(scope) {
+        return execute("editor_policy_index", [scope], withLocales());
     }
 
     function policyShow(scope, policyId) {
@@ -294,8 +303,31 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
         }).then(rememberEnvelope);
     }
 
+    function scriptAssetDownload(scope, event, request) {
+        return execute("editor_script_asset_download", [scope, event], {
+            request: clone(request || {})
+        });
+    }
+
     function reconcile() {
         return execute("editor_reconcile", [], {}).then(rememberEnvelope);
+    }
+
+    function securityDefinitionsShow() {
+        return execute("editor_security_definitions_show", [], withLocales());
+    }
+    function securityDefinitionsUpdate(request) {
+        return execute("editor_security_definitions_update", [], withLocales({
+            request: clone(request || {})
+        })).then(rememberEnvelope);
+    }
+    function advancedAuditShow() {
+        return execute("editor_advanced_audit_show", [], {});
+    }
+    function advancedAuditUpdate(request) {
+        return execute("editor_advanced_audit_update", [], {
+            request: clone(request || {})
+        }).then(rememberEnvelope);
     }
 
     return {
@@ -303,6 +335,7 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
         initialize: initialize,
         open: open,
         children: children,
+        policyIndex: policyIndex,
         policyShow: policyShow,
         policyUpdate: policyUpdate,
         preferenceDocuments: preferenceDocuments,
@@ -322,7 +355,12 @@ define(["freeipa/ipa", "freeipa/rpc", "../locales/translations"], function(IPA, 
         scriptUploadAndAdd: scriptUploadAndAdd,
         scriptAssetReplace: scriptAssetReplace,
         scriptAssetDelete: scriptAssetDelete,
+        scriptAssetDownload: scriptAssetDownload,
         reconcile: reconcile,
+        securityDefinitionsShow: securityDefinitionsShow,
+        securityDefinitionsUpdate: securityDefinitionsUpdate,
+        advancedAuditShow: advancedAuditShow,
+        advancedAuditUpdate: advancedAuditUpdate,
         getDisplayName: function() { return selectedDisplayName; },
         getOpenResult: function() { return editorOpenResult; },
         localePreferences: localePreferences,

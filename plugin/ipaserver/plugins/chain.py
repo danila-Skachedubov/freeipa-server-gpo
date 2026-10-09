@@ -7,6 +7,7 @@ from ipalib import api, errors, _, ngettext
 from ipalib import Str, Command, output, Flag, Bool
 from ipalib.plugable import Registry
 from ipalib import constants
+from ipalib.text import GettextFactory
 from ipapython.dn import DN
 
 from ipaserver.plugins.baseldap import (
@@ -16,6 +17,7 @@ from ipaserver.plugins.baseldap import (
 
 logger = logging.getLogger(__name__)
 register = Registry()
+_gpo = GettextFactory(domain='ipa-gpo-install')
 
 PLUGIN_CONFIG = (
     ('container_system', DN(('cn', 'System'))),
@@ -23,12 +25,12 @@ PLUGIN_CONFIG = (
 )
 
 OBJECT_TYPE_MAPPING = {
-    'usergroup': ('group', 'cn'),
-    'computergroup': ('hostgroup', 'cn'),
+    'ipagpousergroup': ('group', 'cn'),
+    'ipagpocomputergroup': ('hostgroup', 'cn'),
 }
 OBJECT_TYPE_CLASSES = {
-    'usergroup': 'ipausergroup',
-    'computergroup': 'ipahostgroup',
+    'ipagpousergroup': 'ipausergroup',
+    'ipagpocomputergroup': 'ipahostgroup',
 }
 
 GP_LOOKUP_ATTRIBUTES = ['displayName', 'cn']
@@ -72,7 +74,7 @@ def verify_gpo_schema(ldap, api):
                     name=_('Group Policy schema'),
                     reason=_(
                         'Group Policy schema is not installed. '
-                        'The required LDAP object class "groupPolicyContainer" is missing.'
+                        'The required LDAP object class "ipaGpoContainer" is missing.'
                         'Please run the ipa-gpo-install command to extend the schema.'
                     )
                 )
@@ -187,10 +189,10 @@ class chain(LDAPObject):
     container_dn = None
     object_name = _('Group Policy Chain')
     object_name_plural = _('Group Policy Chains')
-    object_class = ['groupPolicyChain']
-    permission_filter_objectclasses = ['groupPolicyChain']
-    default_attributes = ['cn', 'description', 'userGroup', 'computerGroup', 'gpLink']
-    attribute_members = {'gplink': ['gpo']}
+    object_class = ['ipaGpoChain']
+    permission_filter_objectclasses = ['ipaGpoChain']
+    default_attributes = ['cn', 'description', 'ipaGpoUserGroup', 'ipaGpoComputerGroup', 'ipaGpoLink']
+    attribute_members = {'ipagpolink': ['gpo']}
     allow_rename = True
     label = _('Group Policy Chains')
     label_singular = _('Group Policy Chain')
@@ -201,8 +203,8 @@ class chain(LDAPObject):
             'ipapermbindruletype': 'all',
             'ipapermright': {'read', 'search', 'compare'},
             'ipapermdefaultattr': {
-                'cn', 'objectclass', 'description', 'usergroup',
-                'computergroup', 'gplink'
+                'cn', 'objectclass', 'description', 'ipagpousergroup',
+                'ipagpocomputergroup', 'ipagpolink'
             },
         },
         'System: Add Group Policy Chains': {
@@ -216,7 +218,7 @@ class chain(LDAPObject):
         'System: Modify Group Policy Chains': {
             'ipapermright': {'write'},
             'ipapermdefaultattr': {
-                'cn', 'description', 'usergroup', 'computergroup', 'gplink'
+                'cn', 'description', 'ipagpousergroup', 'ipagpocomputergroup', 'ipagpolink'
             },
             'default_privileges': {'Group Policy Administrators'},
         },
@@ -230,16 +232,16 @@ class chain(LDAPObject):
         Str('description?', cli_name='desc',
             label=_('Description'),
             doc=_('Description for the chain')),
-        Str('usergroup?', cli_name='user_group', label=_('User group'),
+        Str('ipagpousergroup?', cli_name='user_group', label=_('User group'),
             doc=_('User group name for this chain')),
-        Str('computergroup?', cli_name='computer_group',
+        Str('ipagpocomputergroup?', cli_name='computer_group',
             label=_('Computer group'),
             doc=_('Computer group name for this chain')),
-        Str('gplink*', cli_name='gp_link', label=_('Group Policy links'),
+        Str('ipagpolink*', cli_name='gp_link', label=_('Group Policy links'),
             doc=_('List of Group Policy Container names')),
         Bool('active?',
             cli_name='active', label=_('Active'),
-            doc=_('Whether this chain is active (computed from chainList)'),
+            doc=_('Whether this chain is active (computed from ipaGpoChainList)'),
             flags=['no_create', 'no_update']),
     )
 
@@ -248,7 +250,7 @@ class chain(LDAPObject):
         try:
             return super(chain, self).__json__()
         except KeyError as e:
-            if 'groupPolicyChain' in str(e):
+            if 'ipaGpoChain' in str(e):
                 result = {
                     'name': self.name,
                     'doc': self.doc,
@@ -278,7 +280,7 @@ class chain(LDAPObject):
         try:
             ldap = self.api.Backend.ldap2
             entry = ldap.find_entry_by_attr(
-                'displayName', displayname, 'groupPolicyContainer',
+                'displayName', displayname, 'ipaGpoContainer',
                 base_dn=DN('cn=Policies,cn=System', api.env.basedn)
             )
             return entry.dn
@@ -286,10 +288,10 @@ class chain(LDAPObject):
             raise errors.NotFound(reason=_("Group Policy '{}' not found").format(displayname))
 
     def get_attrs_list(self, ldap, dn, attrs_list, **options):
-        """Include gplink attribute for association tables."""
+        """Include ipagpolink attribute for association tables."""
         attrs_list = list(attrs_list)
-        if 'gplink' not in attrs_list:
-            attrs_list.append('gplink')
+        if 'ipagpolink' not in attrs_list:
+            attrs_list.append('ipagpolink')
         return attrs_list
 
     def convert_attribute_members(self, entry_attrs, *keys, **options):
@@ -311,8 +313,8 @@ class chain(LDAPObject):
         convert_dns_in_entries(
             entries, ldap,
             attrs_by_field={
-                'usergroup': ['cn'],
-                'computergroup': ['cn']
+                'ipagpousergroup': ['cn'],
+                'ipagpocomputergroup': ['cn']
             }
         )
 
@@ -320,10 +322,10 @@ class chain(LDAPObject):
         convert_dns_in_entries(
             entries, ldap,
             attrs_by_field={
-                'gplink': ['displayName', 'cn']
+                'ipagpolink': ['displayName', 'cn']
             },
             extra_processing={
-                'gplink': lambda entry, converted: entry.__setitem__('gplink_gpo', list(converted))
+                'ipagpolink': lambda entry, converted: entry.__setitem__('ipagpolink_gpo', list(converted))
             }
         )
 
@@ -336,7 +338,7 @@ class chain(LDAPObject):
                         attrs = [
                             OBJECT_TYPE_MAPPING[attr_name][1], 'objectclass'
                         ]
-                    elif attr_name == 'gplink':
+                    elif attr_name == 'ipagpolink':
                         attrs = GPO_VALIDATION_ATTRIBUTES
                     else:
                         attrs = ['cn']
@@ -349,10 +351,10 @@ class chain(LDAPObject):
                             attr_name,
                             name,
                         )
-                    elif attr_name == 'gplink':
+                    elif attr_name == 'ipagpolink':
                         _require_object_class(
                             entry,
-                            'groupPolicyContainer',
+                            'ipaGpoContainer',
                             attr_name,
                             name,
                         )
@@ -373,7 +375,7 @@ class chain(LDAPObject):
                         name,
                     )
                 return str(group_dn)
-            elif attr_name == 'gplink':
+            elif attr_name == 'ipagpolink':
                 return str(self.find_gp_by_displayname(name))
             else:
                 return name
@@ -402,19 +404,19 @@ class chain(LDAPObject):
                     attr_name, options[attr_name], strict
                 )
 
-        if 'gplink' in options and options['gplink']:
-            gp_names = options['gplink']
+        if 'ipagpolink' in options and options['ipagpolink']:
+            gp_names = options['ipagpolink']
             if isinstance(gp_names, str):
-                converted['gplink'] = [
-                    self.resolve_object_name('gplink', gp_names, strict)
+                converted['ipagpolink'] = [
+                    self.resolve_object_name('ipagpolink', gp_names, strict)
                 ]
             elif isinstance(gp_names, tuple):
-                converted['gplink'] = [
-                    self.resolve_object_name('gplink', name, strict) for name in gp_names
+                converted['ipagpolink'] = [
+                    self.resolve_object_name('ipagpolink', name, strict) for name in gp_names
                 ]
             else:
-                converted['gplink'] = [
-                    self.resolve_object_name('gplink', name, strict) for name in gp_names
+                converted['ipagpolink'] = [
+                    self.resolve_object_name('ipagpolink', name, strict) for name in gp_names
                 ]
 
         return converted
@@ -431,7 +433,7 @@ class chain_show(LDAPRetrieve):
         if chain_name:
             try:
                 gpmaster_result = api.Command.gpmaster_show(raw=True)
-                active_chains = gpmaster_result['result'].get('chainlist', [])
+                active_chains = gpmaster_result['result'].get('ipagpochainlist', [])
                 entry_attrs['active'] = [
                     _chain_is_active(chain_name, dn, active_chains)
                 ]
@@ -448,7 +450,7 @@ class chain_toggle_base(Command):
             chain_dn = chain_result.get('dn')
 
             gpmaster_result = api.Command.gpmaster_show(raw=True)
-            current_chains = gpmaster_result['result'].get('chainlist', [])
+            current_chains = gpmaster_result['result'].get('ipagpochainlist', [])
             is_active = _chain_is_active(
                 canonical_name,
                 chain_dn,
@@ -537,7 +539,7 @@ class chain_add(LDAPCreate):
 
         try:
             gpmaster_result = api.Command.gpmaster_show()
-            current_chains = gpmaster_result['result'].get('chainlist', [])
+            current_chains = gpmaster_result['result'].get('ipagpochainlist', [])
 
             if chain_name not in current_chains:
                 api.Command.gpmaster_mod(add_chain=[chain_name])
@@ -593,11 +595,11 @@ class chain_mod(LDAPUpdate):
     def _validate_modification_options(self, options):
         """Reject combinations whose results would overwrite each other."""
         group_options = {
-            'usergroup': (
-                'usergroup', 'add_usergroup', 'remove_usergroup'
+            'ipagpousergroup': (
+                'ipagpousergroup', 'add_usergroup', 'remove_usergroup'
             ),
-            'computergroup': (
-                'computergroup',
+            'ipagpocomputergroup': (
+                'ipagpocomputergroup',
                 'add_computergroup',
                 'remove_computergroup',
             ),
@@ -618,7 +620,7 @@ class chain_mod(LDAPUpdate):
             options.get('moveup_gpc') or options.get('movedown_gpc')
         )
         standard_option_names = {
-            'rename', 'description', 'usergroup', 'computergroup', 'gplink',
+            'rename', 'description', 'ipagpousergroup', 'ipagpocomputergroup', 'ipagpolink',
             'add_usergroup', 'remove_usergroup',
             'add_computergroup', 'remove_computergroup',
             'setattr', 'addattr', 'delattr',
@@ -655,7 +657,7 @@ class chain_mod(LDAPUpdate):
             for attr_name in entry_attrs:
                 attr_value = entry_attrs[attr_name]
                 if (isinstance(attr_value, list) and len(attr_value) == 1 and
-                    attr_name not in ['gplink']):
+                    attr_name not in ['ipagpolink']):
                     result_dict[attr_name] = attr_value[0]
                 else:
                     result_dict[attr_name] = attr_value
@@ -679,8 +681,8 @@ class chain_mod(LDAPUpdate):
                 )
             )
 
-        entry = ldap.get_entry(dn, attrs_list=['gplink'])
-        current_gplinks = [str(gp_dn) for gp_dn in entry.get('gplink', [])]
+        entry = ldap.get_entry(dn, attrs_list=['ipagpolink'])
+        current_gplinks = [str(gp_dn) for gp_dn in entry.get('ipagpolink', [])]
         original_gplinks = list(current_gplinks)
 
         if len(current_gplinks) < 2:
@@ -734,10 +736,10 @@ class chain_mod(LDAPUpdate):
             ldap.modify_s(
                 dn,
                 [
-                    (ldap_module.MOD_DELETE, 'gpLink', None),
+                    (ldap_module.MOD_DELETE, 'ipaGpoLink', None),
                     (
                         ldap_module.MOD_ADD,
-                        'gpLink',
+                        'ipaGpoLink',
                         [ldap.encode(value) for value in current_gplinks],
                     ),
                 ],
@@ -753,7 +755,7 @@ class chain_mod(LDAPUpdate):
                     name='cn',
                     error=constants.ERRMSG_GROUPUSER_NAME.format('chain')
                 )
-        current_entry = ldap.get_entry(dn, attrs_list=['usergroup', 'computergroup', 'gplink'])
+        current_entry = ldap.get_entry(dn, attrs_list=['ipagpousergroup', 'ipagpocomputergroup', 'ipagpolink'])
 
         self._handle_add_operations(entry_attrs, options, keys)
         self._handle_remove_operations(ldap, current_entry, entry_attrs, options)
@@ -765,38 +767,38 @@ class chain_mod(LDAPUpdate):
         """Handle add operations."""
         if 'add_usergroup' in options and options['add_usergroup']:
             group_name = options['add_usergroup']
-            validated = self.obj.convert_names_to_dns({'usergroup': group_name}, strict=True)
-            entry_attrs['usergroup'] = validated['usergroup']
+            validated = self.obj.convert_names_to_dns({'ipagpousergroup': group_name}, strict=True)
+            entry_attrs['ipagpousergroup'] = validated['ipagpousergroup']
 
         if 'add_computergroup' in options and options['add_computergroup']:
             hostgroup_name = options['add_computergroup']
             validated = self.obj.convert_names_to_dns(
-                {'computergroup': hostgroup_name}, strict=True
+                {'ipagpocomputergroup': hostgroup_name}, strict=True
             )
-            entry_attrs['computergroup'] = validated['computergroup']
+            entry_attrs['ipagpocomputergroup'] = validated['ipagpocomputergroup']
 
     def _handle_remove_operations(self, ldap, current_entry, entry_attrs, options):
         """Handle remove operations."""
         if 'remove_usergroup' in options and options['remove_usergroup']:
-            if not current_entry.get('usergroup'):
+            if not current_entry.get('ipagpousergroup'):
                 raise errors.ValidationError(
                     name='remove_usergroup',
                     error=_("No user group assigned to this chain")
                 )
-            entry_attrs['usergroup'] = None
+            entry_attrs['ipagpousergroup'] = None
 
         if 'remove_computergroup' in options and options['remove_computergroup']:
-            if not current_entry.get('computergroup'):
+            if not current_entry.get('ipagpocomputergroup'):
                 raise errors.ValidationError(
                     name='remove_computergroup',
                     error=_("No computer group assigned to this chain")
                 )
-            entry_attrs['computergroup'] = None
+            entry_attrs['ipagpocomputergroup'] = None
 
     def _handle_standard_modifications(self, entry_attrs, options):
         """Handle standard modification operations."""
         standard_options = {k: v for k, v in options.items()
-                           if k in ['usergroup', 'computergroup', 'gplink'] and v}
+                           if k in ['ipagpousergroup', 'ipagpocomputergroup', 'ipagpolink'] and v}
 
         if standard_options:
             converted = self.obj.convert_names_to_dns(standard_options, strict=True)
@@ -810,7 +812,7 @@ class chain_mod(LDAPUpdate):
             try:
                 gpmaster_result = api.Command.gpmaster_show()
                 current_chains = gpmaster_result['result'].get(
-                    'chainlist', []
+                    'ipagpochainlist', []
                 )
                 if old_name in current_chains:
                     api.Command.gpmaster_mod(
@@ -838,7 +840,7 @@ class chain_del(LDAPDelete):
             try:
                 gpmaster_result = api.Command.gpmaster_show()
                 current_chains = gpmaster_result['result'].get(
-                    'chainlist', []
+                    'ipagpochainlist', []
                 )
                 if chain_name in current_chains:
                     api.Command.gpmaster_mod(remove_chain=[chain_name])
@@ -868,6 +870,26 @@ class chain_find(LDAPSearch):
         options_copy.update(converted)
         return super(chain_find, self).args_options_2_entry(*args, **options_copy)
 
+    def exc_callback(self, args, options, exc, call_func,
+                     *call_args, **call_kwargs):
+        """Report missing installation infrastructure without hiding failures."""
+        if (isinstance(exc, errors.NotFound) and
+                not isinstance(exc, errors.EmptyResult) and
+                call_func == self.obj.backend.find_entries):
+            # LDAPSearch otherwise resolves parent_object='', raising KeyError
+            # instead of returning a public diagnostic. Intercept
+            # only the original LDAP search, not errors from other callbacks.
+            raise errors.DatabaseError(
+                desc=_gpo("Group Policy installation is incomplete"),
+                info=_gpo(
+                    "The Chains LDAP container is missing. Run ipa-gpo-install "
+                    "on the IPA server to repair the installation."
+                ),
+            ) from exc
+        return super(chain_find, self).exc_callback(
+            args, options, exc, call_func, *call_args, **call_kwargs
+        )
+
     def post_callback(self, ldap, entries, truncated, *args, **options):
         """Sort chains by GPMaster order."""
         raw = options.get('raw', False)
@@ -877,7 +899,7 @@ class chain_find(LDAPSearch):
         if entries and (not raw or active_filter_requested):
             try:
                 gpmaster_result = api.Command.gpmaster_show()
-                gpmaster_chains = gpmaster_result['result'].get('chainlist', [])
+                gpmaster_chains = gpmaster_result['result'].get('ipagpochainlist', [])
             except Exception:
                 if active_filter_requested:
                     raise
@@ -934,25 +956,11 @@ class chain_find(LDAPSearch):
 
         return [entry for _, entry in active_entries] + inactive_entries
 
-    def execute(self, *args, **options):
-        """Override execute to preserve GPMaster ordering."""
-        try:
-            result = super(chain_find, self).execute(*args, **options)
-        except errors.NotFound:
-            return {
-                'result': [],
-                'count': 0,
-                'truncated': False,
-                'summary': self.msg_summary % {'count': 0}
-            }
-
-        return result
-
 class ChainResolveBase(Command):
     def _get_active_chains_optimized(self):
         """Get active chains using API instead of direct LDAP."""
         gpmaster_result = api.Command.gpmaster_show()
-        return gpmaster_result['result'].get('chainlist', [])
+        return gpmaster_result['result'].get('ipagpochainlist', [])
 
     def _get_matching_policies(self, target_groups, chain_group_attr):
         if not target_groups:
@@ -971,7 +979,7 @@ class ChainResolveBase(Command):
 
                 chain_groups = chain_info.get(chain_group_attr, [])
                 if self._groups_match(target_groups, chain_groups):
-                    for policy_name in chain_info.get('gplink', []):
+                    for policy_name in chain_info.get('ipagpolink', []):
                         if policy_name not in seen_policies:
                             ordered_policies.append(policy_name)
                             seen_policies.add(policy_name)
@@ -999,12 +1007,12 @@ class ChainResolveBase(Command):
 
                 policy_dict = {
                     'name': display_name or policy_name,
-                    'flags': _first_value(policy_result.get('flags'), ''),
+                    'flags': _first_value(policy_result.get('ipagpoflags'), ''),
                     'file_system_path': _first_value(
-                        policy_result.get('gpcfilesyspath'), ''
+                        policy_result.get('ipagpofilesyspath'), ''
                     ),
                     'version': _first_value(
-                        policy_result.get('versionnumber'), ''
+                        policy_result.get('ipagpoversionnumber'), ''
                     )
                 }
                 policies_list.append(policy_dict)
@@ -1038,7 +1046,7 @@ class chain_resolve_for_user(ChainResolveBase):
             _normalize_to_list(user_info.get('memberof_group')) +
             _normalize_to_list(user_info.get('memberofindirect_group'))
         ))
-        policy_names = self._get_matching_policies(user_groups, 'usergroup')
+        policy_names = self._get_matching_policies(user_groups, 'ipagpousergroup')
         policies_list = self._build_policies_list(policy_names)
 
         return {'result': policies_list}
@@ -1061,7 +1069,7 @@ class chain_resolve_for_host(ChainResolveBase):
             _normalize_to_list(host_info.get('memberofindirect_hostgroup'))
         ))
         policy_names = self._get_matching_policies(
-            host_groups, 'computergroup'
+            host_groups, 'ipagpocomputergroup'
         )
         policies_list = self._build_policies_list(policy_names)
 
@@ -1071,7 +1079,7 @@ class chain_resolve_for_host(ChainResolveBase):
 class chain_add_gpo(LDAPAddMember):
     """Add Group Policy Objects to a chain."""
 
-    member_attributes = ['gplink']
+    member_attributes = ['ipagpolink']
     member_count_out = ('%i GPO added.', '%i GPOs added.')
 
     def pre_callback(self, ldap, dn, found, not_found, *keys, **options):
@@ -1101,7 +1109,7 @@ class chain_add_gpo(LDAPAddMember):
                             )
                             _require_object_class(
                                 gpo_entry,
-                                'groupPolicyContainer',
+                                'ipaGpoContainer',
                                 'gpo',
                                 gpo_displayname,
                             )
@@ -1131,7 +1139,7 @@ class chain_add_gpo(LDAPAddMember):
 class chain_remove_gpo(LDAPRemoveMember):
     """Remove Group Policy Objects from a chain."""
 
-    member_attributes = ['gplink']
+    member_attributes = ['ipagpolink']
     member_count_out = ('%i GPO removed.', '%i GPOs removed.')
 
     def pre_callback(self, ldap, dn, found, not_found, *keys, **options):
@@ -1152,7 +1160,7 @@ class chain_remove_gpo(LDAPRemoveMember):
         if not requested_gpos:
             return dn
 
-        current_gplinks = entry_attrs.get('gplink', [])
+        current_gplinks = entry_attrs.get('ipagpolink', [])
         if not current_gplinks:
             raise errors.ValidationError(
                 name='gpo',

@@ -1,5 +1,5 @@
 /** Pure helpers for preserving libadmix discriminated values in browser forms. */
-define([], function() {
+define(['./collection-value'], function(collections) {
     "use strict";
 
     function clone(value) {
@@ -94,6 +94,7 @@ define([], function() {
                     return [parameter.parameter_id, parameter.value];
                 }));
                 (policy.parameters || []).forEach(function(parameter) {
+                    if (parameter.editable === false) return;
                     if (parameter.value !== null && parameter.value !== undefined) return;
                     if (parameter.default_value === null || parameter.default_value === undefined) return;
                     if (parameter.default_value.kind === 'unsupported') return;
@@ -181,6 +182,32 @@ define([], function() {
             && (!hasStateActions || policyStateAction(policy, 'enabled').available)
             && policy.capabilities
             && policy.capabilities.edit_parameters);
+    }
+
+    function validatePolicyDraft(policy, draft) {
+        if (!draft || !canEditPolicyParameters(policy, draft.state)) return null;
+        var values = new Map((draft.parameters || []).map(function(parameter) {
+            return [parameter.parameter_id, parameter.value];
+        }));
+        var lists = (policy.parameters || []).filter(function(parameter) { return parameter.kind === 'list'; });
+        for (var index = 0; index < lists.length; index++) {
+            var list = lists[index];
+            if (!list.collection && policyStateAction(policy, 'enabled').mode === 'dynamic_list_values') {
+                list = Object.assign({}, list, { collection: {
+                    mode: 'list', unique_keys: true, key_case_sensitive: false, allow_empty_values: false, min_items: 1
+                } });
+            }
+            var value = values.get(list.id);
+            if (list.editable === false || value && value.kind === 'unsupported') continue;
+            if (value === null && !list.required && !(list.collection && list.collection.min_items)) continue;
+            var problems = collections.validate(list, value);
+            if (problems.length) return {
+                category: 'validation', field: list.id,
+                message: problems.some(function(problem) { return problem.code === 'minItems' || problem.code === 'requiredValue'; })
+                    ? 'At least one non-empty list entry is required' : 'Invalid collection entries'
+            };
+        }
+        return null;
     }
 
     function insertFilterOperation(collectionPath, index, filterKind, fields) {
@@ -391,6 +418,7 @@ define([], function() {
         policyStateAction: policyStateAction,
         canSelectPolicyState: canSelectPolicyState,
         canEditPolicyParameters: canEditPolicyParameters,
+        validatePolicyDraft: validatePolicyDraft,
         insertFilterOperation: insertFilterOperation,
         editFilterOperation: editFilterOperation,
         replaceFilterOperation: replaceFilterOperation,

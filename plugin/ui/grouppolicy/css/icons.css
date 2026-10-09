@@ -1,0 +1,87 @@
+/* Shared 16px semantic icons; labels, not these decorative images, name rows. */
+.gpo-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
+}
+.gpo-catalog-name {
+  display: flex;
+  align-items: center;
+  min-height: 16px;
+  min-width: 0;
+}
+.gpo-catalog-name > .icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  flex-shrink: 0;
+  margin-right: 8px;
+  background-repeat: no-repeat;
+}
+.gpo-catalog-name > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.gpo-icon.gpo-icon-applications { background-image: url(../img/svg/ico/applications.svg); }
+.gpo-icon.gpo-icon-components { background-image: url(../img/svg/ico/components.svg); }
+.gpo-icon.gpo-icon-database { background-image: url(../img/svg/ico/database.svg); }
+.gpo-icon.gpo-icon-device { background-image: url(../img/svg/ico/device.svg); }
+.gpo-icon.gpo-icon-drive { background-image: url(../img/svg/ico/drive.svg); }
+.gpo-icon.gpo-icon-environment { background-image: url(../img/svg/ico/environment.svg); }
+.gpo-icon.gpo-icon-files { background-image: url(../img/svg/ico/files.svg); }
+.gpo-icon.gpo-icon-folder-settings { background-image: url(../img/svg/ico/folder-settings.svg); }
+.gpo-icon.gpo-icon-folder { background-image: url(../img/svg/ico/folder.svg); }
+.gpo-icon.gpo-icon-ini { background-image: url(../img/svg/ico/ini.svg); }
+.gpo-icon.gpo-icon-browser { background-image: url(../img/svg/ico/browser.svg); }
+.gpo-icon.gpo-icon-users { background-image: url(../img/svg/ico/users.svg); }
+.gpo-icon.gpo-icon-network { background-image: url(../img/svg/ico/network.svg); }
+.gpo-icon.gpo-icon-shared-folder { background-image: url(../img/svg/ico/shared-folder.svg); }
+.gpo-icon.gpo-icon-power { background-image: url(../img/svg/ico/power.svg); }
+.gpo-icon.gpo-icon-printer { background-image: url(../img/svg/ico/printer.svg); }
+.gpo-icon.gpo-icon-globe { background-image: url(../img/svg/ico/globe.svg); }
+.gpo-icon.gpo-icon-registry { background-image: url(../img/svg/ico/registry.svg); }
+.gpo-icon.gpo-icon-scheduled-task { background-image: url(../img/svg/ico/scheduled-task.svg); }
+.gpo-icon.gpo-icon-services { background-image: url(../img/svg/ico/services.svg); }
+.gpo-icon.gpo-icon-shortcut { background-image: url(../img/svg/ico/shortcut.svg); }
+.gpo-icon.gpo-icon-start-menu { background-image: url(../img/svg/ico/start-menu.svg); }
+.gpo-icon.gpo-icon-battery { background-image: url(../img/svg/ico/battery.svg); }
+.gpo-icon.gpo-icon-computer { background-image: url(../img/svg/ico/computer.svg); }
+.gpo-icon.gpo-icon-cpu { background-image: url(../img/svg/ico/cpu.svg); }
+.gpo-icon.gpo-icon-calendar { background-image: url(../img/svg/ico/calendar.svg); }
+.gpo-icon.gpo-icon-domain { background-image: url(../img/svg/ico/domain.svg); }
+.gpo-icon.gpo-icon-connection { background-image: url(../img/svg/ico/connection.svg); }
+.gpo-icon.gpo-icon-file-match { background-image: url(../img/svg/ico/file-match.svg); }
+.gpo-icon.gpo-icon-ip-range { background-image: url(../img/svg/ico/ip-range.svg); }
+.gpo-icon.gpo-icon-language { background-image: url(../img/svg/ico/language.svg); }
+.gpo-icon.gpo-icon-directory-query { background-image: url(../img/svg/ico/directory-query.svg); }
+.gpo-icon.gpo-icon-network-card { background-image: url(../img/svg/ico/network-card.svg); }
+.gpo-icon.gpo-icon-package-query { background-image: url(../img/svg/ico/package-query.svg); }
+.gpo-icon.gpo-icon-org-unit { background-image: url(../img/svg/ico/org-unit.svg); }
+.gpo-icon.gpo-icon-expansion-card { background-image: url(../img/svg/ico/expansion-card.svg); }
+.gpo-icon.gpo-icon-laptop { background-image: url(../img/svg/ico/laptop.svg); }
+.gpo-icon.gpo-icon-processing { background-image: url(../img/svg/ico/processing.svg); }
+.gpo-icon.gpo-icon-memory { background-image: url(../img/svg/ico/memory.svg); }
+.gpo-icon.gpo-icon-run-once { background-image: url(../img/svg/ico/run-once.svg); }
+.gpo-icon.gpo-icon-site { background-image: url(../img/svg/ico/site.svg); }
+.gpo-icon.gpo-icon-terminal { background-image: url(../img/svg/ico/terminal.svg); }
+.gpo-icon.gpo-icon-clock { background-image: url(../img/svg/ico/clock.svg); }
+.gpo-icon.gpo-icon-user { background-image: url(../img/svg/ico/user.svg); }
+.gpo-icon.gpo-icon-system { background-image: url(../img/svg/ico/system.svg); }
+.gpo-icon.gpo-icon-system-query { background-image: url(../img/svg/ico/system-query.svg); }
+.gpo-icon.gpo-icon-security-group { background-image: url(../img/svg/ico/security-group.svg); }
+.gpo-icon.gpo-icon-collection { background-image: url(../img/svg/ico/collection.svg); }
+.gpo-icon.gpo-icon-preferences { background-image: url(../img/svg/ico/preferences.svg); }
+.gpo-icon.gpo-icon-system-settings { background-image: url(../img/svg/ico/system-settings.svg); }
+.gpo-icon.gpo-icon-other-settings { background-image: url(../img/svg/ico/other-settings.svg); }
+.gpo-icon.gpo-icon-filter-unknown { background-image: url(../img/svg/ico/filter-unknown.svg); }
+.gpo-icon.gpo-icon-script { background-image: url(../img/svg/ico/script.svg); }
+.gpo-icon.gpo-icon-script-start { background-image: url(../img/svg/ico/script-start.svg); }
+.gpo-icon.gpo-icon-script-stop { background-image: url(../img/svg/ico/script-stop.svg); }
+.gpo-icon.gpo-icon-script-logon { background-image: url(../img/svg/ico/script-logon.svg); }
+.gpo-icon.gpo-icon-script-logoff { background-image: url(../img/svg/ico/script-logoff.svg); }
+.gpo-icon.gpo-icon-powershell { background-image: url(../img/svg/ico/powershell.svg); }

@@ -11,7 +11,7 @@ from ipa_gpo_install.checks import IPAChecker
 def test_schema_check_falls_back_to_subschema():
     connection = MagicMock()
     schema_entry = {
-        "objectclasses": [b"( 1.2.3 NAME 'groupPolicyContainer' )"],
+        "objectclasses": [b"( 1.2.3 NAME 'ipaGpoContainer' )"],
         "attributetypes": [],
     }
 
@@ -35,7 +35,7 @@ def test_schema_check_falls_back_to_subschema():
         "ipa_gpo_install.checks.ldap.schema.SubSchema",
         return_value=parsed_schema,
     ) as parser:
-        result = checker.check_schema_complete(["groupPolicyContainer"])
+        result = checker.check_schema_complete(["ipaGpoContainer"])
 
     assert result is True
     assert connection.search_s.call_args_list == [
@@ -52,5 +52,5 @@ def test_schema_check_falls_back_to_subschema():
     ]
     parser.assert_called_once_with(schema_entry)
     parsed_schema.get_obj.assert_called_once_with(
-        ldap.schema.ObjectClass, "groupPolicyContainer"
+        ldap.schema.ObjectClass, "ipaGpoContainer"
     )

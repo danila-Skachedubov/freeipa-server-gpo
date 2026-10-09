@@ -60,22 +60,22 @@ def test_gpo_json_falls_back_when_schema_metadata_is_missing(monkeypatch):
     monkeypatch.setattr(
         GPO.LDAPObject,
         "__json__",
-        MagicMock(side_effect=KeyError("groupPolicyContainer")),
+        MagicMock(side_effect=KeyError("ipaGpoContainer")),
     )
 
     result = GPO.gpo.__json__(subject)
 
     assert result["name"] == "gpo"
-    assert result["object_class"] == ["groupPolicyContainer"]
+    assert result["object_class"] == ["ipaGpoContainer"]
     assert [parameter["name"] for parameter in result["takes_params"]] == [
         "displayname",
         "cn",
         "distinguishedname",
-        "flags",
-        "gpcfilesyspath",
-        "versionnumber",
-        "gpcmachineextensionnames",
-        "gpcuserextensionnames",
+        "ipagpoflags",
+        "ipagpofilesyspath",
+        "ipagpoversionnumber",
+        "ipagpomachineextensionnames",
+        "ipagpouserextensionnames",
     ]
     assert result["default_attributes"] == subject.default_attributes
 
@@ -129,7 +129,7 @@ def test_find_gpo_by_displayname_uses_policy_container():
     ldap.find_entry_by_attr.assert_called_once_with(
         "displayName",
         "Policy-One",
-        "groupPolicyContainer",
+        "ipaGpoContainer",
         base_dn=DN(CONTAINER_DN, BASEDN),
     )
 
@@ -178,7 +178,7 @@ def test_verify_gpo_schema_translates_schema_backend_error():
         info="undefined object class",
     )
 
-    with pytest.raises(errors.NotFound, match="groupPolicyContainer"):
+    with pytest.raises(errors.NotFound, match="ipaGpoContainer"):
         GPO.verify_gpo_schema(ldap, _plugin_api())
 
 
@@ -494,11 +494,11 @@ def test_gpo_add_pre_callback_builds_complete_initial_entry(monkeypatch):
         "displayname": "Policy-One",
         "cn": GUID,
         "distinguishedname": str(GPO_DN),
-        "gpcfilesyspath": (
+        "ipagpofilesyspath": (
             f"\\\\EXAMPLE.TEST\\SysVol\\EXAMPLE.TEST\\Policies\\{GUID}"
         ),
-        "flags": 0,
-        "versionnumber": 0,
+        "ipagpoflags": 0,
+        "ipagpoversionnumber": 0,
     }
     schema_check.assert_called_once_with(ldap, subject.api)
     subject.obj.find_gpo_by_displayname.assert_called_once_with(
@@ -791,8 +791,8 @@ def test_gpo_mod_without_rename_resolves_current_entry(monkeypatch):
         subject,
         ldap,
         GPO_DN,
-        {"flags": 1},
-        ["flags"],
+        {"ipagpoflags": 1},
+        ["ipagpoflags"],
         "Policy-One",
     )
 

@@ -27,6 +27,7 @@ UI_PLUGIN_FILES = (
     'chain.js',
     'gpo.js',
     'css/main.css',
+    'css/icons.css',
     'css/other.css',
     'img/arrow.svg',
     'img/close.svg',
@@ -36,13 +37,79 @@ UI_PLUGIN_FILES = (
     'img/svg/ico/file.svg',
     'img/svg/ico/folder.svg',
     'img/svg/ico/user.svg',
+    'img/svg/ico/applications.svg',
+    'img/svg/ico/battery.svg',
+    'img/svg/ico/browser.svg',
+    'img/svg/ico/calendar.svg',
+    'img/svg/ico/clock.svg',
+    'img/svg/ico/collection.svg',
+    'img/svg/ico/components.svg',
+    'img/svg/ico/connection.svg',
+    'img/svg/ico/cpu.svg',
+    'img/svg/ico/database.svg',
+    'img/svg/ico/device.svg',
+    'img/svg/ico/directory-query.svg',
+    'img/svg/ico/domain.svg',
+    'img/svg/ico/drive.svg',
+    'img/svg/ico/environment.svg',
+    'img/svg/ico/expansion-card.svg',
+    'img/svg/ico/file-match.svg',
+    'img/svg/ico/files.svg',
+    'img/svg/ico/filter-unknown.svg',
+    'img/svg/ico/folder-settings.svg',
+    'img/svg/ico/globe.svg',
+    'img/svg/ico/ini.svg',
+    'img/svg/ico/ip-range.svg',
+    'img/svg/ico/language.svg',
+    'img/svg/ico/laptop.svg',
+    'img/svg/ico/memory.svg',
+    'img/svg/ico/network-card.svg',
+    'img/svg/ico/network.svg',
+    'img/svg/ico/org-unit.svg',
+    'img/svg/ico/other-settings.svg',
+    'img/svg/ico/package-query.svg',
+    'img/svg/ico/power.svg',
+    'img/svg/ico/powershell.svg',
+    'img/svg/ico/preferences.svg',
+    'img/svg/ico/printer.svg',
+    'img/svg/ico/processing.svg',
+    'img/svg/ico/registry.svg',
+    'img/svg/ico/run-once.svg',
+    'img/svg/ico/scheduled-task.svg',
+    'img/svg/ico/script-logoff.svg',
+    'img/svg/ico/script-logon.svg',
+    'img/svg/ico/script-start.svg',
+    'img/svg/ico/script-stop.svg',
+    'img/svg/ico/script.svg',
+    'img/svg/ico/security-group.svg',
+    'img/svg/ico/services.svg',
+    'img/svg/ico/shared-folder.svg',
+    'img/svg/ico/shortcut.svg',
+    'img/svg/ico/site.svg',
+    'img/svg/ico/start-menu.svg',
+    'img/svg/ico/system-query.svg',
+    'img/svg/ico/system-settings.svg',
+    'img/svg/ico/system.svg',
+    'img/svg/ico/terminal.svg',
+    'img/svg/ico/users.svg',
     'js/app.js',
+    'js/components/category-path.js',
+    'js/components/editor-icons.js',
+    'js/components/list-navigation.js',
+    'js/components/collection-control.js',
+    'js/components/collection-dialog.js',
     'js/components/divider/divider.js',
+    'js/components/editor-dialog.js',
     'js/components/editor-status.js',
     'js/components/footer/footer.js',
     'js/components/header/header.js',
     'js/components/main/main.js',
+    'js/components/confirmation-dialog.js',
     'js/components/templates/admx-template.js',
+    'js/components/templates/advanced-audit-template.js',
+    'js/components/templates/advanced-audit/model.js',
+    'js/components/templates/all-policies-template.js',
+    'js/components/templates/all-policies/model.js',
     'js/components/templates/default-template.js',
     'js/components/templates/folder-template.js',
     'js/components/templates/preference/layouts/applications.js',
@@ -69,6 +136,17 @@ UI_PLUGIN_FILES = (
     'js/components/templates/preference/layouts/shortcuts.js',
     'js/components/templates/preference/layouts/start-menu.js',
     'js/components/templates/preference/preferences-view-template.js',
+    'js/components/templates/preference/targeting-editor.js',
+    'js/components/templates/preference/targeting-presentations.js',
+    'js/components/templates/preference/targeting-operand-editor.js',
+    'js/components/templates/preference/targeting-typed-input.js',
+    'js/components/templates/security-template.js',
+    'js/components/templates/security/dialog.js',
+    'js/components/templates/security/dependency-plan.js',
+    'js/components/templates/security/header-actions.js',
+    'js/components/templates/security/model.js',
+    'js/components/templates/security/value-editor.js',
+    'js/components/templates/security/workbench.js',
     'js/components/templates/script-template.js',
     'js/components/tree-view/tree-view-list-data.js',
     'js/components/tree-view/tree-view-list.js',
@@ -78,7 +156,9 @@ UI_PLUGIN_FILES = (
     'js/locales/ru.js',
     'js/locales/translations.js',
     'js/util/API.js',
+    'js/util/collection-value.js',
     'js/util/editor-dto.js',
+    'js/util/targeting-tree-draft.js',
     'js/util/element-creator.js',
     'js/util/resizable.js',
 )
@@ -283,6 +363,20 @@ class IPAActions:
             self.logger.error(_("Error creating SYSVOL share: {}").format(e))
             return False
 
+    def check_group_policy_update_assets(self):
+        """Fail before installation mutates anything if update assets are missing."""
+        for target_dir, filenames in (
+                (TARGET_SCHEMA_DIR, ('75-chain.ldif', '75-gpc.ldif', '75-gpmaster.ldif')),
+                (TARGET_UPDATE_DIR, ('75-chain.update', '75-gpc.update', '75-gpmaster.update'))):
+            for filename in filenames:
+                path = os.path.join(target_dir, filename)
+                if not os.path.isfile(path) or not os.access(path, os.R_OK):
+                    self.logger.error(
+                        _("Required Group Policy update asset '{}' is missing or unreadable. Reinstall the freeipa-server-gpo package.").format(path)
+                    )
+                    return False
+        return True
+
     def run_ipa_server_upgrade(self):
         """
         Run ipa-server-upgrade to apply schema changes and updates.
@@ -306,6 +400,20 @@ class IPAActions:
 
         except Exception as e:
             self.logger.error(_("Error running ipa-server-upgrade: {}").format(e))
+            return False
+
+    def reconnect_ldap(self):
+        """Replace the LDAP connection and entry cache after an external upgrade."""
+        try:
+            self.logger.info(_("Reconnecting to LDAP server after upgrade"))
+            backend = self.api.Backend.ldap2
+            if backend.isconnected():
+                backend.disconnect()
+            backend.connect()
+            self.logger.info(_("LDAP connection refreshed successfully"))
+            return True
+        except Exception as e:
+            self.logger.error(_("Error reconnecting to LDAP server: {}").format(e))
             return False
 
     def restart_oddjob(self):

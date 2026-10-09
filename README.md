@@ -24,18 +24,18 @@ When a user logs into the system, policies are applied in a strictly defined seq
 
 1. **Chain processing** - system processes chains in the order specified in the Group Policy Master
 2. **Membership filtering** - for each chain, system checks if it matches the current user and computer
-3. **Policy priority within chain** - if chain matches, policies from it are processed in the order of their sequence in the `gpLink` attribute
+3. **Policy priority within chain** - if chain matches, policies from it are processed in the order of their sequence in the `ipaGpoLink` attribute
 
 #### Priority Management
 
 Priorities are configured at two levels:
 
 **Chain level in Master:**
-- Chain order is determined by their position in the `chainList` attribute of the master
+- Chain order is determined by their position in the `ipaGpoChainList` attribute of the master
 - Chains higher in the list have higher priority
 
 **Policy level within chain:**
-- Policy order is determined by their position in the `gpLink` attribute of the chain
+- Policy order is determined by their position in the `ipaGpoLink` attribute of the chain
 - Policies higher in the list have higher priority
 - In case of setting conflicts, the policy with higher priority takes effect
 
@@ -74,13 +74,13 @@ graph TD
     classDef resultClass fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
 
     subgraph MasterLayer ["🏛️ MASTER LAYER"]
-        Master["Group Policy Master<br/>chainList:<br/>1. dev-chain<br/>2. office-chain"]
+        Master["Group Policy Master<br/>ipaGpoChainList:<br/>1. dev-chain<br/>2. office-chain"]
     end
 
     subgraph ChainLayer ["🔗 CHAIN LAYER"]
         direction LR
-        ChainDev["dev-chain<br/>userGroup: developers<br/>computerGroup: dev-workstations<br/>gpLink:<br/>1. policy-1<br/>2. policy-2"]
-        ChainOffice["office-chain<br/>userGroup: office-users<br/>computerGroup: office-computers<br/>gpLink:<br/>1. policy-3<br/>2. policy-4"]
+        ChainDev["dev-chain<br/>ipaGpoUserGroup: developers<br/>ipaGpoComputerGroup: dev-workstations<br/>ipaGpoLink:<br/>1. policy-1<br/>2. policy-2"]
+        ChainOffice["office-chain<br/>ipaGpoUserGroup: office-users<br/>ipaGpoComputerGroup: office-computers<br/>ipaGpoLink:<br/>1. policy-3<br/>2. policy-4"]
     end
 
     subgraph GPCLayer ["📋 GPC LAYER"]
@@ -127,31 +127,31 @@ The diagram demonstrates the group policy inheritance process using the example 
 Since the user and computer belong to groups from **both** chains, the system identifies two suitable chains:
 
 1. **dev-chain** - matches because:
-   - john ∈ developers (userGroup)
-   - ws001 ∈ dev-workstations (computerGroup)
+   - john ∈ developers (ipaGpoUserGroup)
+   - ws001 ∈ dev-workstations (ipaGpoComputerGroup)
 
 2. **office-chain** - matches because:
-   - john ∈ office-users (userGroup)
-   - ws001 ∈ office-computers (computerGroup)
+   - john ∈ office-users (ipaGpoUserGroup)
+   - ws001 ∈ office-computers (ipaGpoComputerGroup)
 
 #### Policy Sequence
 
 **Step 1: Chain Order**
-Group Policy Master defines processing order through the `chainList` attribute:
+Group Policy Master defines processing order through the `ipaGpoChainList` attribute:
 ```
 1. dev-chain (first in list)
 2. office-chain (second in list)
 ```
 
 **Step 2: Policies from dev-chain**
-In order of `gpLink` attribute:
+In order of `ipaGpoLink` attribute:
 ```
 1. policy-1 (priority 1)
 2. policy-2 (priority 2)
 ```
 
 **Step 3: Policies from office-chain**
-In order of `gpLink` attribute:
+In order of `ipaGpoLink` attribute:
 ```
 3. policy-3 (priority 1)
 4. policy-4 (priority 2)
@@ -166,9 +166,9 @@ policy-1 → policy-2 → policy-3 → policy-4
 
 #### Sequence Explanation
 
-1. **First all policies from dev-chain** - because this chain is first in master's `chainList`
-2. **Then all policies from office-chain** - because this chain is second in master's `chainList`
-3. **Within each chain** policies are in the order of their sequence in `gpLink`
+1. **First all policies from dev-chain** - because this chain is first in master's `ipaGpoChainList`
+2. **Then all policies from office-chain** - because this chain is second in master's `ipaGpoChainList`
+3. **Within each chain** policies are in the order of their sequence in `ipaGpoLink`
 4. **In case of setting conflicts** the last policy takes precedence (in this case from policy-1)
 
 This approach provides predictable and controlled policy inheritance with flexible priority management at two levels: chain level and policy level within chain.
@@ -213,15 +213,15 @@ Options:
 ## Technical implementation
 
 ### LDAP Schema
-**groupPolicyContainer (GPC)**
+**ipaGpoContainer (GPC)**
 - `cn` - Policy GUID
 - `displayName` - Display name of policy
 - `distinguishedName` - Object DN
-- `flags` - Policy flags
-- `gPCFileSysPath` - Path to policy files in SYSVOL
-- `versionNumber` - Policy version number
-- `gPCMachineExtensionNames` - Published machine-side policy extensions
-- `gPCUserExtensionNames` - Published user-side policy extensions
+- `ipaGpoFlags` - Policy flags
+- `ipaGpoFileSysPath` - Path to policy files in SYSVOL
+- `ipaGpoVersionNumber` - Policy version number
+- `ipaGpoMachineExtensionNames` - Published machine-side policy extensions
+- `ipaGpoUserExtensionNames` - Published user-side policy extensions
 
 ### Web editor architecture
 
@@ -231,17 +231,17 @@ submits SYSVOL or registry paths. File changes are committed atomically by
 `libadmix`; the plugin publishes the resulting packed version and extension
 attributes to LDAP with a snapshot assertion before acknowledging the commit.
 
-**groupPolicyChain**
+**ipaGpoChain**
 - `cn` - Chain name
 - `displayName` - Display name of chain
-- `userGroup` - User group DN
-- `computerGroup` - Computer group DN
-- `gpLink` - Ordered list of policy DNs
+- `ipaGpoUserGroup` - User group DN
+- `ipaGpoComputerGroup` - Computer group DN
+- `ipaGpoLink` - Ordered list of policy DNs
 
-**groupPolicyMaster**
+**ipaGpoMaster**
 - `cn` - Master object name
-- `pdcEmulator` - PDC emulator DN
-- `chainList` - Ordered list of policy chains
+- `ipaGpoPdcEmulator` - PDC emulator DN
+- `ipaGpoChainList` - Ordered list of policy chains
 
 ## Management commands
 

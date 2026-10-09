@@ -51,17 +51,17 @@ def test_gpmaster_json_falls_back_when_schema_metadata_is_missing(
     monkeypatch.setattr(
         GPMASTER.LDAPObject,
         "__json__",
-        MagicMock(side_effect=KeyError("groupPolicyMaster")),
+        MagicMock(side_effect=KeyError("ipaGpoMaster")),
     )
 
     result = GPMASTER.gpmaster.__json__(subject)
 
     assert result["name"] == "gpmaster"
-    assert result["object_class"] == ["groupPolicyMaster"]
+    assert result["object_class"] == ["ipaGpoMaster"]
     assert [parameter["name"] for parameter in result["takes_params"]] == [
         "cn",
-        "chainlist",
-        "pdcemulator",
+        "ipagpochainlist",
+        "ipagpopdcemulator",
     ]
     assert result["default_attributes"] == subject.default_attributes
 
@@ -116,7 +116,7 @@ def _resolver(chain_object=None, ldap=None):
     backend = ldap or MagicMock()
     backend.get_entry.return_value = {
         "cn": ["primary"],
-        "objectclass": ["top", "groupPolicyChain"],
+        "objectclass": ["top", "ipaGpoChain"],
     }
     subject = SimpleNamespace(
         api=SimpleNamespace(
@@ -331,7 +331,7 @@ def test_get_gpmaster_dn_uses_global_basedn(monkeypatch):
 
 def _modifier(current_chains=()):
     ldap = MagicMock()
-    ldap.get_entry.return_value = {"chainlist": list(current_chains)}
+    ldap.get_entry.return_value = {"ipagpochainlist": list(current_chains)}
     obj = MagicMock()
     obj.get_gpmaster_dn.return_value = DN(
         ("cn", "grouppolicymaster"), ("cn", "etc"), BASEDN
@@ -355,7 +355,7 @@ def test_add_chain_appends_new_dn_without_duplicate():
         {"add_chain": ("primary", "fallback")},
     )
 
-    assert entry_attrs["chainlist"] == [str(CHAIN_DN), str(second_dn)]
+    assert entry_attrs["ipagpochainlist"] == [str(CHAIN_DN), str(second_dn)]
     assert obj.resolve_chain_name.call_args_list == [
         call("primary", strict=True),
         call("fallback", strict=True),
@@ -371,7 +371,7 @@ def test_add_chain_does_not_duplicate_equivalent_mixed_case_dn():
         subject, entry_attrs, {"add_chain": "primary"}
     )
 
-    assert entry_attrs["chainlist"] == [str(CHAIN_DN)]
+    assert entry_attrs["ipagpochainlist"] == [str(CHAIN_DN)]
 
 
 def test_add_chain_reports_missing_chain():
@@ -391,7 +391,7 @@ def test_remove_chain_rejects_empty_master():
         GPMASTER.gpmaster_mod._handle_remove_operations(
             subject,
             ldap,
-            {"chainlist": []},
+            {"ipagpochainlist": []},
             {},
             {"remove_chain": "primary"},
         )
@@ -407,12 +407,12 @@ def test_remove_chain_by_resolved_dn():
     GPMASTER.gpmaster_mod._handle_remove_operations(
         subject,
         ldap,
-        {"chainlist": [CHAIN_DN]},
+        {"ipagpochainlist": [CHAIN_DN]},
         entry_attrs,
         {"remove_chain": "primary"},
     )
 
-    assert entry_attrs["chainlist"] == []
+    assert entry_attrs["ipagpochainlist"] == []
     ldap.get_entry.assert_not_called()
 
 
@@ -424,12 +424,12 @@ def test_remove_chain_matches_equivalent_mixed_case_dn():
     GPMASTER.gpmaster_mod._handle_remove_operations(
         subject,
         ldap,
-        {"chainlist": [CHAIN_DN]},
+        {"ipagpochainlist": [CHAIN_DN]},
         entry_attrs,
         {"remove_chain": "primary"},
     )
 
-    assert entry_attrs["chainlist"] == []
+    assert entry_attrs["ipagpochainlist"] == []
     ldap.get_entry.assert_not_called()
 
 
@@ -442,12 +442,12 @@ def test_remove_chain_by_readable_name_when_dn_resolution_is_unavailable():
     GPMASTER.gpmaster_mod._handle_remove_operations(
         subject,
         ldap,
-        {"chainlist": [CHAIN_DN]},
+        {"ipagpochainlist": [CHAIN_DN]},
         entry_attrs,
         {"remove_chain": "primary"},
     )
 
-    assert entry_attrs["chainlist"] == []
+    assert entry_attrs["ipagpochainlist"] == []
     ldap.get_entry.assert_called_once_with(CHAIN_DN, attrs_list=["cn"])
 
 
@@ -460,7 +460,7 @@ def test_remove_chain_reports_name_not_assigned_to_master():
         GPMASTER.gpmaster_mod._handle_remove_operations(
             subject,
             ldap,
-            {"chainlist": [CHAIN_DN]},
+            {"ipagpochainlist": [CHAIN_DN]},
             {},
             {"remove_chain": "missing"},
         )
@@ -475,14 +475,14 @@ def test_standard_modifications_set_pdc_and_resolve_chainlist():
         subject,
         entry_attrs,
         {
-            "pdcemulator": "dc1.example.test",
-            "chainlist": ["primary"],
+            "ipagpopdcemulator": "dc1.example.test",
+            "ipagpochainlist": ["primary"],
         },
     )
 
     assert entry_attrs == {
-        "pdcemulator": "dc1.example.test",
-        "chainlist": [str(CHAIN_DN)],
+        "ipagpopdcemulator": "dc1.example.test",
+        "ipagpochainlist": [str(CHAIN_DN)],
     }
     obj.convert_chain_names_to_dns.assert_called_once_with(
         ["primary"], strict=True
@@ -491,7 +491,7 @@ def test_standard_modifications_set_pdc_and_resolve_chainlist():
 
 class MoveLdap:
     def __init__(self, chains):
-        self.master = {"chainlist": list(chains)}
+        self.master = {"ipagpochainlist": list(chains)}
         self.modifications = []
         self.error_handler_calls = 0
         self.chain_names = {
@@ -520,7 +520,7 @@ class MoveLdap:
 
     def modify_s(self, dn, modifications):
         self.modifications.append((dn, modifications))
-        self.master["chainlist"] = [
+        self.master["ipagpochainlist"] = [
             value.decode() for value in modifications[1][2]
         ]
 
@@ -560,16 +560,16 @@ def test_move_operation_reorders_with_one_atomic_ldap_modify(options, expected):
         (
             MASTER_DN,
             [
-                (python_ldap.MOD_DELETE, "chainList", None),
+                (python_ldap.MOD_DELETE, "ipaGpoChainList", None),
                 (
                     python_ldap.MOD_ADD,
-                    "chainList",
+                    "ipaGpoChainList",
                     [value.encode() for value in expected],
                 ),
             ],
         )
     ]
-    assert ldap.master["chainlist"] == expected
+    assert ldap.master["ipagpochainlist"] == expected
     assert ldap.error_handler_calls == 1
 
 
@@ -585,7 +585,7 @@ def test_move_operation_matches_chain_name_case_insensitively():
         {"moveup_chain": "FALLBACK"},
     )
 
-    assert ldap.master["chainlist"] == [
+    assert ldap.master["ipagpochainlist"] == [
         str(SECOND_CHAIN_DN),
         str(CHAIN_DN),
     ]
@@ -609,7 +609,7 @@ def test_move_operation_atomic_modify_failure_preserves_original_chains():
             {"moveup_chain": "fallback"},
         )
 
-    assert backend.master["chainlist"] == [CHAIN_DN, SECOND_CHAIN_DN]
+    assert backend.master["ipagpochainlist"] == [CHAIN_DN, SECOND_CHAIN_DN]
     assert len(backend.modifications) == 1
     assert backend.error_handler_calls == 1
 
@@ -648,7 +648,7 @@ def test_move_operation_skips_ldap_updates_at_list_boundary(options):
         ldap, MASTER_DN, options
     )
     assert ldap.modifications == []
-    assert ldap.master["chainlist"] == [CHAIN_DN, SECOND_CHAIN_DN]
+    assert ldap.master["ipagpochainlist"] == [CHAIN_DN, SECOND_CHAIN_DN]
 
 
 @pytest.mark.parametrize(
@@ -726,7 +726,7 @@ def test_empty_moveup_option_does_not_override_movedown_direction():
     )
 
     assert len(ldap.modifications) == 1
-    assert ldap.master["chainlist"] == [
+    assert ldap.master["ipagpochainlist"] == [
         str(SECOND_CHAIN_DN), str(CHAIN_DN)
     ]
 
@@ -738,7 +738,7 @@ def test_empty_moveup_option_does_not_override_movedown_direction():
 def test_validate_move_propagates_chain_lookup_failure(option_name):
     ldap = MagicMock()
     ldap.get_entry.side_effect = [
-        {"chainlist": [str(CHAIN_DN)]},
+        {"ipagpochainlist": [str(CHAIN_DN)]},
         RuntimeError("LDAP unavailable"),
     ]
 
@@ -754,7 +754,7 @@ def test_validate_move_propagates_chain_lookup_failure(option_name):
 def test_move_operation_propagates_lookup_failure_before_update():
     ldap = MagicMock()
     ldap.get_entry.side_effect = [
-        {"chainlist": [str(CHAIN_DN), str(SECOND_CHAIN_DN)]},
+        {"ipagpochainlist": [str(CHAIN_DN), str(SECOND_CHAIN_DN)]},
         RuntimeError("LDAP unavailable"),
     ]
     subject = _move_subject(ldap)
@@ -774,7 +774,7 @@ def test_move_operation_propagates_lookup_failure_before_update():
 def test_validate_move_skips_empty_name_on_unrelated_chain():
     ldap = MagicMock()
     ldap.get_entry.side_effect = [
-        {"chainlist": [str(CHAIN_DN), str(SECOND_CHAIN_DN)]},
+        {"ipagpochainlist": [str(CHAIN_DN), str(SECOND_CHAIN_DN)]},
         {"cn": []},
         {"cn": ["fallback"]},
     ]
@@ -792,7 +792,7 @@ def _command_subject(entry=None):
     ldap.get_entry.return_value = entry or {}
     obj = MagicMock()
     obj.get_gpmaster_dn.return_value = MASTER_DN
-    obj.default_attributes = ["cn", "chainlist", "pdcemulator"]
+    obj.default_attributes = ["cn", "ipagpochainlist", "ipagpopdcemulator"]
     subject = SimpleNamespace(
         api=SimpleNamespace(Backend=SimpleNamespace(ldap2=ldap)),
         obj=obj,
@@ -804,8 +804,8 @@ def test_show_returns_flattened_values_and_readable_chain_names():
     subject, obj, _ldap = _command_subject(
         {
             "cn": ["grouppolicymaster"],
-            "chainlist": [str(CHAIN_DN)],
-            "pdcemulator": ["dc1.example.test"],
+            "ipagpochainlist": [str(CHAIN_DN)],
+            "ipagpopdcemulator": ["dc1.example.test"],
         }
     )
     obj.convert_chain_dns_to_names.return_value = ["primary"]
@@ -815,8 +815,8 @@ def test_show_returns_flattened_values_and_readable_chain_names():
     assert result == {
         "result": {
             "cn": "grouppolicymaster",
-            "chainlist": ["primary"],
-            "pdcemulator": "dc1.example.test",
+            "ipagpochainlist": ["primary"],
+            "ipagpopdcemulator": "dc1.example.test",
         },
         "value": "grouppolicymaster",
         "summary": None,
@@ -826,12 +826,12 @@ def test_show_returns_flattened_values_and_readable_chain_names():
 
 def test_show_raw_preserves_chain_dns():
     subject, obj, _ldap = _command_subject(
-        {"cn": ["grouppolicymaster"], "chainlist": [str(CHAIN_DN)]}
+        {"cn": ["grouppolicymaster"], "ipagpochainlist": [str(CHAIN_DN)]}
     )
 
     result = GPMASTER.gpmaster_show.execute(subject, raw=True)
 
-    assert result["result"]["chainlist"] == [str(CHAIN_DN)]
+    assert result["result"]["ipagpochainlist"] == [str(CHAIN_DN)]
     obj.convert_chain_dns_to_names.assert_not_called()
 
 
@@ -846,9 +846,9 @@ def test_show_translates_missing_master():
 @pytest.mark.parametrize(
     ("entry", "expected"),
     [
-        ({"pdcemulator": ["dc1.example.test"]}, "dc1.example.test"),
+        ({"ipagpopdcemulator": ["dc1.example.test"]}, "dc1.example.test"),
         ({}, "Not configured"),
-        ({"pdcemulator": []}, "Not configured"),
+        ({"ipagpopdcemulator": []}, "Not configured"),
     ],
 )
 def test_show_pdc_returns_configured_or_default_value(entry, expected):
@@ -871,8 +871,8 @@ def test_move_execute_returns_converted_and_flattened_result():
     subject, obj, ldap = _command_subject(
         {
             "cn": ["grouppolicymaster"],
-            "chainlist": [str(CHAIN_DN)],
-            "pdcemulator": ["dc1.example.test"],
+            "ipagpochainlist": [str(CHAIN_DN)],
+            "ipagpopdcemulator": ["dc1.example.test"],
         }
     )
     subject._do_move_operation = MagicMock()
@@ -890,8 +890,8 @@ def test_move_execute_returns_converted_and_flattened_result():
     assert result == {
         "result": {
             "cn": "grouppolicymaster",
-            "chainlist": ["primary"],
-            "pdcemulator": "dc1.example.test",
+            "ipagpochainlist": ["primary"],
+            "ipagpopdcemulator": "dc1.example.test",
         },
         "value": "grouppolicymaster",
         "summary": 'Modified Group Policy Master "grouppolicymaster"',
@@ -916,13 +916,13 @@ def test_move_execute_rejects_noncanonical_singleton_key_before_ldap():
 @pytest.mark.parametrize(
     ("option_name", "option_value"),
     [
-        ("pdcemulator", "dc1.example.test"),
+        ("ipagpopdcemulator", "dc1.example.test"),
         ("add_chain", "fallback"),
         ("remove_chain", "primary"),
-        ("chainlist", ["primary"]),
-        ("setattr", "pdcemulator=dc1.example.test"),
-        ("addattr", "chainlist=primary"),
-        ("delattr", "pdcemulator=old.example.test"),
+        ("ipagpochainlist", ["primary"]),
+        ("setattr", "ipagpopdcemulator=dc1.example.test"),
+        ("addattr", "ipagpochainlist=primary"),
+        ("delattr", "ipagpopdcemulator=old.example.test"),
     ],
 )
 def test_move_execute_rejects_mixed_modifications_before_ldap(
@@ -945,7 +945,7 @@ def test_move_execute_rejects_mixed_modifications_before_ldap(
 
 
 def test_pre_callback_runs_add_remove_and_standard_handlers_in_order():
-    subject, _obj, ldap = _command_subject({"chainlist": [str(CHAIN_DN)]})
+    subject, _obj, ldap = _command_subject({"ipagpochainlist": [str(CHAIN_DN)]})
     calls = []
     subject._handle_add_operations = MagicMock(
         side_effect=lambda *_args: calls.append("add")
@@ -976,7 +976,7 @@ def test_pre_callback_combines_add_and_remove_on_one_chainlist_snapshot():
         )
 
     ldap = MagicMock()
-    ldap.get_entry.return_value = {"chainlist": [CHAIN_DN]}
+    ldap.get_entry.return_value = {"ipagpochainlist": [CHAIN_DN]}
     obj = MagicMock()
     obj.get_gpmaster_dn.return_value = MASTER_DN
 
@@ -1005,4 +1005,4 @@ def test_pre_callback_combines_add_and_remove_on_one_chainlist_snapshot():
     )
 
     assert result == MASTER_DN
-    assert entry_attrs["chainlist"] == [str(SECOND_CHAIN_DN)]
+    assert entry_attrs["ipagpochainlist"] == [str(SECOND_CHAIN_DN)]
