@@ -38,8 +38,8 @@ define([], function() {
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },
             { source: 'field', field: 'properties.action', labelKey: 'columnAction', format: 'action' },
-            { source: 'field', field: 'properties.startupType',   labelKey: 'columnStartupType' },
-            { source: 'field', field: 'properties.serviceAction', labelKey: 'columnServiceAction' }
+            { source: 'field', field: 'properties.startupType',   labelKey: 'columnStartupType', fit: true },
+            { source: 'field', field: 'properties.serviceAction', labelKey: 'columnServiceAction', fit: true }
         ]
     };
 });

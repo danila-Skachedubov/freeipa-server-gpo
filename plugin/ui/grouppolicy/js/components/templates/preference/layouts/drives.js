@@ -28,7 +28,7 @@ define([], function() {
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },
             { source: 'field', field: 'properties.action', labelKey: 'columnAction', format: 'action' },
-            { source: 'field', field: 'properties.letter', labelKey: 'columnLetter' },
+            { source: 'field', field: 'properties.letter', labelKey: 'columnLetter', fit: true },
             { source: 'field', field: 'properties.path',   labelKey: 'columnPath' }
         ]
     };

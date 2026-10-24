@@ -49,7 +49,7 @@ define([], function() {
             { source: 'name',  labelKey: 'columnName' },
             { source: 'order', labelKey: 'columnOrder' },
             { source: 'field', field: 'properties.action', labelKey: 'columnAction', format: 'action' },
-            { source: 'field', field: 'properties.hive', labelKey: 'columnHive' },
+            { source: 'field', field: 'properties.hive', labelKey: 'columnHive', fit: true },
             { source: 'field', field: 'properties.key',  labelKey: 'columnKey' }
         ]
     };

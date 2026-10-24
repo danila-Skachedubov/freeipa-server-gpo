@@ -946,13 +946,18 @@ define([
             var useTemplate = Boolean(columns);
             var headerCells = useTemplate
                 ? columns.map(function(column) {
-                    return createElement('th', { text: pt(column.labelKey) });
+                    return createElement('th', { className: columnClass(column), text: pt(column.labelKey) });
                 })
                 : [
                     createElement('th', { text: pt('itemColumn') }),
                     createElement('th', { text: pt('filtersColumn') }),
                     createElement('th', { text: pt('actionsColumn') })
                 ];
+
+            function columnClass(column) {
+                var fit = column.fit || column.source === 'order' || column.format === 'action';
+                return fit ? 'gpo-preference-table__fit' : null;
+            }
 
             function buildDataCells(preferenceItem, index) {
                 if (!useTemplate) {
@@ -973,7 +978,7 @@ define([
                             ? actionLabel(value)
                             : (value === null || value === undefined ? '' : String(value));
                     }
-                    return createElement('td', { text: text });
+                    return createElement('td', { className: columnClass(column), text: text });
                 });
             }
 
@@ -1022,7 +1027,7 @@ define([
             });
 
             var table = createElement('table', {
-                className: ['preference__table', 'gpo-catalog-table'],
+                className: ['preference__table', 'gpo-catalog-table', 'gpo-preference-table'],
                 children: [
                     createElement('thead', { children: [createElement('tr', { children: headerCells })] }),
                     createElement('tbody', { children: bodyRows })

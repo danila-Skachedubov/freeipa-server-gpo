@@ -57,8 +57,8 @@ define([], function() {
             { source: 'order', labelKey: 'columnOrder' },
             { source: 'field', field: 'properties.action', labelKey: 'columnAction', format: 'action' },
             { source: 'field', field: 'properties.path',      labelKey: 'columnPath' },
-            { source: 'field', field: 'properties.userLimit', labelKey: 'columnUserLimit' },
-            { source: 'field', field: 'properties.abe',       labelKey: 'columnAbe' }
+            { source: 'field', field: 'properties.userLimit', labelKey: 'columnUserLimit', fit: true },
+            { source: 'field', field: 'properties.abe',       labelKey: 'columnAbe', fit: true }
         ]
     };
 });
